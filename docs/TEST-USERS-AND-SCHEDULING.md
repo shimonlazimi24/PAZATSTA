@@ -46,7 +46,7 @@ After running `npx prisma db seed`:
 | Student | **student@test.com** | רוני ישראלי | On `/login` click **כניסה כתלמיד** |
 
 - **Admin** (for `/admin`): either  
-  - log in with **admin@pazatsta.co.il** (role admin), or  
+  - log in with **shachar.cygler@gmail.com** (role admin), or  
   - log in as **teacher** with the hardcoded admin-teacher email (**teacher@test.com**), then open **/admin** (or click **ניהול** in the sidebar). The allowed teacher email is set in `src/lib/admin.ts` (`ADMIN_TEACHER_EMAIL`).
 
 ---
@@ -107,7 +107,7 @@ So the “important” scheduling page for **real** use is:
 
 ## Quick checklist for testers
 
-1. Run `npx prisma db seed` (creates teacher@test.com, student@test.com, admin@pazatsta.co.il).
+1. Run `npx prisma db seed` (creates teacher@test.com, student@test.com, shachar.cygler@gmail.com as admin).
 2. Open `/login` → use **כניסה כמורה** → you should land on `/teacher` (teacher dashboard with availability + lessons).
 3. Open `/login` in another browser/incognito → use **כניסה כתלמיד** → you should land on `/student` (book a lesson + my lessons).
 4. On teacher: add availability (date + time range). Those slots appear in the list and are stored in the DB.

@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-const ADMIN_EMAIL = "admin@pazatsta.co.il";
+const ADMIN_EMAIL = "shachar.cygler@gmail.com";
 const TEST_TEACHER_EMAIL = "teacher@test.com";
 const TEST_STUDENT_EMAIL = "student@test.com";
 

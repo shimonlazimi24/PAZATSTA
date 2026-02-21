@@ -37,7 +37,7 @@ Two-sided platform: **Teacher portal** (availability, complete lessons, PDF summ
    npx prisma db seed
    ```
 
-   Seed creates user `admin@pazatsta.co.il` (admin). Use that email to log in first.
+   Seed creates user `shachar.cygler@gmail.com` (admin). Use that email to log in first.
 
    If you already ran migrations before, run again for new models (TeacherProfile, StudentProfile, Availability, LessonSummary, Lesson changes):
 
@@ -55,7 +55,7 @@ Two-sided platform: **Teacher portal** (availability, complete lessons, PDF summ
 
 ## How to check
 
-- **Admin:** Seed creates `admin@pazatsta.co.il`. Request code → verify → you land on `/admin`.
+- **Admin:** Seed creates `shachar.cygler@gmail.com`. Request code → verify → you land on `/admin`.
 - **Teacher (via invite):** As admin, POST `/api/admin/invite` with `{ "email": "teacher@test.com", "role": "teacher" }`. Then log in as that email → redirect to `/teacher`.
 - **No access:** Use an email that is neither a user nor in `invites` → request code returns “No access, contact admin”.
 - **Session:** After login, refresh `/teacher` (or your role page) — still accessible.
