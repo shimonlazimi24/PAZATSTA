@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,19 +9,22 @@ import { Logo } from "@/components/Logo";
 import { BackLink } from "@/components/design/BackLink";
 
 export default function TeacherLoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading" | "sent" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [message, setMessage] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed) return;
     setStatus("loading");
     setMessage("");
     try {
       const res = await fetch("/api/auth/request-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+        body: JSON.stringify({ email: trimmed }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -29,7 +32,9 @@ export default function TeacherLoginPage() {
         setMessage(data.error || "שליחת הקוד נכשלה");
         return;
       }
-      setStatus("sent");
+      const params = new URLSearchParams({ email: trimmed, role: "teacher" });
+      if (data.emailSent === false) params.set("hint", "noEmail");
+      router.push(`/verify?${params.toString()}`);
     } catch {
       setStatus("error");
       setMessage("שגיאת רשת");
@@ -51,46 +56,33 @@ export default function TeacherLoginPage() {
                 הזן את האימייל שלך לקבלת קוד. רק חשבונות מורים יכולים להיכנס מכאן.
               </p>
             </div>
-            {status === "sent" ? (
-              <div className="space-y-4">
-                <p className="text-center text-emerald-600 text-sm">
-                  נשלח קוד לאימייל. בדוק את תיבת הדואר.
-                </p>
-                <Link
-                  href={`/verify?email=${encodeURIComponent(email.trim().toLowerCase())}&teacher=1`}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label
+                  htmlFor="teacher-login-email"
+                  className="block text-sm font-medium text-foreground mb-1"
                 >
-                  <Button className="w-full">המשך להזנת קוד</Button>
-                </Link>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label
-                    htmlFor="teacher-login-email"
-                    className="block text-sm font-medium text-foreground mb-1"
-                  >
-                    אימייל
-                  </label>
-                  <Input
-                    id="teacher-login-email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={status === "loading"}
-                  />
-                </div>
-                {message && <p className="text-sm text-destructive">{message}</p>}
-                <Button
-                  type="submit"
+                  אימייל
+                </label>
+                <Input
+                  id="teacher-login-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
                   disabled={status === "loading"}
-                  className="w-full"
-                >
-                  {status === "loading" ? "שולח…" : "שלחו לי קוד"}
-                </Button>
-              </form>
-            )}
+                />
+              </div>
+              {message && <p className="text-sm text-destructive">{message}</p>}
+              <Button
+                type="submit"
+                disabled={status === "loading"}
+                className="w-full"
+              >
+                {status === "loading" ? "שולח…" : "שלחו לי קוד"}
+              </Button>
+            </form>
           </CardContent>
         </Card>
 

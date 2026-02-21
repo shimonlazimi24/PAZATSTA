@@ -42,8 +42,8 @@ export async function POST(req: Request) {
   }
 
   try {
-    await sendLoginCode(email, code);
-    return NextResponse.json({ ok: true, message: "Code sent" });
+    const emailSent = await sendLoginCode(email, code);
+    return NextResponse.json({ ok: true, message: "Code sent", emailSent });
   } catch (e) {
     console.error("[request-code] Email error:", (e as Error)?.message ?? e);
     return NextResponse.json(

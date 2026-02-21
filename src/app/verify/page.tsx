@@ -15,6 +15,7 @@ function VerifyForm() {
       ? roleParam
       : "student";
   const nextParam = searchParams.get("next") ?? "";
+  const hintNoEmail = searchParams.get("hint") === "noEmail";
   const phoneParam = searchParams.get("phone") ?? "";
   const [email, setEmail] = useState(emailParam);
   const [code, setCode] = useState("");
@@ -28,6 +29,7 @@ function VerifyForm() {
     try {
       const res = await fetch("/api/auth/verify-code", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
@@ -44,8 +46,7 @@ function VerifyForm() {
         return;
       }
       const redirect = data.redirect ?? "/";
-      router.replace(redirect);
-      router.refresh();
+      window.location.href = redirect;
     } catch {
       setStatus("error");
       setMessage("שגיאת רשת");
@@ -59,6 +60,11 @@ function VerifyForm() {
           <div className="text-center" dir="rtl">
             <h1 className="text-xl font-semibold text-[var(--color-text)]">הזנת קוד</h1>
             <p className="text-sm text-[var(--color-text-muted)] mt-1">נשלח קוד בן 6 ספרות לאימייל שלך</p>
+            {hintNoEmail && (
+              <p className="text-xs text-amber-700 bg-amber-50 rounded-[var(--radius-input)] py-2 px-3 mt-2">
+                אימייל לא נשלח (RESEND לא מוגדר). הקוד מופיע בלוגים של השרת ב-Netlify.
+              </p>
+            )}
           </div>
           <form onSubmit={handleSubmit} className="space-y-4" dir="rtl">
             <div>

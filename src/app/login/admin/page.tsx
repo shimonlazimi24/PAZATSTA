@@ -29,7 +29,9 @@ export default function AdminLoginPage() {
         setMessage(data.error || "שליחת הקוד נכשלה");
         return;
       }
-      router.push(`/verify?email=${encodeURIComponent(trimmed)}&role=admin`);
+      const params = new URLSearchParams({ email: trimmed, role: "admin", next: "/admin" });
+      if (data.emailSent === false) params.set("hint", "noEmail");
+      router.push(`/verify?${params.toString()}`);
     } catch {
       setStatus("error");
       setMessage("שגיאת רשת");
