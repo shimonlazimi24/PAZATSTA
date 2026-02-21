@@ -7,33 +7,48 @@ const OTP_TTL_MINUTES = 10;
 const MAX_ATTEMPTS = 5;
 
 export async function POST(req: Request) {
+  let body: { email?: string };
   try {
-    const body = await req.json();
-    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
-    if (!email) {
-      return NextResponse.json({ error: "Email required" }, { status: 400 });
-    }
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+  const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+  if (!email) {
+    return NextResponse.json({ error: "Email required" }, { status: 400 });
+  }
 
-    // Students can always request a code (self-signup). Teachers/admins need an invite (enforced at verify).
-    const code = createOTP();
-    const codeHash = hashOTP(code);
-    const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
+  let code: string;
+  try {
+    code = createOTP();
+  } catch (e) {
+    console.error("[request-code] OTP error:", e);
+    return NextResponse.json({ error: "Failed to send code" }, { status: 500 });
+  }
+  const codeHash = hashOTP(code);
+  const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
 
+  try {
     await prisma.loginCode.deleteMany({ where: { email } });
     await prisma.loginCode.create({
       data: { email, codeHash, expiresAt, attempts: 0 },
     });
+  } catch (e) {
+    console.error("[request-code] Database error:", (e as Error)?.message ?? e);
+    return NextResponse.json(
+      { error: "Failed to send code" },
+      { status: 503 }
+    );
+  }
 
+  try {
     await sendLoginCode(email, code);
     return NextResponse.json({ ok: true, message: "Code sent" });
   } catch (e) {
-    const err = e as Error;
-    // Always log server-side so Netlify (or any host) function logs show the cause
-    console.error("[request-code] Error:", err?.message ?? String(e));
-    const message =
-      process.env.NODE_ENV !== "production" && err?.message
-        ? err.message
-        : "Failed to send code";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[request-code] Email error:", (e as Error)?.message ?? e);
+    return NextResponse.json(
+      { error: "Failed to send code" },
+      { status: 503 }
+    );
   }
 }

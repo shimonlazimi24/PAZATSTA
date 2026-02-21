@@ -21,8 +21,9 @@ export function getLoginCodeContent(code: string) {
 }
 
 export async function sendLoginCode(email: string, code: string): Promise<void> {
-  if (isDev && noRealKey()) {
-    console.log("[DEV] Login OTP for", email, "->", code);
+  if (noRealKey()) {
+    // No Resend key (dev or production): log OTP server-side so it appears in Netlify/host logs
+    console.log("[request-code] OTP for", email, "->", code, "(RESEND_API_KEY not set or placeholder)");
     return;
   }
   const { subject, text } = getLoginCodeContent(code);
@@ -34,8 +35,9 @@ export async function sendLoginCode(email: string, code: string): Promise<void> 
       text,
     });
   } catch (err) {
+    console.error("[request-code] Resend failed for", email, "->", err);
     if (isDev) {
-      console.log("[DEV] Email failed, use this OTP for", email, "->", code);
+      console.log("[request-code] Use this OTP for", email, "->", code);
       return;
     }
     throw err;
