@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
@@ -12,7 +12,7 @@ const MODES: { value: LoginMode; label: string; desc: string }[] = [
   { value: "teacher", label: "התחבר כמורה", desc: "ניהול זמינות, שיעורים ודיווחים" },
 ];
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextAdmin = searchParams.get("next") === "/admin";
@@ -139,5 +139,32 @@ export default function LoginPage() {
 
       </div>
     </div>
+  );
+}
+
+function LoginFallback() {
+  return (
+    <div
+      className="min-h-screen flex flex-col items-center justify-center p-4 bg-[var(--color-bg)]"
+      dir="rtl"
+    >
+      <div className="w-full max-w-md space-y-8">
+        <div className="flex justify-center">
+          <Logo alt="Paza" className="h-10 w-auto" width={140} height={48} />
+        </div>
+        <h1 className="text-2xl font-bold text-center text-[var(--color-text)]">
+          התחברות
+        </h1>
+        <p className="text-center text-[var(--color-text-muted)]">טוען…</p>
+      </div>
+    </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginFallback />}>
+      <LoginForm />
+    </Suspense>
   );
 }
