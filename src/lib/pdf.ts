@@ -10,10 +10,18 @@ export function getLessonSummaryHtml(params: {
   timeRange: string;
   summaryText: string;
   homeworkText: string;
+  pointsToKeep?: string;
+  pointsToImprove?: string;
+  tips?: string;
+  recommendations?: string;
 }): string {
+  const section = (title: string, text: string) =>
+    text && text !== "—"
+      ? `<section><h2>${escapeHtml(title)}</h2><p>${escapeHtml(text)}</p></section>`
+      : "";
   return `
 <!DOCTYPE html>
-<html>
+<html dir="rtl">
 <head>
   <meta charset="utf-8">
   <style>
@@ -26,16 +34,14 @@ export function getLessonSummaryHtml(params: {
   </style>
 </head>
 <body>
-  <h1>Lesson Summary</h1>
-  <div class="meta">${params.studentName} with ${params.teacherName} — ${params.date} ${params.timeRange}</div>
-  <section>
-    <h2>Summary</h2>
-    <p>${escapeHtml(params.summaryText)}</p>
-  </section>
-  <section>
-    <h2>Homework</h2>
-    <p>${escapeHtml(params.homeworkText)}</p>
-  </section>
+  <h1>דוח סיום שיעור</h1>
+  <div class="meta">${escapeHtml(params.studentName)} עם ${escapeHtml(params.teacherName)} — ${params.date} ${params.timeRange}</div>
+  ${section("סיכום כללי", params.summaryText)}
+  ${section("נקודות לשימור", params.pointsToKeep || "")}
+  ${section("נקודות לשיפור", params.pointsToImprove || "")}
+  ${section("טיפים", params.tips || "")}
+  ${section("המלצות להמשך", params.recommendations || "")}
+  ${section("משימות לתרגול", params.homeworkText)}
 </body>
 </html>
   `.trim();

@@ -14,7 +14,15 @@ type Lesson = {
   status: string;
   reportCompleted?: boolean;
   student: { name: string | null; email: string };
-  summary: { summaryText: string; homeworkText: string; pdfUrl?: string | null } | null;
+  summary: {
+    summaryText: string;
+    homeworkText: string;
+    pointsToKeep?: string;
+    pointsToImprove?: string;
+    tips?: string;
+    recommendations?: string;
+    pdfUrl?: string | null;
+  } | null;
 };
 
 const MOCK_LESSON: Lesson = {
@@ -30,8 +38,12 @@ const MOCK_LESSON: Lesson = {
 const MOCK_LESSON_DONE: Lesson = {
   ...MOCK_LESSON,
   summary: {
-    summaryText: "עבדנו על משוואות ריבועיות ופתרון עם נוסחת השורשים.",
-    homeworkText: "עמוד 42 תרגילים 1–5.",
+    summaryText: "עבדנו על חשיבה כמותית ותרגול שאלות מהמא״ה.",
+    homeworkText: "תרגול פרק 3 – 20 שאלות.",
+    pointsToKeep: "התלמידה מתקדמת יפה בשאלות מילוליות.",
+    pointsToImprove: "להתאמן יותר על גאומטריה.",
+    tips: "לנצל את הזמן בפרק הכמותי.",
+    recommendations: "להמשיך עם תרגול מלא סימולציה.",
     pdfUrl: null,
   },
 };
@@ -46,6 +58,10 @@ export default function TeacherLessonReportPage() {
   const [loading, setLoading] = useState(!isDemo && !isDemoDone);
   const [summaryText, setSummaryText] = useState("");
   const [homeworkText, setHomeworkText] = useState("");
+  const [pointsToKeep, setPointsToKeep] = useState("");
+  const [pointsToImprove, setPointsToImprove] = useState("");
+  const [tips, setTips] = useState("");
+  const [recommendations, setRecommendations] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState("");
 
@@ -72,6 +88,10 @@ export default function TeacherLessonReportPage() {
     if (lesson?.summary) {
       setSummaryText(lesson.summary.summaryText);
       setHomeworkText(lesson.summary.homeworkText);
+      setPointsToKeep(lesson.summary.pointsToKeep ?? "");
+      setPointsToImprove(lesson.summary.pointsToImprove ?? "");
+      setTips(lesson.summary.tips ?? "");
+      setRecommendations(lesson.summary.recommendations ?? "");
     }
   }, [lesson]);
 
@@ -79,8 +99,15 @@ export default function TeacherLessonReportPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!summaryText.trim() && !homeworkText.trim()) {
-      setError("נא למלא סיכום או משימות לתרגול.");
+    const hasAny =
+      summaryText.trim() ||
+      homeworkText.trim() ||
+      pointsToKeep.trim() ||
+      pointsToImprove.trim() ||
+      tips.trim() ||
+      recommendations.trim();
+    if (!hasAny) {
+      setError("נא למלא לפחות שדה אחד בדוח.");
       return;
     }
     setStatus("loading");
@@ -99,6 +126,10 @@ export default function TeacherLessonReportPage() {
         body: JSON.stringify({
           summaryText: summaryText.trim(),
           homeworkText: homeworkText.trim(),
+          pointsToKeep: pointsToKeep.trim(),
+          pointsToImprove: pointsToImprove.trim(),
+          tips: tips.trim(),
+          recommendations: recommendations.trim(),
         }),
       });
       const data = await res.json();
@@ -117,7 +148,7 @@ export default function TeacherLessonReportPage() {
 
   if (loading || !id) {
     return (
-      <AppShell title="דוח שיעור">
+      <AppShell title="דוח סיום שיעור">
         <p className="text-sm text-[var(--color-text-muted)]">טוען…</p>
       </AppShell>
     );
@@ -125,7 +156,7 @@ export default function TeacherLessonReportPage() {
 
   if (!lesson) {
     return (
-      <AppShell title="דוח שיעור">
+      <AppShell title="דוח סיום שיעור">
         <p className="text-sm text-[var(--color-text-muted)]">שיעור לא נמצא.</p>
         <Link href="/teacher/dashboard" className="text-[var(--color-primary)] hover:underline mt-2 inline-block">
           חזרה ללוח המורה
@@ -136,8 +167,12 @@ export default function TeacherLessonReportPage() {
 
   const studentName = lesson.student.name || lesson.student.email;
 
+  const fieldClass =
+    "w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-input)] text-sm";
+  const labelClass = "block text-sm font-medium text-[var(--color-text)] mb-1";
+
   return (
-    <AppShell title="דוח שיעור">
+    <AppShell title="דוח סיום שיעור">
       <div className="max-w-xl space-y-6" dir="rtl">
         {(isDemo || isDemoDone) && (
           <p className="text-center text-sm text-[var(--color-text-muted)] rounded-[var(--radius-input)] bg-[var(--color-highlight)]/50 py-2 px-3">
@@ -145,51 +180,115 @@ export default function TeacherLessonReportPage() {
           </p>
         )}
         <BackLink href="/teacher/dashboard" label="חזרה ללוח המורה" />
-        <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-4">
-          <p className="font-medium text-[var(--color-text)]">
-            {lesson.date} {lesson.startTime}–{lesson.endTime}
-          </p>
-          <p className="text-sm text-[var(--color-text-muted)]">{studentName}</p>
-        </div>
+
+        <section>
+          <h2 className="text-sm font-semibold text-[var(--color-text-muted)] mb-2">פרטים למעלה</h2>
+          <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-4">
+            <p className="font-medium text-[var(--color-text)]">
+              {lesson.date} {lesson.startTime}–{lesson.endTime}
+            </p>
+            <p className="text-sm text-[var(--color-text-muted)]">{studentName}</p>
+          </div>
+        </section>
 
         {alreadyCompleted ? (
-          <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-bg-muted)] p-4 space-y-3">
-            <h3 className="font-semibold text-[var(--color-text)]">סיכום השיעור</h3>
+          <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-bg-muted)] p-4 space-y-4">
+            <h3 className="font-semibold text-[var(--color-text)]">סיכום כללי</h3>
             <p className="text-sm text-[var(--color-text)] whitespace-pre-wrap">
               {lesson.summary?.summaryText || "—"}
             </p>
-            <h3 className="font-semibold text-[var(--color-text)]">משימות לתרגול</h3>
+            <h3 className="font-semibold text-[var(--color-text)]">נקודות לשימור</h3>
             <p className="text-sm text-[var(--color-text)] whitespace-pre-wrap">
-              {lesson.summary?.homeworkText || "—"}
+              {lesson.summary?.pointsToKeep || "—"}
             </p>
-            <p className="text-xs text-[var(--color-text-muted)]">
+            <h3 className="font-semibold text-[var(--color-text)]">נקודות לשיפור</h3>
+            <p className="text-sm text-[var(--color-text)] whitespace-pre-wrap">
+              {lesson.summary?.pointsToImprove || "—"}
+            </p>
+            <h3 className="font-semibold text-[var(--color-text)]">טיפים</h3>
+            <p className="text-sm text-[var(--color-text)] whitespace-pre-wrap">
+              {lesson.summary?.tips || "—"}
+            </p>
+            <h3 className="font-semibold text-[var(--color-text)]">המלצות להמשך</h3>
+            <p className="text-sm text-[var(--color-text)] whitespace-pre-wrap">
+              {lesson.summary?.recommendations || "—"}
+            </p>
+            {(lesson.summary?.homeworkText ?? "") && (
+              <>
+                <h3 className="font-semibold text-[var(--color-text)]">משימות לתרגול</h3>
+                <p className="text-sm text-[var(--color-text)] whitespace-pre-wrap">
+                  {lesson.summary?.homeworkText}
+                </p>
+              </>
+            )}
+            <p className="text-xs text-[var(--color-text-muted)] pt-2">
               הדוח הושלם ואין אפשרות לעריכה.
             </p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[var(--color-text)] mb-1">
-                סיכום השיעור
-              </label>
+              <label className={labelClass}>סיכום כללי</label>
               <textarea
                 value={summaryText}
                 onChange={(e) => setSummaryText(e.target.value)}
-                rows={4}
-                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-input)] text-sm"
-                placeholder="מה נלמד בשיעור?"
+                rows={3}
+                className={fieldClass}
+                placeholder="סיכום כללי של השיעור"
                 disabled={status === "loading"}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[var(--color-text)] mb-1">
-                משימות לתרגול
-              </label>
+              <label className={labelClass}>נקודות לשימור</label>
+              <textarea
+                value={pointsToKeep}
+                onChange={(e) => setPointsToKeep(e.target.value)}
+                rows={2}
+                className={fieldClass}
+                placeholder="מה עבד טוב, לשמור עליו"
+                disabled={status === "loading"}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>נקודות לשיפור</label>
+              <textarea
+                value={pointsToImprove}
+                onChange={(e) => setPointsToImprove(e.target.value)}
+                rows={2}
+                className={fieldClass}
+                placeholder="מה לשפר"
+                disabled={status === "loading"}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>טיפים</label>
+              <textarea
+                value={tips}
+                onChange={(e) => setTips(e.target.value)}
+                rows={2}
+                className={fieldClass}
+                placeholder="טיפים לתלמיד"
+                disabled={status === "loading"}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>המלצות להמשך</label>
+              <textarea
+                value={recommendations}
+                onChange={(e) => setRecommendations(e.target.value)}
+                rows={2}
+                className={fieldClass}
+                placeholder="המלצות לשיעורים הבאים"
+                disabled={status === "loading"}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>משימות לתרגול (אופציונלי)</label>
               <textarea
                 value={homeworkText}
                 onChange={(e) => setHomeworkText(e.target.value)}
-                rows={3}
-                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-input)] text-sm"
+                rows={2}
+                className={fieldClass}
                 placeholder="תרגול והכנה לשיעור הבא"
                 disabled={status === "loading"}
               />

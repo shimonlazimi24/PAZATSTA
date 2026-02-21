@@ -33,6 +33,10 @@ export async function GET(
       ? {
           summaryText: lesson.summary.summaryText,
           homeworkText: lesson.summary.homeworkText,
+          pointsToKeep: lesson.summary.pointsToKeep,
+          pointsToImprove: lesson.summary.pointsToImprove,
+          tips: lesson.summary.tips,
+          recommendations: lesson.summary.recommendations,
           pdfUrl: lesson.summary.pdfUrl,
         }
       : null,

@@ -87,10 +87,24 @@ export function getLessonCompletedContent(params: {
   date: string;
   summaryText: string;
   homeworkText: string;
+  pointsToKeep?: string;
+  pointsToImprove?: string;
+  tips?: string;
+  recommendations?: string;
 }) {
+  const lines = [
+    `דוח שיעור: ${params.studentName} עם ${params.teacherName} — ${params.date}`,
+    "",
+    "סיכום כללי: " + (params.summaryText || "—"),
+    "נקודות לשימור: " + (params.pointsToKeep || "—"),
+    "נקודות לשיפור: " + (params.pointsToImprove || "—"),
+    "טיפים: " + (params.tips || "—"),
+    "המלצות להמשך: " + (params.recommendations || "—"),
+    "משימות לתרגול: " + (params.homeworkText || "—"),
+  ];
   return {
-    subject: "Lesson summary",
-    text: `Lesson completed: ${params.studentName} with ${params.teacherName} on ${params.date}.\n\nSummary: ${params.summaryText}\n\nHomework: ${params.homeworkText}`,
+    subject: "דוח סיום שיעור",
+    text: lines.join("\n"),
   };
 }
 
@@ -101,6 +115,10 @@ export async function sendLessonCompleted(params: {
   date: string;
   summaryText: string;
   homeworkText: string;
+  pointsToKeep?: string;
+  pointsToImprove?: string;
+  tips?: string;
+  recommendations?: string;
   pdfBuffer?: Buffer;
   pdfFilename?: string;
 }): Promise<void> {

@@ -32,7 +32,7 @@ const STEPS = [
 const SUBJECTS: { id: SubjectId; title: string; subtitle: string }[] = [
   { id: "math", title: "מתמטיקה", subtitle: "יסודי | חטיבה | תיכון" },
   { id: "english", title: "אנגלית", subtitle: "יסודי | חטיבה | תיכון" },
-  { id: "physics", title: "פיזיקה", subtitle: "תיכון | בגרויות" },
+  { id: "psychometric", title: "פסיכומטרי / הכנה למא״ה", subtitle: "צו ראשון | קורס טיס | מודיעין" },
   { id: "language", title: "לשון והבעה", subtitle: "חטיבה | תיכון" },
 ];
 

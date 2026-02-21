@@ -17,9 +17,15 @@ export async function POST(
     const body = await req.json();
     const summaryText = typeof body.summaryText === "string" ? body.summaryText.trim() : "";
     const homeworkText = typeof body.homeworkText === "string" ? body.homeworkText.trim() : "";
-    if (!summaryText && !homeworkText) {
+    const pointsToKeep = typeof body.pointsToKeep === "string" ? body.pointsToKeep.trim() : "";
+    const pointsToImprove = typeof body.pointsToImprove === "string" ? body.pointsToImprove.trim() : "";
+    const tips = typeof body.tips === "string" ? body.tips.trim() : "";
+    const recommendations = typeof body.recommendations === "string" ? body.recommendations.trim() : "";
+    const hasAny =
+      summaryText || homeworkText || pointsToKeep || pointsToImprove || tips || recommendations;
+    if (!hasAny) {
       return NextResponse.json(
-        { error: "summaryText or homeworkText required" },
+        { error: "נא למלא לפחות שדה אחד בדוח" },
         { status: 400 }
       );
     }
@@ -44,6 +50,10 @@ export async function POST(
       timeRange,
       summaryText: summaryText || "—",
       homeworkText: homeworkText || "—",
+      pointsToKeep: pointsToKeep || "—",
+      pointsToImprove: pointsToImprove || "—",
+      tips: tips || "—",
+      recommendations: recommendations || "—",
     });
 
     let pdfBuffer: Buffer;
@@ -70,6 +80,10 @@ export async function POST(
           lessonId: lesson.id,
           summaryText: summaryText || "",
           homeworkText: homeworkText || "",
+          pointsToKeep: pointsToKeep || "",
+          pointsToImprove: pointsToImprove || "",
+          tips: tips || "",
+          recommendations: recommendations || "",
           pdfUrl,
         },
       }),
@@ -95,6 +109,10 @@ export async function POST(
       date: dateStr,
       summaryText: summaryText || "—",
       homeworkText: homeworkText || "—",
+      pointsToKeep: pointsToKeep || "—",
+      pointsToImprove: pointsToImprove || "—",
+      tips: tips || "—",
+      recommendations: recommendations || "—",
       pdfBuffer,
       pdfFilename: `lesson-summary-${dateStr}.pdf`,
     });

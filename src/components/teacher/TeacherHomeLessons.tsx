@@ -23,7 +23,7 @@ const MOCK_UPCOMING: Lesson[] = [
     startTime: "10:00",
     endTime: "10:45",
     status: "scheduled",
-    questionFromStudent: "אשמח להתמקד בפתרון משוואות ריבועיות.",
+    questionFromStudent: "אשמח להתמקד בחשיבה כמותית והכנה למא״ה.",
     student: { id: "s1", email: "student@example.com", name: "דני כהן" },
     summary: null,
   },

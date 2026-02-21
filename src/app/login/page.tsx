@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
 
@@ -14,6 +14,8 @@ const MODES: { value: LoginMode; label: string; desc: string }[] = [
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextAdmin = searchParams.get("next") === "/admin";
   const [mode, setMode] = useState<LoginMode>(null);
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
@@ -37,7 +39,10 @@ export default function LoginPage() {
         setMessage(data.error || "שליחת הקוד נכשלה");
         return;
       }
-      router.push(`/verify?email=${encodeURIComponent(trimmed)}&role=${mode}`);
+      const verifyUrl = nextAdmin
+        ? `/verify?email=${encodeURIComponent(trimmed)}&role=${mode}&next=/admin`
+        : `/verify?email=${encodeURIComponent(trimmed)}&role=${mode}`;
+      router.push(verifyUrl);
     } catch {
       setStatus("error");
       setMessage("שגיאת רשת");
@@ -59,6 +64,11 @@ export default function LoginPage() {
 
         {mode === null ? (
           <>
+            {nextAdmin && (
+              <p className="text-center text-sm text-[var(--color-primary)] bg-[var(--color-bg-muted)] rounded-[var(--radius-input)] py-2 px-3">
+                כניסה לאזור הניהול: בחרו &quot;התחבר כמורה&quot; והזינו אימייל עם הרשאות מנהל.
+              </p>
+            )}
             <p className="text-center text-[var(--color-text-muted)]">
               בחרו איך אתם נכנסים
             </p>

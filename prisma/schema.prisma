@@ -85,12 +85,16 @@ model Lesson {
 }
 
 model LessonSummary {
-  id          String   @id @default(cuid())
-  lessonId    String   @unique
-  summaryText String
-  homeworkText String
-  pdfUrl      String?
-  createdAt   DateTime @default(now())
+  id               String   @id @default(cuid())
+  lessonId         String   @unique
+  summaryText      String   // סיכום כללי
+  homeworkText     String   @default("") // משימות לתרגול (optional)
+  pointsToKeep     String   @default("") // נקודות לשימור
+  pointsToImprove  String   @default("") // נקודות לשיפור
+  tips             String   @default("") // טיפים
+  recommendations  String   @default("") // המלצות להמשך
+  pdfUrl           String?
+  createdAt        DateTime @default(now())
 
   lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 }

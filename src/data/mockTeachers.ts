@@ -1,4 +1,4 @@
-export type SubjectId = "math" | "english" | "physics" | "language";
+export type SubjectId = "math" | "english" | "psychometric" | "language";
 
 export interface MockTeacher {
   id: string;
@@ -39,11 +39,11 @@ export const MOCK_TEACHERS: MockTeacher[] = [
     id: "t3",
     name: "יוסי אברהם",
     photo: "",
-    bio: "מורה לפיזיקה ולמתמטיקה. מומחה לבגרויות והכנה ללימודים גבוהים.",
-    subjects: ["physics", "math"],
+    bio: "מורה למתמטיקה והכנה למא״ה. מומחה לפסיכומטרי צבאי ולצו ראשון.",
+    subjects: ["psychometric", "math"],
     rating: 5.0,
     reviewCount: 67,
-    specialties: ["פיזיקה 5 יח׳", "מתמטיקה", "תיכון"],
+    specialties: ["חשיבה כמותית", "מתמטיקה", "הכנה למא״ה"],
     availabilityLabel: "פנוי היום",
   },
   {
@@ -72,11 +72,11 @@ export const MOCK_TEACHERS: MockTeacher[] = [
     id: "t6",
     name: "שירה דוד",
     photo: "",
-    bio: "מורה לפיזיקה ומתמטיקה. הכנה ממוקדת לבגרויות.",
-    subjects: ["physics", "math"],
+    bio: "מורה למתמטיקה ואנגלית. הכנה ממוקדת לקורס טיס ולמסלולי מודיעין.",
+    subjects: ["psychometric", "math", "english"],
     rating: 4.8,
     reviewCount: 92,
-    specialties: ["פיזיקה", "מתמטיקה 5 יח׳"],
+    specialties: ["הכנה לקורס טיס", "מתמטיקה", "אנגלית"],
     availabilityLabel: "פנוי השבוע",
   },
 ];

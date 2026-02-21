@@ -14,6 +14,7 @@ function VerifyForm() {
     roleParam === "student" || roleParam === "teacher" || roleParam === "admin"
       ? roleParam
       : "student";
+  const nextParam = searchParams.get("next") ?? "";
   const phoneParam = searchParams.get("phone") ?? "";
   const [email, setEmail] = useState(emailParam);
   const [code, setCode] = useState("");
@@ -32,6 +33,7 @@ function VerifyForm() {
           email: email.trim().toLowerCase(),
           code: code.replace(/\D/g, ""),
           role,
+          next: nextParam || undefined,
           phone: phoneParam.trim() || undefined,
         }),
       });

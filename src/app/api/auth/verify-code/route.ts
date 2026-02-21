@@ -7,6 +7,7 @@ import {
   SESSION_COOKIE,
   sign,
 } from "@/lib/auth";
+import { canAccessAdmin } from "@/lib/admin";
 
 const MAX_ATTEMPTS = 5;
 
@@ -81,6 +82,16 @@ export async function POST(req: Request) {
         );
       }
     } else {
+      // role === "student"
+      if (user && user.role === "teacher") {
+        return NextResponse.json(
+          {
+            error:
+              "חשבון זה רשום כמורה. נא להתחבר דרך \"התחבר כמורה\" או להשתמש באימייל אחר לכניסה כתלמיד.",
+          },
+          { status: 403 }
+        );
+      }
       if (!user) {
         user = await prisma.user.create({
           data: {
@@ -105,8 +116,11 @@ export async function POST(req: Request) {
     await prisma.loginCode.delete({ where: { id: loginCode.id } });
     const sessionId = await createSession(user.id);
     const cookieCfg = getSessionCookieConfig();
-    const redirect =
-      user.role === "student"
+    const nextPath = typeof body.next === "string" ? body.next.trim() : "";
+    const wantAdmin = nextPath === "/admin" && canAccessAdmin(user);
+    const redirect = wantAdmin
+      ? "/admin"
+      : user.role === "student"
         ? "/student/book"
         : user.role === "teacher"
           ? "/teacher/availability"

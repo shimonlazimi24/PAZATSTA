@@ -27,8 +27,8 @@ const PREVIEWS = [
       studentName: "דני כהן",
       teacherName: "מיכל לוי",
       date: "2025-02-18",
-      summaryText: "עבדנו על משוואות ריבועיות ופתרון עם נוסחת השורשים.",
-      homeworkText: "עמוד 42 תרגילים 1–5.",
+      summaryText: "עבדנו על חשיבה כמותית ותרגול שאלות מהמא״ה.",
+      homeworkText: "תרגול פרק 3 – 20 שאלות.",
     }),
   },
   {
@@ -51,7 +51,7 @@ const PREVIEWS = [
           endTime: "09:45",
           teacherName: "מיכל לוי",
           studentName: "דני כהן",
-          summaryText: "משוואות ריבועיות.",
+          summaryText: "חשיבה כמותית, הכנה למא״ה.",
           homeworkText: "עמוד 42.",
         },
         {

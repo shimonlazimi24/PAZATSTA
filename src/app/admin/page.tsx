@@ -7,8 +7,8 @@ import { SendSummaryButton } from "@/components/admin/SendSummaryButton";
 
 export default async function AdminPage() {
   const user = await getUserFromSession();
-  if (!user) redirect("/login");
-  if (!canAccessAdmin(user)) redirect(`/${user.role}`);
+  if (!user) redirect("/login?next=/admin");
+  if (!canAccessAdmin(user)) redirect("/login?next=/admin");
 
   return (
     <AdminShell email={user.email}>
