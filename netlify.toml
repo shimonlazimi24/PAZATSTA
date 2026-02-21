@@ -1,0 +1,7 @@
+# Optional: makes Netlify build settings explicit for this Next.js app
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+# Next.js on Netlify uses the Essential Next.js plugin; publish is handled by the plugin.
+# If the plugin is not enabled, enable it in Netlify UI: Site → Build & deploy → Plugins → Add "Essential Next.js".

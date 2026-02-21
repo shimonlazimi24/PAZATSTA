@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  teacher
+  parent
+  student
+}
+
+enum LessonStatus {
+  scheduled
+  completed
+  canceled
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  phone     String?
+  role      Role
+  createdAt DateTime @default(now())
+
+  sessions           Session[]
+  teacherProfile     TeacherProfile?
+  studentProfile     StudentProfile?
+  lessonsAsTeacher   Lesson[] @relation("LessonTeacher")
+  lessonsAsStudent   Lesson[] @relation("LessonStudent")
+  availabilitySlots  Availability[]
+}
+
+model TeacherProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  bio         String?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model StudentProfile {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  parentId   String?
+  teacherId  String?
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Availability {
+  id           String   @id @default(cuid())
+  teacherId    String
+  date         DateTime
+  startTime    String
+  endTime      String
+  isAvailable  Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  teacher User @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+}
+
+model Lesson {
+  id                  String       @id @default(cuid())
+  teacherId           String
+  studentId           String
+  date                DateTime
+  startTime           String
+  endTime             String
+  status              LessonStatus @default(scheduled)
+  questionFromStudent String?
+  createdAt           DateTime     @default(now())
+
+  teacher User @relation("LessonTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  student User @relation("LessonStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  summary LessonSummary?
+}
+
+model LessonSummary {
+  id          String   @id @default(cuid())
+  lessonId    String   @unique
+  summaryText String
+  homeworkText String
+  pdfUrl      String?
+  createdAt   DateTime @default(now())
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+}
+
+model Invite {
+  id        String    @id @default(cuid())
+  email     String
+  role      Role
+  expiresAt DateTime
+  usedAt   DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model LoginCode {
+  id        String   @id @default(cuid())
+  email     String
+  codeHash  String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

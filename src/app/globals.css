@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Pazatsta-style tokens */
+    --color-primary: #5a6b47;
+    --color-primary-hover: #4a5a3a;
+    --color-highlight: #f5e6a6;
+    --color-bg: #ffffff;
+    --color-bg-muted: #f5f5f4;
+    --color-text: #1c1917;
+    --color-text-muted: #57534e;
+    --color-border: #e7e5e4;
+    --radius-card: 1rem;
+    --radius-button: 9999px;
+    --radius-input: 0.75rem;
+    --shadow-card: 0 2px 15px -3px rgb(0 0 0 / 0.07), 0 10px 20px -2px rgb(0 0 0 / 0.04);
+    --shadow-hover: 0 10px 40px -15px rgb(0 0 0 / 0.1);
+    /* Legacy compatibility */
+    --background: 0 0% 100%;
+    --foreground: 24 10% 10%;
+    --primary: 88 22% 35%;
+    --primary-foreground: 0 0% 100%;
+    --border: 24 6% 90%;
+    --input: 24 6% 90%;
+    --ring: 88 22% 35%;
+    --muted: 24 5% 96%;
+    --muted-foreground: 24 4% 46%;
+    --card: 0 0% 100%;
+    --card-foreground: 24 10% 10%;
+    --secondary: 24 5% 96%;
+    --secondary-foreground: 24 6% 20%;
+    --accent: 24 5% 96%;
+    --accent-foreground: 24 6% 20%;
+    --destructive: 0 84% 60%;
+  }
+  [dir="rtl"] {
+    font-family: "Heebo", "Assistant", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  }
+  body {
+    @apply antialiased;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+  }
+}
