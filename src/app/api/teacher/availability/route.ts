@@ -2,37 +2,52 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getUserFromSession } from "@/lib/auth";
 
+function isDbUnreachable(e: unknown): boolean {
+  return typeof e === "object" && e !== null && (e as { code?: string }).code === "P1001";
+}
+
 export async function GET(req: Request) {
-  const user = await getUserFromSession();
-  if (!user || user.role !== "teacher") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  try {
+    const user = await getUserFromSession();
+    if (!user || user.role !== "teacher") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    const { searchParams } = new URL(req.url);
+    const start = searchParams.get("start");
+    const end = searchParams.get("end");
+    const slots = await prisma.availability.findMany({
+      where: {
+        teacherId: user.id,
+        ...(start && end
+          ? {
+              date: {
+                gte: new Date(start),
+                lte: new Date(end),
+              },
+            }
+          : {}),
+      },
+      orderBy: [{ date: "asc" }, { startTime: "asc" }],
+    });
+    return NextResponse.json(
+      slots.map((s) => ({
+        id: s.id,
+        date: s.date.toISOString().slice(0, 10),
+        startTime: s.startTime,
+        endTime: s.endTime,
+        isAvailable: s.isAvailable,
+      }))
+    );
+  } catch (e) {
+    if (isDbUnreachable(e)) {
+      console.error("[teacher/availability] Database unreachable (P1001):", e);
+      return NextResponse.json(
+        { error: "אין חיבור למסד הנתונים. נא לבדוק את החיבור ולנסות שוב." },
+        { status: 503 }
+      );
+    }
+    throw e;
   }
-  const { searchParams } = new URL(req.url);
-  const start = searchParams.get("start");
-  const end = searchParams.get("end");
-  const slots = await prisma.availability.findMany({
-    where: {
-      teacherId: user.id,
-      ...(start && end
-        ? {
-            date: {
-              gte: new Date(start),
-              lte: new Date(end),
-            },
-          }
-        : {}),
-    },
-    orderBy: [{ date: "asc" }, { startTime: "asc" }],
-  });
-  return NextResponse.json(
-    slots.map((s) => ({
-      id: s.id,
-      date: s.date.toISOString().slice(0, 10),
-      startTime: s.startTime,
-      endTime: s.endTime,
-      isAvailable: s.isAvailable,
-    }))
-  );
 }
 
 export async function POST(req: Request) {

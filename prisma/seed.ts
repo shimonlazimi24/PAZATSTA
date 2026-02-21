@@ -2,14 +2,15 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+const ADMIN_EMAIL = "admin@pazatsta.co.il";
 const TEST_TEACHER_EMAIL = "teacher@test.com";
 const TEST_STUDENT_EMAIL = "student@test.com";
 
 async function main() {
   await prisma.user.upsert({
-    where: { email: "admin@paza.local" },
+    where: { email: ADMIN_EMAIL },
     create: {
-      email: "admin@paza.local",
+      email: ADMIN_EMAIL,
       role: "admin",
     },
     update: {},

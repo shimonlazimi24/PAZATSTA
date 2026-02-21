@@ -1,28 +1,35 @@
 import { redirect } from "next/navigation";
 import { getUserFromSession } from "@/lib/auth";
+import { canAccessAdmin } from "@/lib/admin";
 import { AdminShell } from "@/components/AdminShell";
-import { InviteForm } from "@/components/InviteForm";
-import { InvitesList } from "@/components/InvitesList";
+import { DefineTeacherForm } from "@/components/admin/DefineTeacherForm";
+import { SendSummaryButton } from "@/components/admin/SendSummaryButton";
 
 export default async function AdminPage() {
   const user = await getUserFromSession();
   if (!user) redirect("/login");
-  if (user.role !== "admin") redirect(`/${user.role}`);
+  if (!canAccessAdmin(user)) redirect(`/${user.role}`);
 
   return (
     <AdminShell email={user.email}>
       <div className="space-y-8">
         <section>
           <h2 className="text-xl font-bold text-[var(--color-text)] mb-3 text-right">
-            הזמנת משתמש
+            הגדרת מורה
           </h2>
-          <InviteForm />
+          <p className="text-sm text-[var(--color-text-muted)] mb-3 text-right">
+            הזינו אימייל כדי ליצור משתמש מורה או לעדכן תפקיד קיים למורה.
+          </p>
+          <DefineTeacherForm />
         </section>
         <section>
           <h2 className="text-xl font-bold text-[var(--color-text)] mb-3 text-right">
-            הזמנות אחרונות
+            סיכום שיעורים
           </h2>
-          <InvitesList />
+          <p className="text-sm text-[var(--color-text-muted)] mb-3 text-right">
+            שליחת סיכום כל השיעורים שהושלמו (7 ימים אחרונים) לאימייל שלך.
+          </p>
+          <SendSummaryButton />
         </section>
       </div>
     </AdminShell>

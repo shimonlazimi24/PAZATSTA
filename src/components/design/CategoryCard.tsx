@@ -5,7 +5,7 @@ import { Button } from "./Button";
 
 export interface CategoryCardProps {
   title: string;
-  subtitle: string;
+  subtitle?: string;
   imagePlaceholder?: boolean;
   href?: string;
 }
@@ -20,7 +20,7 @@ export function CategoryCard({ title, subtitle, imagePlaceholder = true, href = 
       )}
       <div className="flex flex-1 flex-col p-5 text-right">
         <h3 className="text-xl font-bold text-[var(--color-text)]">{title}</h3>
-        <p className="mt-1 text-sm text-[var(--color-text-muted)]">{subtitle}</p>
+        {subtitle ? <p className="mt-1 text-sm text-[var(--color-text-muted)]">{subtitle}</p> : null}
         <div className="mt-4">
           <span className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[var(--color-bg-muted)] px-6 py-3 text-sm font-semibold text-[var(--color-text)] hover:bg-[var(--color-border)]">
             קביעת שיעור פרטי

@@ -4,15 +4,16 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Stepper } from "@/components/design/Stepper";
+import { BackLink } from "@/components/design/BackLink";
 import { Button } from "@/components/design/Button";
 import { Card } from "@/components/design/Card";
 import { CategoryCard } from "@/components/design/CategoryCard";
-import { Chip } from "@/components/design/Chip";
 import { TeacherCard } from "@/components/design/TeacherCard";
 import { DateSelector } from "@/components/design/DateSelector";
 import { TimeSlots } from "@/components/design/TimeSlots";
 import { FormField } from "@/components/design/FormField";
 import { SummaryCard } from "@/components/design/SummaryCard";
+import { MyLessonsBlock } from "@/components/MyLessonsBlock";
 import { MOCK_TEACHERS, type MockTeacher, type SubjectId } from "@/data/mockTeachers";
 import {
   generateMockSlotsForDate,
@@ -22,7 +23,6 @@ import {
 
 const STEPS = [
   { label: "מקצוע" },
-  { label: "רמה" },
   { label: "מורה" },
   { label: "תאריך ושעה" },
   { label: "פרטים" },
@@ -36,8 +36,6 @@ const SUBJECTS: { id: SubjectId; title: string; subtitle: string }[] = [
   { id: "language", title: "לשון והבעה", subtitle: "חטיבה | תיכון" },
 ];
 
-const GRADES = ["יסודי", "חטיבה", "תיכון", "בגרות"];
-
 function formatDateLabel(dateStr: string): string {
   const d = new Date(dateStr + "T12:00:00");
   return d.toLocaleDateString("he-IL", { day: "numeric", month: "short" });
@@ -48,11 +46,20 @@ function formatWeekday(dateStr: string): string {
   return d.toLocaleDateString("he-IL", { weekday: "short" });
 }
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+function isValidEmail(value: string): boolean {
+  return EMAIL_REGEX.test(value.trim());
+}
+
+function isValidPhone(value: string): boolean {
+  const digits = value.replace(/\D/g, "");
+  return digits.length >= 9 && digits.length <= 11;
+}
+
 export default function BookPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [subjectId, setSubjectId] = useState<SubjectId | null>(null);
-  const [grade, setGrade] = useState<string | null>(null);
   const [teacher, setTeacher] = useState<MockTeacher | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<MockSlot | null>(null);
@@ -83,15 +90,16 @@ export default function BookPage() {
   }, [subjectId]);
 
   const canProceedStep1 = subjectId !== null;
-  const canProceedStep2 = grade !== null;
-  const canProceedStep3 = teacher !== null;
-  const canProceedStep4 = selectedDate !== null && selectedSlot !== null;
+  const canProceedStep2 = teacher !== null;
+  const canProceedStep3 = selectedDate !== null && selectedSlot !== null;
 
   function validateStep5(): boolean {
     const e: Record<string, string> = {};
     if (!name.trim()) e.name = "נא להזין שם מלא";
     if (!phone.trim()) e.phone = "נא להזין טלפון";
+    else if (!isValidPhone(phone)) e.phone = "נא להזין מספר טלפון תקין (9–11 ספרות)";
     if (!email.trim()) e.email = "נא להזין אימייל";
+    else if (!isValidEmail(email)) e.email = "נא להזין כתובת אימייל תקינה";
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -100,11 +108,20 @@ export default function BookPage() {
     if (step === 1 && !canProceedStep1) return;
     if (step === 2 && !canProceedStep2) return;
     if (step === 3 && !canProceedStep3) return;
-    if (step === 4 && !canProceedStep4) return;
-    if (step === 5) {
+    if (step === 4) {
       if (!validateStep5()) return;
     }
-    if (step === 6) {
+    if (step === 5) {
+      const payload = {
+        subjectTitle,
+        teacherName: teacher?.name ?? "",
+        date: selectedDate ?? "",
+        startTime: selectedSlot?.startTime ?? "",
+        endTime: selectedSlot?.endTime ?? "",
+      };
+      try {
+        sessionStorage.setItem("paza_last_booking", JSON.stringify(payload));
+      } catch (_) {}
       router.push("/book/success");
       return;
     }
@@ -121,9 +138,7 @@ export default function BookPage() {
     <div className="min-h-screen bg-[var(--color-bg)]">
       <header className="border-b border-[var(--color-border)] bg-white">
         <div className="mx-auto max-w-3xl px-4 py-4 sm:px-6">
-          <Link href="/" className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
-            ← חזרה לדף הבית
-          </Link>
+          <BackLink href="/welcome" label="חזרה לדף הבית" />
           <h1 className="mt-2 text-2xl font-bold text-[var(--color-text)] text-right">קביעת שיעור</h1>
           <div className="mt-4">
             <Stepper steps={STEPS} currentStep={step} />
@@ -132,6 +147,7 @@ export default function BookPage() {
       </header>
 
       <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+        <MyLessonsBlock />
         {step === 1 && (
           <div className="space-y-6">
             <p className="text-[var(--color-text-muted)] text-right">בחרו מקצוע</p>
@@ -156,22 +172,6 @@ export default function BookPage() {
 
         {step === 2 && (
           <div className="space-y-6">
-            <p className="text-[var(--color-text-muted)] text-right">בחרו רמה / כיתה</p>
-            <div className="flex flex-wrap gap-2">
-              {GRADES.map((g) => (
-                <Chip key={g} selected={grade === g} onClick={() => setGrade(g)}>
-                  {g}
-                </Chip>
-              ))}
-            </div>
-            {!grade && (
-              <p className="text-sm text-red-600 text-right">נא לבחור רמה אחת</p>
-            )}
-          </div>
-        )}
-
-        {step === 3 && (
-          <div className="space-y-6">
             <p className="text-[var(--color-text-muted)] text-right">בחרו מורה</p>
             <div className="space-y-3">
               {filteredTeachers.map((t) => (
@@ -186,7 +186,7 @@ export default function BookPage() {
           </div>
         )}
 
-        {step === 4 && (
+        {step === 3 && (
           <div className="space-y-6">
             <p className="text-[var(--color-text-muted)] text-right">בחרו תאריך</p>
             <DateSelector
@@ -207,24 +207,55 @@ export default function BookPage() {
           </div>
         )}
 
-        {step === 5 && (
+        {step === 4 && (
           <Card>
             <div className="space-y-4">
-              <FormField label="שם מלא" name="name" value={name} onChange={setName} required error={errors.name} />
-              <FormField label="טלפון" name="phone" type="tel" value={phone} onChange={setPhone} required error={errors.phone} />
-              <FormField label="אימייל" name="email" type="email" value={email} onChange={setEmail} required error={errors.email} />
+              <FormField
+                label="שם מלא"
+                name="name"
+                value={name}
+                onChange={(v) => {
+                  setName(v);
+                  if (errors.name) setErrors((e) => ({ ...e, name: "" }));
+                }}
+                required
+                error={errors.name}
+              />
+              <FormField
+                label="טלפון"
+                name="phone"
+                type="tel"
+                value={phone}
+                onChange={(v) => {
+                  setPhone(v);
+                  if (errors.phone) setErrors((e) => ({ ...e, phone: "" }));
+                }}
+                required
+                error={errors.phone}
+              />
+              <FormField
+                label="אימייל"
+                name="email"
+                type="email"
+                value={email}
+                onChange={(v) => {
+                  setEmail(v);
+                  if (errors.email) setErrors((e) => ({ ...e, email: "" }));
+                }}
+                required
+                error={errors.email}
+              />
               <FormField label="הערות (אופציונלי)" name="notes" value={notes} onChange={setNotes} />
             </div>
           </Card>
         )}
 
-        {step === 6 && (
+        {step === 5 && (
           <div className="space-y-6">
             <SummaryCard
               title="סיכום הזמנה"
               rows={[
                 { label: "מקצוע", value: subjectTitle },
-                { label: "רמה", value: grade ?? "" },
                 { label: "מורה", value: teacher?.name ?? "" },
                 {
                   label: "תאריך ושעה",
@@ -245,22 +276,21 @@ export default function BookPage() {
         )}
 
         <div className="mt-10 flex justify-between gap-4">
-          {step > 1 && step < 6 ? (
+          {step > 1 && step < 5 ? (
             <Button variant="secondary" onClick={handleBack}>
               חזרה
             </Button>
           ) : (
             <span />
           )}
-          {step < 6 && (
+          {step < 5 && (
             <Button
               onClick={handleNext}
               showArrow
               disabled={
                 (step === 1 && !canProceedStep1) ||
                 (step === 2 && !canProceedStep2) ||
-                (step === 3 && !canProceedStep3) ||
-                (step === 4 && !canProceedStep4)
+                (step === 3 && !canProceedStep3)
               }
             >
               המשך

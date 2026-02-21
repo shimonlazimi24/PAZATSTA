@@ -75,6 +75,7 @@ model Lesson {
   startTime           String
   endTime             String
   status              LessonStatus @default(scheduled)
+  reportCompleted     Boolean      @default(false)
   questionFromStudent String?
   createdAt           DateTime     @default(now())
 

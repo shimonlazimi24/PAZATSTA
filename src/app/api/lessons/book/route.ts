@@ -3,22 +3,19 @@ import { prisma } from "@/lib/db";
 import { getUserFromSession } from "@/lib/auth";
 import { sendBookingConfirmation } from "@/lib/email";
 
+const SLOT_TAKEN_ERROR = "הזמן נתפס, בחר זמן אחר";
+
 export async function POST(req: Request) {
   const user = await getUserFromSession();
-  if (!user || (user.role !== "student" && user.role !== "parent")) {
+  if (!user || user.role !== "student") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   try {
     const body = await req.json();
-    const availabilityId = typeof body.availabilityId === "string" ? body.availabilityId : "";
-    const fullName = typeof body.fullName === "string" ? body.fullName.trim() : "";
-    const phone = typeof body.phone === "string" ? body.phone.trim() : "";
-    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
-    const questionFromStudent = typeof body.questionFromStudent === "string" ? body.questionFromStudent.trim() : null;
-
-    if (!availabilityId || !fullName || !phone || !email) {
+    const availabilityId = typeof body.availabilityId === "string" ? body.availabilityId.trim() : "";
+    if (!availabilityId) {
       return NextResponse.json(
-        { error: "availabilityId, fullName, phone, email required" },
+        { error: "נא לבחור משבצת זמן" },
         { status: 400 }
       );
     }
@@ -29,85 +26,55 @@ export async function POST(req: Request) {
     });
     if (!slot) {
       return NextResponse.json(
-        { error: "Slot not found or no longer available" },
-        { status: 400 }
+        { error: SLOT_TAKEN_ERROR },
+        { status: 409 }
       );
     }
 
-    let studentId: string;
-    if (user.role === "student") {
-      studentId = user.id;
-    } else {
-      const student = await prisma.user.findFirst({
-        where: { email, role: "student" },
-        include: { studentProfile: true },
+    const lesson = await prisma.$transaction(async (tx) => {
+      const current = await tx.availability.findFirst({
+        where: { id: availabilityId, isAvailable: true },
+        include: { teacher: true },
       });
-      if (!student) {
-        return NextResponse.json(
-          { error: "Student email not found. Student must have an account." },
-          { status: 400 }
-        );
-      }
-      studentId = student.id;
-      if (student.studentProfile) {
-        await prisma.studentProfile.update({
-          where: { userId: student.id },
-          data: { parentId: user.id },
-        });
-      } else {
-        await prisma.studentProfile.upsert({
-          where: { userId: student.id },
-          create: { userId: student.id, parentId: user.id },
-          update: { parentId: user.id },
-        });
-      }
-    }
-
-    const [lesson] = await prisma.$transaction([
-      prisma.lesson.create({
+      if (!current) return null;
+      const created = await tx.lesson.create({
         data: {
-          teacherId: slot.teacherId,
-          studentId,
-          date: slot.date,
-          startTime: slot.startTime,
-          endTime: slot.endTime,
+          teacherId: current.teacherId,
+          studentId: user.id,
+          date: current.date,
+          startTime: current.startTime,
+          endTime: current.endTime,
           status: "scheduled",
-          questionFromStudent: questionFromStudent || undefined,
         },
-        include: {
-          teacher: true,
-          student: true,
-        },
-      }),
-      prisma.availability.delete({ where: { id: slot.id } }),
-    ]);
+        include: { teacher: true, student: true },
+      });
+      await tx.availability.delete({ where: { id: current.id } });
+      return created;
+    });
+
+    if (!lesson) {
+      return NextResponse.json(
+        { error: SLOT_TAKEN_ERROR },
+        { status: 409 }
+      );
+    }
 
     const dateStr = lesson.date.toISOString().slice(0, 10);
     const timeRange = `${lesson.startTime}–${lesson.endTime}`;
     const teacherName = lesson.teacher.name || lesson.teacher.email;
-    const studentName = fullName || lesson.student.name || lesson.student.email;
+    const studentName = lesson.student.name || lesson.student.email || lesson.student.email;
 
-    const adminUsers = await prisma.user.findMany({
-      where: { role: "admin" },
-      select: { email: true },
-    });
-    const toEmails = [
-      lesson.teacher.email,
-      lesson.student.email,
-      ...adminUsers.map((a) => a.email),
-    ];
-    if (user.role === "parent" && email && !toEmails.includes(email)) {
-      toEmails.push(email);
+    try {
+      await sendBookingConfirmation({
+        to: [lesson.teacher.email, lesson.student.email],
+        studentName: studentName || "תלמיד",
+        teacherName,
+        date: dateStr,
+        timeRange,
+      });
+    } catch (emailErr) {
+      console.error("[lessons/book] Email send failed:", emailErr);
     }
-    const uniqueTo = Array.from(new Set(toEmails));
-
-    await sendBookingConfirmation({
-      to: uniqueTo,
-      studentName,
-      teacherName,
-      date: dateStr,
-      timeRange,
-    });
 
     return NextResponse.json({
       id: lesson.id,
@@ -117,8 +84,12 @@ export async function POST(req: Request) {
       teacher: { id: lesson.teacher.id, name: teacherName, email: lesson.teacher.email },
     });
   } catch (e) {
+    console.error("[lessons/book] Booking failed:", e);
+    const message = process.env.NODE_ENV === "development" && e instanceof Error
+      ? e.message
+      : "שגיאה בקביעת השיעור";
     return NextResponse.json(
-      { error: "Failed to book lesson" },
+      { error: message },
       { status: 500 }
     );
   }

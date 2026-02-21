@@ -3,11 +3,18 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { BackLink } from "@/components/design/BackLink";
 
 function VerifyForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const emailParam = searchParams.get("email") ?? "";
+  const roleParam = searchParams.get("role");
+  const role =
+    roleParam === "student" || roleParam === "teacher" || roleParam === "admin"
+      ? roleParam
+      : "student";
+  const phoneParam = searchParams.get("phone") ?? "";
   const [email, setEmail] = useState(emailParam);
   const [code, setCode] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
@@ -24,19 +31,22 @@ function VerifyForm() {
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
           code: code.replace(/\D/g, ""),
+          role,
+          phone: phoneParam.trim() || undefined,
         }),
       });
       const data = await res.json();
       if (!res.ok) {
         setStatus("error");
-        setMessage(data.error || "Verification failed");
+        setMessage(data.error || "אימות נכשל");
         return;
       }
-      router.replace(`/${data.role}`);
+      const redirect = data.redirect ?? "/";
+      router.replace(redirect);
       router.refresh();
     } catch {
       setStatus("error");
-      setMessage("Network error");
+      setMessage("שגיאת רשת");
     }
   }
 
@@ -44,14 +54,14 @@ function VerifyForm() {
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
       <div className="w-full max-w-sm">
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 space-y-6">
-          <div className="text-center">
-            <h1 className="text-xl font-semibold text-gray-900">Enter your code</h1>
-            <p className="text-sm text-gray-500 mt-1">We sent a 6-digit code to your email</p>
+          <div className="text-center" dir="rtl">
+            <h1 className="text-xl font-semibold text-[var(--color-text)]">הזנת קוד</h1>
+            <p className="text-sm text-[var(--color-text-muted)] mt-1">נשלח קוד בן 6 ספרות לאימייל שלך</p>
           </div>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" dir="rtl">
             <div>
-              <label htmlFor="verify-email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email
+              <label htmlFor="verify-email" className="block text-sm font-medium text-[var(--color-text)] mb-1">
+                אימייל
               </label>
               <input
                 id="verify-email"
@@ -60,13 +70,13 @@ function VerifyForm() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-input)] focus:ring-2 focus:ring-[var(--color-primary)]"
                 disabled={status === "loading"}
               />
             </div>
             <div>
-              <label htmlFor="verify-code" className="block text-sm font-medium text-gray-700 mb-1">
-                Code
+              <label htmlFor="verify-code" className="block text-sm font-medium text-[var(--color-text)] mb-1">
+                קוד
               </label>
               <input
                 id="verify-code"
@@ -76,7 +86,7 @@ function VerifyForm() {
                 value={code}
                 onChange={(e) => setCode(e.target.value.slice(0, 6))}
                 maxLength={6}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-center text-lg tracking-widest focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-input)] text-center text-lg tracking-widest focus:ring-2 focus:ring-[var(--color-primary)]"
                 disabled={status === "loading"}
               />
             </div>
@@ -84,15 +94,13 @@ function VerifyForm() {
             <button
               type="submit"
               disabled={status === "loading" || code.length !== 6}
-              className="w-full py-2.5 rounded-md bg-gray-900 text-white font-medium hover:bg-gray-800 disabled:opacity-50"
+              className="w-full py-2.5 rounded-[var(--radius-input)] bg-[var(--color-primary)] text-white font-medium hover:opacity-90 disabled:opacity-50"
             >
-              {status === "loading" ? "Verifying…" : "Verify"}
+              {status === "loading" ? "מאמת…" : "אימות"}
             </button>
           </form>
-          <p className="text-center text-sm text-gray-500">
-            <Link href="/login" className="text-gray-600 hover:underline">
-              Back to login
-            </Link>
+          <p className="text-center text-sm text-[var(--color-text-muted)]">
+            <BackLink href="/login" label="חזרה להתחברות" />
           </p>
         </div>
       </div>

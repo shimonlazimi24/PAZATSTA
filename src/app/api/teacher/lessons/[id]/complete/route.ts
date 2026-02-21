@@ -75,7 +75,7 @@ export async function POST(
       }),
       prisma.lesson.update({
         where: { id: lesson.id },
-        data: { status: "completed" },
+        data: { status: "completed", reportCompleted: true },
       }),
     ]);
 

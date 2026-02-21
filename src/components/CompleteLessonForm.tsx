@@ -17,7 +17,7 @@ export function CompleteLessonForm({ lessonId, onDone, onCancel }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!summaryText.trim() && !homeworkText.trim()) {
-      setError("Add summary or homework.");
+      setError("נא למלא סיכום או משימות בית.");
       return;
     }
     setStatus("loading");
@@ -54,26 +54,26 @@ export function CompleteLessonForm({ lessonId, onDone, onCancel }: Props) {
     >
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Summary
+          סיכום השיעור
         </label>
         <textarea
           value={summaryText}
           onChange={(e) => setSummaryText(e.target.value)}
           rows={3}
           className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-          placeholder="What was covered in the lesson?"
+          placeholder="מה נלמד בשיעור?"
         />
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Homework
+          משימות בית
         </label>
         <textarea
           value={homeworkText}
           onChange={(e) => setHomeworkText(e.target.value)}
           rows={2}
           className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-          placeholder="Practice assignments"
+          placeholder="תרגול והכנה לשיעור הבא"
         />
       </div>
       {error && <p className="text-sm text-red-600">{error}</p>}
@@ -83,14 +83,14 @@ export function CompleteLessonForm({ lessonId, onDone, onCancel }: Props) {
           disabled={status === "loading"}
           className="px-3 py-1.5 bg-gray-900 text-white text-sm rounded disabled:opacity-50"
         >
-          {status === "loading" ? "Submitting…" : "Submit & send PDF"}
+          {status === "loading" ? "שולח…" : "שליחה ושליחת PDF"}
         </button>
         <button
           type="button"
           onClick={onCancel}
           className="px-3 py-1.5 border border-gray-300 text-sm rounded"
         >
-          Cancel
+          ביטול
         </button>
       </div>
     </form>

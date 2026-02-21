@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getUserFromSession } from "@/lib/auth";
+import { canAccessAdmin } from "@/lib/admin";
 import { ROLES } from "@/types";
 
 const INVITE_EXPIRY_DAYS = 7;
 
 export async function POST(req: Request) {
   const user = await getUserFromSession();
-  if (!user || user.role !== "admin") {
+  if (!user || !canAccessAdmin(user)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   try {

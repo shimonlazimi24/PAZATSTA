@@ -1,14 +1,43 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { DateSelector } from "@/components/design/DateSelector";
+import { TimeSlots } from "@/components/design/TimeSlots";
+import { cn } from "@/lib/utils";
 
-type Slot = {
+type ApiSlot = {
   id: string;
   date: string;
   startTime: string;
   endTime: string;
   isAvailable: boolean;
 };
+
+const SLOT_DURATION = 45; // minutes
+const START_HOUR = 8;
+const END_HOUR = 20;
+
+function timeToMinutes(t: string): number {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function minutesToTime(min: number): string {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+}
+
+function getWeekDates(): string[] {
+  const d = new Date();
+  const out: string[] = [];
+  for (let i = 0; i < 7; i++) {
+    const x = new Date(d);
+    x.setDate(d.getDate() + i);
+    out.push(x.toISOString().slice(0, 10));
+  }
+  return out;
+}
 
 function getWeekRange(date: Date): { start: string; end: string } {
   const d = new Date(date);
@@ -24,138 +53,196 @@ function getWeekRange(date: Date): { start: string; end: string } {
   };
 }
 
-export function TeacherAvailability() {
-  const [weekStart, setWeekStart] = useState(() => {
-    const d = new Date();
-    return d.toISOString().slice(0, 10);
-  });
-  const [slots, setSlots] = useState<Slot[]>([]);
+function formatDateLabel(dateStr: string): string {
+  const d = new Date(dateStr + "T12:00:00");
+  return d.toLocaleDateString("he-IL", { day: "numeric", month: "short" });
+}
+
+function formatWeekday(dateStr: string): string {
+  const d = new Date(dateStr + "T12:00:00");
+  return d.toLocaleDateString("he-IL", { weekday: "short" });
+}
+
+function generateTimeOptionsForDay(): { id: string; startTime: string; endTime: string }[] {
+  const options: { id: string; startTime: string; endTime: string; available: boolean }[] = [];
+  let idx = 0;
+  for (let h = START_HOUR; h < END_HOUR; h++) {
+    for (let m = 0; m < 60; m += SLOT_DURATION) {
+      const start = minutesToTime(h * 60 + m);
+      const endMin = h * 60 + m + SLOT_DURATION;
+      const end = minutesToTime(endMin);
+      if (endMin <= END_HOUR * 60) {
+        options.push({
+          id: `opt-${idx++}`,
+          startTime: start,
+          endTime: end,
+          available: true,
+        });
+      }
+    }
+  }
+  return options;
+}
+
+const TIME_OPTIONS = generateTimeOptionsForDay();
+
+type TeacherAvailabilityProps = {
+  onSlotsChange?: (slots: ApiSlot[]) => void;
+};
+
+export function TeacherAvailability({ onSlotsChange }: TeacherAvailabilityProps = {}) {
+  const weekDates = getWeekDates();
+  const dateOptions = weekDates.map((date) => ({
+    date,
+    label: formatDateLabel(date),
+    weekday: formatWeekday(date),
+  }));
+
+  const [selectedDate, setSelectedDate] = useState<string | null>(weekDates[0]);
+  const [slots, setSlots] = useState<ApiSlot[]>([]);
   const [loading, setLoading] = useState(true);
-  const [newDate, setNewDate] = useState("");
-  const [newStart, setNewStart] = useState("09:00");
-  const [newEnd, setNewEnd] = useState("09:45");
-  const [submitting, setSubmitting] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [toggling, setToggling] = useState<string | null>(null);
 
   const load = useCallback(() => {
-    const { start, end } = getWeekRange(new Date(weekStart));
+    if (!selectedDate) return;
+    const start = weekDates[0];
+    const end = weekDates[weekDates.length - 1];
     setLoading(true);
+    setLoadError(null);
     fetch(`/api/teacher/availability?start=${start}&end=${end}`)
-      .then((r) => (r.ok ? r.json() : []))
-      .then(setSlots)
+      .then(async (r) => {
+        if (!r.ok) {
+          const data = await r.json().catch(() => ({}));
+          setLoadError(data.error || "לא ניתן לטעון זמינות");
+          return [];
+        }
+        return r.json();
+      })
+      .then((data) => {
+        setSlots(data);
+        onSlotsChange?.(data);
+      })
       .finally(() => setLoading(false));
-  }, [weekStart]);
+  }, [selectedDate]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    const start = weekDates[0];
+    const end = weekDates[weekDates.length - 1];
+    setLoading(true);
+    setLoadError(null);
+    fetch(`/api/teacher/availability?start=${start}&end=${end}`)
+      .then(async (r) => {
+        if (!r.ok) {
+          const data = await r.json().catch(() => ({}));
+          setLoadError(data.error || "לא ניתן לטעון זמינות");
+          return [];
+        }
+        return r.json();
+      })
+      .then((data) => {
+        setSlots(data);
+        onSlotsChange?.(data);
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
-  async function addSlot(e: React.FormEvent) {
-    e.preventDefault();
-    if (!newDate || !newStart || !newEnd) return;
-    setSubmitting(true);
+  const existingForDate = selectedDate
+    ? slots.filter((s) => s.date === selectedDate)
+    : [];
+  const slotOptions = TIME_OPTIONS.map((opt) => {
+    const existing = existingForDate.find(
+      (s) => s.startTime === opt.startTime && s.endTime === opt.endTime
+    );
+    return {
+      id: existing?.id ?? opt.id,
+      startTime: opt.startTime,
+      endTime: opt.endTime,
+      available: true,
+      date: selectedDate ?? "",
+      isAdded: !!existing,
+    };
+  });
+
+  async function toggleSlot(opt: (typeof slotOptions)[0]) {
+    if (!selectedDate || toggling) return;
+    setToggling(opt.id);
     try {
-      await fetch("/api/teacher/availability", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          date: newDate,
-          startTime: newStart,
-          endTime: newEnd,
-        }),
-      });
-      setNewDate("");
-      load();
+      if (opt.isAdded && opt.id && !opt.id.startsWith("opt-")) {
+        await fetch(`/api/teacher/availability?id=${opt.id}`, { method: "DELETE" });
+      } else {
+        await fetch("/api/teacher/availability", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            date: selectedDate,
+            startTime: opt.startTime,
+            endTime: opt.endTime,
+          }),
+        });
+      }
+      const start = weekDates[0];
+      const end = weekDates[weekDates.length - 1];
+      const res = await fetch(`/api/teacher/availability?start=${start}&end=${end}`);
+      const data = res.ok ? await res.json() : [];
+      setSlots(data);
+      onSlotsChange?.(data);
     } finally {
-      setSubmitting(false);
+      setToggling(null);
     }
   }
 
-  async function removeSlot(id: string) {
-    await fetch(`/api/teacher/availability?id=${id}`, { method: "DELETE" });
-    load();
-  }
-
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-4 flex-wrap">
-        <label className="text-sm font-medium text-gray-700">Week starting</label>
-        <input
-          type="date"
-          value={weekStart}
-          onChange={(e) => setWeekStart(e.target.value)}
-          className="px-3 py-1.5 border border-gray-300 rounded-md"
+    <div className="space-y-6">
+      {loadError && (
+        <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-[var(--radius-input)] px-3 py-2 text-right">
+          {loadError}
+        </p>
+      )}
+      <p className="text-sm text-[var(--color-text-muted)] text-right">
+        בחרו תאריך ואז סמנו את משבצות השעה שבהן אתם פנויים. לחיצה מוסיפה/מסירה.
+      </p>
+      <div>
+        <p className="text-[var(--color-text-muted)] text-right mb-2">בחרו תאריך</p>
+        <DateSelector
+          options={dateOptions}
+          selectedDate={selectedDate}
+          onSelect={setSelectedDate}
         />
       </div>
-      <form onSubmit={addSlot} className="flex flex-wrap items-end gap-2 p-3 bg-gray-50 rounded-lg">
+      {selectedDate && (
         <div>
-          <label className="block text-xs text-gray-500">Date</label>
-          <input
-            type="date"
-            value={newDate}
-            onChange={(e) => setNewDate(e.target.value)}
-            required
-            className="px-2 py-1.5 border rounded text-sm"
-          />
-        </div>
-        <div>
-          <label className="block text-xs text-gray-500">Start</label>
-          <input
-            type="time"
-            value={newStart}
-            onChange={(e) => setNewStart(e.target.value)}
-            className="px-2 py-1.5 border rounded text-sm"
-          />
-        </div>
-        <div>
-          <label className="block text-xs text-gray-500">End</label>
-          <input
-            type="time"
-            value={newEnd}
-            onChange={(e) => setNewEnd(e.target.value)}
-            className="px-2 py-1.5 border rounded text-sm"
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={submitting}
-          className="px-3 py-1.5 bg-gray-900 text-white text-sm rounded disabled:opacity-50"
-        >
-          Add slot
-        </button>
-      </form>
-      {loading ? (
-        <p className="text-sm text-gray-500">Loading…</p>
-      ) : (
-        <ul className="border border-gray-200 rounded-lg divide-y divide-gray-100">
-          {slots.length === 0 ? (
-            <li className="p-4 text-sm text-gray-500 text-center">
-              No slots this week. Add slots above.
-            </li>
+          <p className="text-[var(--color-text-muted)] text-right mb-2 mt-6">בחרו שעות פנויות</p>
+          {loading ? (
+            <p className="text-sm text-[var(--color-text-muted)]">טוען…</p>
           ) : (
-            slots.map((slot) => (
-              <li
-                key={slot.id}
-                className="px-4 py-2 flex justify-between items-center"
-              >
-                <span className="text-sm">
-                  {new Date(slot.date + "T12:00:00").toLocaleDateString("en-US", {
-                    weekday: "short",
-                    month: "short",
-                    day: "numeric",
-                  })}{" "}
-                  {slot.startTime}–{slot.endTime}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => removeSlot(slot.id)}
-                  className="text-red-600 hover:underline text-xs"
-                >
-                  Remove
-                </button>
-              </li>
-            ))
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+              {slotOptions.map((opt) => {
+                const isSelected = opt.isAdded;
+                const busy = toggling === opt.id;
+                return (
+                  <button
+                    key={`${selectedDate}-${opt.startTime}-${opt.endTime}`}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => toggleSlot(opt)}
+                    className={cn(
+                      "rounded-[var(--radius-input)] border px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2",
+                      isSelected &&
+                        "border-[var(--color-primary)] bg-[var(--color-primary)] text-white",
+                      !isSelected &&
+                        "border-[var(--color-border)] bg-white text-[var(--color-text)] hover:border-[var(--color-primary)]",
+                      busy && "opacity-50 cursor-wait"
+                    )}
+                  >
+                    {opt.startTime}–{opt.endTime}
+                    {isSelected && <span className="mr-1 text-xs opacity-90">פנוי</span>}
+                  </button>
+                );
+              })}
+            </div>
           )}
-        </ul>
+        </div>
       )}
     </div>
   );

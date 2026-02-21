@@ -2,22 +2,30 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 const SESSION_COOKIE = "session";
-const PUBLIC_PATHS = ["/login", "/verify", "/", "/book", "/teacher"];
-const PUBLIC_PREFIX = "/api/auth";
-const CRON_PREFIX = "/api/cron";
+const PUBLIC_PATHS = ["/", "/login", "/verify", "/welcome"];
+const PUBLIC_PREFIXES = ["/api/auth", "/api/cron", "/login/"];
+
+const STUDENT_PREFIX = "/student";
+const TEACHER_PREFIX = "/teacher";
+const ADMIN_PREFIX = "/admin";
+
+function isPublic(path: string): boolean {
+  if (PUBLIC_PATHS.includes(path)) return true;
+  return PUBLIC_PREFIXES.some((p) => path.startsWith(p));
+}
 
 export function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
-  if (PUBLIC_PATHS.some((p) => path === p || path.startsWith(p + "/"))) {
+
+  if (isPublic(path)) {
     return NextResponse.next();
   }
-  if (path.startsWith(PUBLIC_PREFIX) || path.startsWith(CRON_PREFIX)) {
-    return NextResponse.next();
-  }
+
   const session = req.cookies.get(SESSION_COOKIE)?.value;
   if (!session) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
+
   return NextResponse.next();
 }
 

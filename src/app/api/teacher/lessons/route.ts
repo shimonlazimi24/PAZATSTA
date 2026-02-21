@@ -12,6 +12,7 @@ export async function GET(req: Request) {
   const year = searchParams.get("year");
   const upcoming = searchParams.get("upcoming") === "true";
 
+  const past = searchParams.get("past") === "true";
   const where: { teacherId: string; date?: { gte?: Date; lt?: Date } } = {
     teacherId: user.id,
   };
@@ -25,6 +26,10 @@ export async function GET(req: Request) {
     }
   } else if (upcoming) {
     where.date = { gte: new Date() };
+  } else if (past) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    where.date = { lt: today };
   }
 
   const lessons = await prisma.lesson.findMany({
@@ -33,7 +38,10 @@ export async function GET(req: Request) {
       student: { select: { id: true, email: true, name: true } },
       summary: true,
     },
-    orderBy: [{ date: "asc" }, { startTime: "asc" }],
+    orderBy:
+      past
+        ? [{ date: "desc" }, { startTime: "desc" }]
+        : [{ date: "asc" }, { startTime: "asc" }],
   });
   return NextResponse.json(
     lessons.map((l) => ({

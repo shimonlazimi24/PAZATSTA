@@ -28,6 +28,9 @@ yarn-error.log*
 *.swp
 *.swo
 
+# Nested repo (exclude from main project)
+PAZATSTA/
+
 # OS
 .DS_Store
 Thumbs.db

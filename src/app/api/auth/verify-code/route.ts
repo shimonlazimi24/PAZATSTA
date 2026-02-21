@@ -16,9 +16,15 @@ export async function POST(req: Request) {
     const email =
       typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
     const code = typeof body.code === "string" ? body.code.replace(/\D/g, "") : "";
+    const roleParam = body.role;
+    const role =
+      roleParam === "student" || roleParam === "teacher" || roleParam === "admin"
+        ? roleParam
+        : "student";
+    const phone = typeof body.phone === "string" ? body.phone.trim() : "";
     if (!email || code.length !== 6) {
       return NextResponse.json(
-        { error: "Email and 6-digit code required" },
+        { error: "נא להזין אימייל וקוד בן 6 ספרות" },
         { status: 400 }
       );
     }
@@ -29,21 +35,21 @@ export async function POST(req: Request) {
     });
     if (!loginCode) {
       return NextResponse.json(
-        { error: "No code requested or expired. Request a new code." },
+        { error: "לא נשלח קוד או שפג תוקף. נא לבקש קוד חדש." },
         { status: 400 }
       );
     }
     if (loginCode.expiresAt < new Date()) {
       await prisma.loginCode.delete({ where: { id: loginCode.id } });
       return NextResponse.json(
-        { error: "Code expired. Request a new code." },
+        { error: "פג תוקף הקוד. נא לבקש קוד חדש." },
         { status: 400 }
       );
     }
     if (loginCode.attempts >= MAX_ATTEMPTS) {
       await prisma.loginCode.delete({ where: { id: loginCode.id } });
       return NextResponse.json(
-        { error: "Too many attempts. Request a new code." },
+        { error: "ניסיונות רבים מדי. נא לבקש קוד חדש." },
         { status: 400 }
       );
     }
@@ -57,44 +63,41 @@ export async function POST(req: Request) {
       if (newAttempts >= MAX_ATTEMPTS) {
         await prisma.loginCode.delete({ where: { id: loginCode.id } });
       }
-      return NextResponse.json({ error: "Invalid code" }, { status: 400 });
+      return NextResponse.json({ error: "קוד שגוי" }, { status: 400 });
     }
 
     let user = await prisma.user.findUnique({ where: { email } });
-    if (!user) {
-      const invite = await prisma.invite.findFirst({
-        where: {
-          email,
-          usedAt: null,
-          expiresAt: { gt: new Date() },
-        },
-      });
-      // Only teachers (and admin/parent) need an invite. Students can always sign up (no invite = create as student).
-      const newRole = invite ? invite.role : "student";
-      user = await prisma.user.create({
-        data: {
-          email,
-          role: newRole,
-        },
-      });
-      if (invite) {
-        await prisma.invite.update({
-          where: { id: invite.id },
-          data: { usedAt: new Date() },
-        });
+
+    if (role === "teacher" || role === "admin") {
+      if (!user || user.role !== role) {
+        return NextResponse.json(
+          {
+            error:
+              role === "teacher"
+                ? "חשבון מורה לא קיים עבור אימייל זה. נא לפנות לאדמין להגדרת מורה."
+                : "חשבון אדמין לא קיים עבור אימייל זה.",
+          },
+          { status: 403 }
+        );
       }
-      if (user.role === "teacher") {
-        await prisma.teacherProfile.upsert({
-          where: { userId: user.id },
-          create: { userId: user.id },
-          update: {},
+    } else {
+      if (!user) {
+        user = await prisma.user.create({
+          data: {
+            email,
+            role: "student",
+            ...(phone ? { phone } : {}),
+          },
         });
-      }
-      if (user.role === "student") {
         await prisma.studentProfile.upsert({
           where: { userId: user.id },
           create: { userId: user.id },
           update: {},
+        });
+      } else if (phone) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { phone },
         });
       }
     }
@@ -102,10 +105,15 @@ export async function POST(req: Request) {
     await prisma.loginCode.delete({ where: { id: loginCode.id } });
     const sessionId = await createSession(user.id);
     const cookieCfg = getSessionCookieConfig();
-    const res = NextResponse.json({
-      ok: true,
-      role: user.role,
-    });
+    const redirect =
+      user.role === "student"
+        ? "/student/book"
+        : user.role === "teacher"
+          ? "/teacher/availability"
+          : user.role === "admin"
+            ? "/admin"
+            : "/";
+    const res = NextResponse.json({ ok: true, role: user.role, redirect });
     res.cookies.set(SESSION_COOKIE, sign(sessionId), {
       ...cookieCfg,
       maxAge: cookieCfg.maxAge,

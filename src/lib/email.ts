@@ -12,17 +12,26 @@ function getResend() {
 
 const from = () => process.env.RESEND_FROM ?? "onboarding@resend.dev";
 
+/** Build login OTP email content (for preview or send). */
+export function getLoginCodeContent(code: string) {
+  return {
+    subject: "קוד התחברות – פאזה",
+    text: `קוד ההתחברות שלך: ${code}\nתוקף: 10 דקות.`,
+  };
+}
+
 export async function sendLoginCode(email: string, code: string): Promise<void> {
   if (isDev && noRealKey()) {
     console.log("[DEV] Login OTP for", email, "->", code);
     return;
   }
+  const { subject, text } = getLoginCodeContent(code);
   try {
     await getResend().emails.send({
       from: from(),
       to: email,
-      subject: "Your login code",
-      text: `Your login code is ${code}. Expires in 10 minutes.`,
+      subject,
+      text,
     });
   } catch (err) {
     if (isDev) {
@@ -33,6 +42,19 @@ export async function sendLoginCode(email: string, code: string): Promise<void> 
   }
 }
 
+/** Build booking confirmation email content (for preview or send). */
+export function getBookingConfirmationContent(params: {
+  studentName: string;
+  teacherName: string;
+  date: string;
+  timeRange: string;
+}) {
+  return {
+    subject: "שיעור נקבע – פאזה",
+    text: `שיעור נקבע: ${params.studentName} עם ${params.teacherName} בתאריך ${params.date} בשעה ${params.timeRange}.`,
+  };
+}
+
 export async function sendBookingConfirmation(params: {
   to: string[];
   studentName: string;
@@ -40,7 +62,7 @@ export async function sendBookingConfirmation(params: {
   date: string;
   timeRange: string;
 }): Promise<void> {
-  const text = `Lesson booked: ${params.studentName} with ${params.teacherName} on ${params.date} at ${params.timeRange}.`;
+  const { subject, text } = getBookingConfirmationContent(params);
   if (isDev && noRealKey()) {
     console.log("[DEV] Booking confirmation to", params.to, text);
     return;
@@ -50,10 +72,24 @@ export async function sendBookingConfirmation(params: {
     await resend.emails.send({
       from: from(),
       to: email,
-      subject: "Lesson booked",
+      subject,
       text,
     });
   }
+}
+
+/** Build lesson-completed email content (for preview or send). */
+export function getLessonCompletedContent(params: {
+  studentName: string;
+  teacherName: string;
+  date: string;
+  summaryText: string;
+  homeworkText: string;
+}) {
+  return {
+    subject: "Lesson summary",
+    text: `Lesson completed: ${params.studentName} with ${params.teacherName} on ${params.date}.\n\nSummary: ${params.summaryText}\n\nHomework: ${params.homeworkText}`,
+  };
 }
 
 export async function sendLessonCompleted(params: {
@@ -66,7 +102,7 @@ export async function sendLessonCompleted(params: {
   pdfBuffer?: Buffer;
   pdfFilename?: string;
 }): Promise<void> {
-  const text = `Lesson completed: ${params.studentName} with ${params.teacherName} on ${params.date}.\n\nSummary: ${params.summaryText}\n\nHomework: ${params.homeworkText}`;
+  const { subject, text } = getLessonCompletedContent(params);
   if (isDev && noRealKey()) {
     console.log("[DEV] Lesson completed email to", params.to, params.summaryText?.slice(0, 50));
     return;
@@ -79,11 +115,23 @@ export async function sendLessonCompleted(params: {
     await resend.emails.send({
       from: from(),
       to: email,
-      subject: "Lesson summary",
+      subject,
       text,
       attachments: attachment,
     });
   }
+}
+
+/** Build follow-up reminder email content (for preview or send). */
+export function getFollowUpReminderContent(params: {
+  studentName: string;
+  teacherName: string;
+  lastLessonDate: string;
+}) {
+  return {
+    subject: "Schedule your next lesson",
+    text: `Reminder: It has been over 7 days since the last lesson (${params.lastLessonDate}) for ${params.studentName} with ${params.teacherName}. Consider scheduling the next lesson.`,
+  };
 }
 
 export async function sendFollowUpReminder(params: {
@@ -92,7 +140,7 @@ export async function sendFollowUpReminder(params: {
   teacherName: string;
   lastLessonDate: string;
 }): Promise<void> {
-  const text = `Reminder: It has been over 7 days since the last lesson (${params.lastLessonDate}) for ${params.studentName} with ${params.teacherName}. Consider scheduling the next lesson.`;
+  const { subject, text } = getFollowUpReminderContent(params);
   if (isDev && noRealKey()) {
     console.log("[DEV] Follow-up reminder to", params.to);
     return;
@@ -102,8 +150,63 @@ export async function sendFollowUpReminder(params: {
     await resend.emails.send({
       from: from(),
       to: email,
-      subject: "Schedule your next lesson",
+      subject,
       text,
     });
   }
+}
+
+/** Build admin summary email content (for preview or send). */
+export function getAdminSummaryContent(params: {
+  startDate: string;
+  endDate: string;
+  lessons: {
+    date: string;
+    startTime: string;
+    endTime: string;
+    teacherName: string;
+    studentName: string;
+    summaryText: string;
+    homeworkText: string;
+  }[];
+}) {
+  const lines = [
+    `סיכום שיעורים שהושלמו (${params.startDate} – ${params.endDate})`,
+    "",
+    ...params.lessons.map(
+      (l) =>
+        `${l.date} ${l.startTime}–${l.endTime} | ${l.teacherName} ↔ ${l.studentName}\nסיכום: ${l.summaryText || "—"}\nמשימות: ${l.homeworkText || "—"}`
+    ),
+  ];
+  return {
+    subject: `סיכום שיעורים ${params.startDate} – ${params.endDate}`,
+    text: lines.join("\n"),
+  };
+}
+
+export async function sendAdminSummary(params: {
+  to: string;
+  startDate: string;
+  endDate: string;
+  lessons: {
+    date: string;
+    startTime: string;
+    endTime: string;
+    teacherName: string;
+    studentName: string;
+    summaryText: string;
+    homeworkText: string;
+  }[];
+}): Promise<void> {
+  const { subject, text } = getAdminSummaryContent(params);
+  if (isDev && noRealKey()) {
+    console.log("[DEV] Admin summary to", params.to, params.lessons.length, "lessons");
+    return;
+  }
+  await getResend().emails.send({
+    from: from(),
+    to: params.to,
+    subject,
+    text,
+  });
 }
