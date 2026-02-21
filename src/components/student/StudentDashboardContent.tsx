@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { CalendarPlus } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
+import { addToCalendar } from "@/lib/calendar";
 
 type Lesson = {
   id: string;
@@ -27,7 +29,7 @@ export function StudentDashboardContent() {
   const [past, setPast] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  function fetchLessons() {
     Promise.all([
       fetch("/api/student/lessons?upcoming=true").then((r) => (r.ok ? r.json() : [])),
       fetch("/api/student/lessons?past=true").then((r) => (r.ok ? r.json() : [])),
@@ -37,6 +39,18 @@ export function StudentDashboardContent() {
         setPast(p);
       })
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    fetchLessons();
+  }, []);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") fetchLessons();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, []);
 
   return (
@@ -63,24 +77,45 @@ export function StudentDashboardContent() {
             </p>
           ) : (
             <ul className="space-y-2">
-              {upcoming.map((l) => (
-                <li
-                  key={l.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white px-4 py-3"
-                >
-                  <div>
-                    <p className="font-medium text-[var(--color-text)]">
-                      {l.teacher.name || l.teacher.email}
-                    </p>
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                      {formatDate(l.date)} {l.startTime}–{l.endTime}
-                    </p>
-                  </div>
-                  <span className="rounded-full bg-[var(--color-primary)]/15 px-2.5 py-0.5 text-xs font-medium text-[var(--color-primary)]">
-                    מתוזמן
-                  </span>
-                </li>
-              ))}
+              {upcoming.map((l) => {
+                const teacherLabel = l.teacher.name || l.teacher.email;
+                const calendarTitle = `שיעור פאזה (${teacherLabel})`;
+                return (
+                  <li
+                    key={l.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white px-4 py-3"
+                  >
+                    <div>
+                      <p className="font-medium text-[var(--color-text)]">
+                        {teacherLabel}
+                      </p>
+                      <p className="text-sm text-[var(--color-text-muted)]">
+                        {formatDate(l.date)} {l.startTime}–{l.endTime}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          addToCalendar({
+                            date: l.date,
+                            startTime: l.startTime,
+                            endTime: l.endTime,
+                            title: calendarTitle,
+                          })
+                        }
+                        className="inline-flex items-center gap-1.5 rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs font-medium text-[var(--color-text)] hover:bg-[var(--color-bg-muted)]"
+                      >
+                        <CalendarPlus className="h-3.5 w-3.5" aria-hidden />
+                        הוסף ללוח השנה
+                      </button>
+                      <span className="rounded-full bg-[var(--color-primary)]/15 px-2.5 py-0.5 text-xs font-medium text-[var(--color-primary)]">
+                        מתוזמן
+                      </span>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>

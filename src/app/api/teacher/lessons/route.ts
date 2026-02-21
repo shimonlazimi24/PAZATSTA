@@ -13,6 +13,9 @@ export async function GET(req: Request) {
   const upcoming = searchParams.get("upcoming") === "true";
 
   const past = searchParams.get("past") === "true";
+  const now = new Date();
+  const startOfTodayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
+
   const where: { teacherId: string; date?: { gte?: Date; lt?: Date } } = {
     teacherId: user.id,
   };
@@ -25,11 +28,9 @@ export async function GET(req: Request) {
       where.date = { gte: start, lt: end };
     }
   } else if (upcoming) {
-    where.date = { gte: new Date() };
+    where.date = { gte: startOfTodayUtc };
   } else if (past) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    where.date = { lt: today };
+    where.date = { lt: startOfTodayUtc };
   }
 
   const lessons = await prisma.lesson.findMany({

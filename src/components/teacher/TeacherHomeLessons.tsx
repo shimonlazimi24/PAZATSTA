@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, CalendarPlus } from "lucide-react";
+import { addToCalendar } from "@/lib/calendar";
 
 type Lesson = {
   id: string;
@@ -144,28 +145,49 @@ export function TeacherHomeLessons() {
             השיעורים הקרובים
           </h3>
           <ul className="divide-y divide-[var(--color-border)] rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white overflow-hidden shadow-[var(--shadow-card)]">
-            {upcoming.map((l) => (
-              <li key={l.id} className="p-4 hover:bg-[var(--color-bg-muted)]/50 transition-colors">
-                <div className="flex flex-wrap justify-between items-start gap-2">
-                  <div>
-                    <p className="font-medium text-[var(--color-text)]">
-                      {formatLessonDate(l.date)} {l.startTime}–{l.endTime}
-                    </p>
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                      {l.student.name || l.student.email}
-                    </p>
-                    {l.questionFromStudent && (
-                      <p className="text-sm text-[var(--color-text)] mt-1">
-                        שאלה: {l.questionFromStudent}
+            {upcoming.map((l) => {
+              const studentLabel = l.student.name || l.student.email;
+              const calendarTitle = `שיעור פאזה – ${studentLabel}`;
+              return (
+                <li key={l.id} className="p-4 hover:bg-[var(--color-bg-muted)]/50 transition-colors">
+                  <div className="flex flex-wrap justify-between items-start gap-2">
+                    <div>
+                      <p className="font-medium text-[var(--color-text)]">
+                        {formatLessonDate(l.date)} {l.startTime}–{l.endTime}
                       </p>
-                    )}
+                      <p className="text-sm text-[var(--color-text-muted)]">
+                        {studentLabel}
+                      </p>
+                      {l.questionFromStudent && (
+                        <p className="text-sm text-[var(--color-text)] mt-1">
+                          שאלה: {l.questionFromStudent}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          addToCalendar({
+                            date: l.date,
+                            startTime: l.startTime,
+                            endTime: l.endTime,
+                            title: calendarTitle,
+                          })
+                        }
+                        className="inline-flex items-center gap-1.5 rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs font-medium text-[var(--color-text)] hover:bg-[var(--color-bg-muted)]"
+                      >
+                        <CalendarPlus className="h-3.5 w-3.5" aria-hidden />
+                        הוסף ללוח השנה
+                      </button>
+                      <span className="rounded-full bg-[var(--color-primary)]/15 px-2.5 py-0.5 text-xs font-medium text-[var(--color-primary)]">
+                        מתוזמן
+                      </span>
+                    </div>
                   </div>
-                  <span className="rounded-full bg-[var(--color-primary)]/15 px-2.5 py-0.5 text-xs font-medium text-[var(--color-primary)]">
-                    מתוזמן
-                  </span>
-                </div>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}
