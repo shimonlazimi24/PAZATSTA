@@ -10,7 +10,15 @@ function getResend() {
   return new Resend(apiKey);
 }
 
-const from = () => process.env.RESEND_FROM ?? "onboarding@resend.dev";
+const RESEND_DEV_FROM = "onboarding@resend.dev";
+const from = () => process.env.RESEND_FROM ?? RESEND_DEV_FROM;
+
+/** Resend SDK returns { data, error } and does not throw. Error has { name, message }. */
+function isDomainNotVerifiedError(error: { name?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  const msg = typeof error.message === "string" ? error.message : "";
+  return /domain|verify|verification|from/i.test(msg);
+}
 
 /** Build login OTP email content (for preview or send). */
 export function getLoginCodeContent(code: string) {
@@ -27,22 +35,36 @@ export async function sendLoginCode(email: string, code: string): Promise<boolea
     return false;
   }
   const { subject, text } = getLoginCodeContent(code);
-  try {
-    await getResend().emails.send({
-      from: from(),
+  const fromAddr = from();
+
+  const result = await getResend().emails.send({
+    from: fromAddr,
+    to: email,
+    subject,
+    text,
+  });
+
+  if (!result.error) return true;
+
+  if (fromAddr !== RESEND_DEV_FROM && isDomainNotVerifiedError(result.error)) {
+    console.warn("[request-code] Domain not verified for", fromAddr, ", retrying with", RESEND_DEV_FROM);
+    const retry = await getResend().emails.send({
+      from: RESEND_DEV_FROM,
       to: email,
       subject,
       text,
     });
-    return true;
-  } catch (err) {
-    console.error("[request-code] Resend failed for", email, "->", err);
-    if (isDev) {
-      console.log("[request-code] Use this OTP for", email, "->", code);
-      return false;
-    }
-    throw err;
+    if (!retry.error) return true;
+    console.error("[request-code] Retry failed for", email, "->", retry.error);
+  } else {
+    console.error("[request-code] Resend failed for", email, "->", result.error);
   }
+
+  if (isDev) {
+    console.log("[request-code] Use this OTP for", email, "->", code);
+    return false;
+  }
+  throw new Error(result.error.message ?? "Failed to send email");
 }
 
 /** Build booking confirmation email content (for preview or send). */
