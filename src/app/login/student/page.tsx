@@ -55,7 +55,7 @@ export default function StudentLoginPage() {
         setMessage(data.error || "כניסה לבדיקה נכשלה");
         return;
       }
-      router.push(role === "teacher" ? "/teacher" : "/book");
+      router.push(role === "teacher" ? "/teacher" : "/student");
       router.refresh();
     } catch {
       setMessage("שגיאת רשת");

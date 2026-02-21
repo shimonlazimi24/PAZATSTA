@@ -27,12 +27,13 @@ export async function POST(req: Request) {
     await sendLoginCode(email, code);
     return NextResponse.json({ ok: true, message: "Code sent" });
   } catch (e) {
-    if (process.env.NODE_ENV !== "production") {
-      console.error("[request-code] Error:", e);
-    }
-    return NextResponse.json(
-      { error: "Failed to send code" },
-      { status: 500 }
-    );
+    const err = e as Error;
+    // Always log server-side so Netlify (or any host) function logs show the cause
+    console.error("[request-code] Error:", err?.message ?? String(e));
+    const message =
+      process.env.NODE_ENV !== "production" && err?.message
+        ? err.message
+        : "Failed to send code";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
