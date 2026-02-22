@@ -17,6 +17,9 @@ function isPublic(path: string): boolean {
 export function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
 
+  if (path === "/welcome") {
+    return NextResponse.redirect(new URL("/book", req.url));
+  }
   if (isPublic(path)) {
     return NextResponse.next();
   }

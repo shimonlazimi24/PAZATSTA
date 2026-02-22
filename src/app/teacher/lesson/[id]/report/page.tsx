@@ -13,7 +13,13 @@ type Lesson = {
   endTime: string;
   status: string;
   reportCompleted?: boolean;
-  student: { name: string | null; email: string };
+  teacher?: { name: string | null; email: string };
+  student: {
+    name: string | null;
+    email: string;
+    screeningType?: string | null;
+    screeningDate?: string | null;
+  };
   summary: {
     summaryText: string;
     homeworkText: string;
@@ -31,18 +37,34 @@ const MOCK_LESSON: Lesson = {
   startTime: "11:00",
   endTime: "11:45",
   status: "completed",
-  student: { name: "מאי גולן", email: "maya@example.com" },
+  teacher: { name: "דני כהן", email: "teacher@test.com" },
+  student: { name: "מאי גולן", email: "maya@example.com", screeningType: "יום המא\"ה - מבחנים פסיכוטכניים", screeningDate: "2025-03-01" },
   summary: null,
 };
 
+const TIP_TAGS = [
+  "ניצול זמן",
+  "הרגעה לפני מבחן",
+  "קריאה מדויקת של השאלה",
+  "סדר פתרון",
+  "תרגול סימולציות",
+  "שינה לפני מיון",
+  "הגעה בזמן",
+  "בגדים נוחים",
+  "מזון/מים",
+  "אחר",
+];
+
 const MOCK_LESSON_DONE: Lesson = {
   ...MOCK_LESSON,
+  teacher: { name: "דני כהן", email: "teacher@test.com" },
+  student: { ...MOCK_LESSON.student, screeningType: "יום המא\"ה - מבחנים פסיכוטכניים", screeningDate: "2025-03-01" },
   summary: {
     summaryText: "עבדנו על חשיבה כמותית ותרגול שאלות מהמא״ה.",
     homeworkText: "תרגול פרק 3 – 20 שאלות.",
     pointsToKeep: "התלמידה מתקדמת יפה בשאלות מילוליות.",
     pointsToImprove: "להתאמן יותר על גאומטריה.",
-    tips: "לנצל את הזמן בפרק הכמותי.",
+    tips: "ניצול זמן, תרגול סימולציות",
     recommendations: "להמשיך עם תרגול מלא סימולציה.",
     pdfUrl: null,
   },
@@ -83,6 +105,19 @@ export default function TeacherLessonReportPage() {
       .catch(() => setLesson(null))
       .finally(() => setLoading(false));
   }, [id, isDemo, isDemoDone]);
+
+  const tipsSet = new Set(
+    tips
+      .split(/[,،]/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+  );
+  function toggleTip(tag: string) {
+    const next = new Set(tipsSet);
+    if (next.has(tag)) next.delete(tag);
+    else next.add(tag);
+    setTips(Array.from(next).join(", "));
+  }
 
   useEffect(() => {
     if (lesson?.summary) {
@@ -182,12 +217,13 @@ export default function TeacherLessonReportPage() {
         <BackLink href="/teacher/dashboard" label="חזרה ללוח המורה" />
 
         <section>
-          <h2 className="text-sm font-semibold text-[var(--color-text-muted)] mb-2">פרטים למעלה</h2>
-          <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-4">
-            <p className="font-medium text-[var(--color-text)]">
-              {lesson.date} {lesson.startTime}–{lesson.endTime}
-            </p>
-            <p className="text-sm text-[var(--color-text-muted)]">{studentName}</p>
+          <h2 className="text-sm font-semibold text-[var(--color-text-muted)] mb-2">פרטי השיעור</h2>
+          <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-4 space-y-2 text-sm">
+            <p><span className="text-[var(--color-text-muted)]">שם המורה:</span> {lesson.teacher?.name ?? lesson.teacher?.email ?? "—"}</p>
+            <p><span className="text-[var(--color-text-muted)]">שם תלמיד:</span> {studentName}</p>
+            <p><span className="text-[var(--color-text-muted)]">תאריך השיעור:</span> {lesson.date} {lesson.startTime}–{lesson.endTime}</p>
+            <p><span className="text-[var(--color-text-muted)]">תאריך המיון:</span> {lesson.student.screeningDate ?? "—"}</p>
+            <p><span className="text-[var(--color-text-muted)]">סוג המיון:</span> {lesson.student.screeningType ?? "—"}</p>
           </div>
         </section>
 
@@ -261,15 +297,27 @@ export default function TeacherLessonReportPage() {
               />
             </div>
             <div>
-              <label className={labelClass}>טיפים</label>
-              <textarea
-                value={tips}
-                onChange={(e) => setTips(e.target.value)}
-                rows={2}
-                className={fieldClass}
-                placeholder="טיפים לתלמיד"
-                disabled={status === "loading"}
-              />
+              <label className={labelClass}>טיפים (בחירה)</label>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {TIP_TAGS.map((tag) => {
+                  const selected = tipsSet.has(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => toggleTip(tag)}
+                      disabled={status === "loading"}
+                      className={`px-3 py-1.5 rounded-[var(--radius-input)] border text-sm font-medium transition-colors ${
+                        selected
+                          ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                          : "bg-white border-[var(--color-border)] text-[var(--color-text)] hover:bg-[var(--color-bg-muted)]"
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             <div>
               <label className={labelClass}>המלצות להמשך</label>

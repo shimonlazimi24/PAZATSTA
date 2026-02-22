@@ -31,6 +31,10 @@ export async function POST(req: Request) {
       );
     }
 
+    const studentProfile = await prisma.studentProfile.findUnique({
+      where: { userId: user.id },
+    });
+
     const lesson = await prisma.$transaction(async (tx) => {
       const current = await tx.availability.findFirst({
         where: { id: availabilityId, isAvailable: true },
@@ -62,7 +66,9 @@ export async function POST(req: Request) {
     const dateStr = lesson.date.toISOString().slice(0, 10);
     const timeRange = `${lesson.startTime}–${lesson.endTime}`;
     const teacherName = lesson.teacher.name || lesson.teacher.email;
-    const studentName = lesson.student.name || lesson.student.email || lesson.student.email;
+    const studentName = lesson.student.name || lesson.student.email;
+    const topic = studentProfile?.currentScreeningType ?? undefined;
+    const screeningDate = studentProfile?.currentScreeningDate?.toISOString().slice(0, 10);
 
     try {
       await sendBookingConfirmation({
@@ -71,6 +77,8 @@ export async function POST(req: Request) {
         teacherName,
         date: dateStr,
         timeRange,
+        topic,
+        screeningDate,
       });
     } catch (emailErr) {
       console.error("[lessons/book] Email send failed:", emailErr);

@@ -71,14 +71,14 @@ export function PublicTeacherPage() {
     <div className="min-h-screen bg-[var(--color-bg)]">
       <header className="border-b border-[var(--color-border)] bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-          <Link href="/welcome" className="flex shrink-0">
+          <Link href="/book" className="flex shrink-0">
             <Logo alt="Paza" className="h-8 w-auto object-contain" width={100} height={28} />
           </Link>
           <div className="flex gap-2">
             <Link href="/login/teacher">
               <Button>כניסה למורים</Button>
             </Link>
-<Link href="/welcome">
+<Link href="/book">
             <Button variant="secondary">דף הבית</Button>
           </Link>
           </div>

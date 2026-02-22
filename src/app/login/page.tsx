@@ -5,11 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
 
-type LoginMode = "student" | "teacher" | null;
+type LoginMode = "student" | "teacher" | "admin" | null;
 
 const MODES: { value: LoginMode; label: string; desc: string }[] = [
   { value: "student", label: "התחבר כתלמיד", desc: "קביעת שיעורים והשיעורים שלי" },
   { value: "teacher", label: "התחבר כמורה", desc: "ניהול זמינות, שיעורים ודיווחים" },
+  { value: "admin", label: "התחבר כאדמין", desc: "הגדרת מורים וסיכומי שיעורים" },
 ];
 
 function LoginForm() {
@@ -73,21 +74,36 @@ function LoginForm() {
               בחרו איך אתם נכנסים
             </p>
             <div className="grid gap-4">
-              {MODES.map((m) => (
-                <button
-                  key={m.value ?? "x"}
-                  type="button"
-                  onClick={() => setMode(m.value)}
-                  className="rounded-2xl border border-[var(--color-border)] bg-white p-6 text-right shadow-sm transition hover:border-[var(--color-primary)] hover:shadow-md"
-                >
-                  <p className="text-lg font-semibold text-[var(--color-text)]">
-                    {m.label}
-                  </p>
-                  <p className="text-sm text-[var(--color-text-muted)] mt-1">
-                    {m.desc}
-                  </p>
-                </button>
-              ))}
+              {MODES.map((m) =>
+                m.value === "admin" ? (
+                  <Link
+                    key="admin"
+                    href="/login/admin"
+                    className="rounded-2xl border border-[var(--color-border)] bg-white p-6 text-right shadow-sm transition hover:border-[var(--color-primary)] hover:shadow-md block"
+                  >
+                    <p className="text-lg font-semibold text-[var(--color-text)]">
+                      {m.label}
+                    </p>
+                    <p className="text-sm text-[var(--color-text-muted)] mt-1">
+                      {m.desc}
+                    </p>
+                  </Link>
+                ) : (
+                  <button
+                    key={m.value ?? "x"}
+                    type="button"
+                    onClick={() => setMode(m.value!)}
+                    className="rounded-2xl border border-[var(--color-border)] bg-white p-6 text-right shadow-sm transition hover:border-[var(--color-primary)] hover:shadow-md"
+                  >
+                    <p className="text-lg font-semibold text-[var(--color-text)]">
+                      {m.label}
+                    </p>
+                    <p className="text-sm text-[var(--color-text-muted)] mt-1">
+                      {m.desc}
+                    </p>
+                  </button>
+                )
+              )}
             </div>
           </>
         ) : (

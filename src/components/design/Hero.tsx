@@ -23,9 +23,6 @@ export function Hero() {
           <Link href="/book">
             <Button showArrow>קביעת שיעור</Button>
           </Link>
-          <Link href="/#how">
-            <Button variant="secondary">איך זה עובד</Button>
-          </Link>
         </div>
       </div>
     </section>

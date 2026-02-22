@@ -11,10 +11,11 @@ type NavItem = { href: string; label: string; icon: React.ComponentType<{ classN
 
 const TEACHER_NAV: NavItem[] = [
   { href: "/teacher/dashboard", label: "לוח מורה", icon: LayoutDashboard },
+  { href: "/teacher/availability", label: "הגדרת זמינות", icon: Calendar },
 ];
 const STUDENT_NAV: NavItem[] = [
   { href: "/student", label: "השיעורים שלי", icon: Calendar },
-  { href: "/student/book", label: "קביעת שיעור", icon: BookOpen },
+  { href: "/book", label: "קביעת שיעור", icon: BookOpen },
 ];
 const ADMIN_NAV: NavItem[] = [
   { href: "/admin", label: "ניהול", icon: Settings },
@@ -52,7 +53,7 @@ export function Sidebar() {
   return (
     <aside className="hidden w-64 shrink-0 border-s border-border bg-card md:block">
       <div className="sticky top-0 flex h-screen flex-col p-4">
-        <Link href="/welcome" className="mb-8 flex items-center gap-2 px-2">
+        <Link href="/book" className="mb-8 flex items-center gap-2 px-2">
           <Logo alt="Paza" className="h-7 w-auto object-contain" width={100} height={28} />
         </Link>
         <nav className="flex flex-1 flex-col gap-1">

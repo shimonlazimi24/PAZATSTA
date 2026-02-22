@@ -77,7 +77,7 @@ export default function DevEmailsPage() {
             תצוגת אימיילים
           </h1>
           <Link
-            href="/welcome"
+            href="/book"
             className="text-sm text-[var(--color-primary)] hover:underline"
           >
             חזרה

@@ -51,6 +51,7 @@ export async function GET(req: Request) {
       startTime: l.startTime,
       endTime: l.endTime,
       status: l.status,
+      followUpCompletedAt: l.followUpCompletedAt?.toISOString() ?? null,
       questionFromStudent: l.questionFromStudent,
       student: l.student,
       summary: l.summary

@@ -73,10 +73,15 @@ export function getBookingConfirmationContent(params: {
   teacherName: string;
   date: string;
   timeRange: string;
+  topic?: string;
+  screeningDate?: string;
 }) {
+  let text = `שיעור נקבע: ${params.studentName} עם ${params.teacherName} בתאריך ${params.date} בשעה ${params.timeRange}.`;
+  if (params.topic) text += `\nסוג המיון: ${params.topic}`;
+  if (params.screeningDate) text += `\nתאריך המיון: ${params.screeningDate}`;
   return {
     subject: "שיעור נקבע – פאזה",
-    text: `שיעור נקבע: ${params.studentName} עם ${params.teacherName} בתאריך ${params.date} בשעה ${params.timeRange}.`,
+    text,
   };
 }
 
@@ -86,6 +91,8 @@ export async function sendBookingConfirmation(params: {
   teacherName: string;
   date: string;
   timeRange: string;
+  topic?: string;
+  screeningDate?: string;
 }): Promise<void> {
   const { subject, text } = getBookingConfirmationContent(params);
   if (isDev && noRealKey()) {
@@ -165,38 +172,46 @@ export async function sendLessonCompleted(params: {
   }
 }
 
-/** Build follow-up reminder email content (for preview or send). */
-export function getFollowUpReminderContent(params: {
+/** Build follow-up reminder email (teacher reminder on student's screening date). */
+export function getScreeningFollowUpReminderContent(params: {
   studentName: string;
-  teacherName: string;
+  screeningType: string;
+  screeningDate: string;
   lastLessonDate: string;
 }) {
+  const text = [
+    `תזכורת פולו-אפ: היום תאריך המיון של התלמיד/ה ${params.studentName}.`,
+    `סוג המיון: ${params.screeningType}`,
+    `תאריך המיון: ${params.screeningDate}`,
+    `שיעור אחרון: ${params.lastLessonDate}`,
+    "",
+    "מומלץ ליצור קשר עם התלמיד/ה ולוודא שהכל מוכן למיון.",
+  ].join("\n");
   return {
-    subject: "Schedule your next lesson",
-    text: `Reminder: It has been over 7 days since the last lesson (${params.lastLessonDate}) for ${params.studentName} with ${params.teacherName}. Consider scheduling the next lesson.`,
+    subject: "תזכורת פולו-אפ לתלמיד",
+    text,
   };
 }
 
-export async function sendFollowUpReminder(params: {
-  to: string[];
+export async function sendScreeningFollowUpReminder(params: {
+  to: string;
   studentName: string;
-  teacherName: string;
+  screeningType: string;
+  screeningDate: string;
   lastLessonDate: string;
 }): Promise<void> {
-  const { subject, text } = getFollowUpReminderContent(params);
+  const { subject, text } = getScreeningFollowUpReminderContent(params);
   if (isDev && noRealKey()) {
-    console.log("[DEV] Follow-up reminder to", params.to);
+    console.log("[DEV] Screening follow-up reminder to", params.to);
     return;
   }
-  const resend = getResend();
-  for (const email of params.to) {
-    await resend.emails.send({
-      from: from(),
-      to: email,
-      subject,
-      text,
-    });
-  }
+  const res = await getResend().emails.send({
+    from: from(),
+    to: params.to,
+    subject,
+    text,
+  });
+  if (res.error) console.error("[sendScreeningFollowUpReminder]", res.error);
 }
 
 /** Build admin summary email content (for preview or send). */
@@ -252,4 +267,49 @@ export async function sendAdminSummary(params: {
     subject,
     text,
   });
+}
+
+/** Build weekly hours summary for admin (payment). */
+export function getWeeklyHoursSummaryContent(params: {
+  startDate: string;
+  endDate: string;
+  byTeacher: { teacherName: string; teacherEmail: string; hours: number; lessonCount: number }[];
+}) {
+  const lines = [
+    `סיכום שעות שבועי לתשלום (${params.startDate} – ${params.endDate})`,
+    "",
+    ...params.byTeacher.map(
+      (t) =>
+        `${t.teacherName} (${t.teacherEmail}): ${t.hours.toFixed(2)} שעות, ${t.lessonCount} שיעורים`
+    ),
+    "",
+    "סה״כ מורים: " + params.byTeacher.length,
+  ];
+  return {
+    subject: `סיכום שעות מורים – ${params.startDate} עד ${params.endDate}`,
+    text: lines.join("\n"),
+  };
+}
+
+export async function sendWeeklyHoursSummaryToAdmin(params: {
+  to: string[];
+  startDate: string;
+  endDate: string;
+  byTeacher: { teacherName: string; teacherEmail: string; hours: number; lessonCount: number }[];
+}): Promise<void> {
+  if (params.byTeacher.length === 0) return;
+  const { subject, text } = getWeeklyHoursSummaryContent(params);
+  if (isDev && noRealKey()) {
+    console.log("[DEV] Weekly hours summary to", params.to);
+    return;
+  }
+  const resend = getResend();
+  for (const email of params.to) {
+    await resend.emails.send({
+      from: from(),
+      to: email,
+      subject,
+      text,
+    });
+  }
 }

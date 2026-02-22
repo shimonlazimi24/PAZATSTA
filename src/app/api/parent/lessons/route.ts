@@ -7,14 +7,8 @@ export async function GET() {
   if (!user || user.role !== "parent") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-  const students = await prisma.user.findMany({
-    where: {
-      role: "student",
-      studentProfile: { parentId: user.id },
-    },
-    select: { id: true },
-  });
-  const studentIds = students.map((s) => s.id);
+  // Parent–student link not in current schema; return empty until implemented.
+  const studentIds: string[] = [];
   if (studentIds.length === 0) {
     return NextResponse.json([]);
   }

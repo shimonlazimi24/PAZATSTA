@@ -28,7 +28,8 @@ Two-sided platform: **Teacher portal** (availability, complete lessons, PDF summ
    - `DATABASE_URL` — Postgres connection string (e.g. Supabase or Railway)
    - `RESEND_API_KEY` — Resend API key (for OTP emails)
    - `COOKIE_SECRET` — Random string, at least 32 characters
-   - Optional: `RESEND_FROM`, `APP_URL`, `STORAGE_PATH`, `CRON_SECRET`
+   - Optional: `RESEND_FROM`, `APP_URL`, `STORAGE_PATH`
+   - `CRON_SECRET` — for daily follow-up reminder; call `GET /api/cron/follow-up` with `Authorization: Bearer <CRON_SECRET>` (e.g. Vercel Cron or external scheduler)
 
 3. **Database**
 
@@ -55,8 +56,9 @@ Two-sided platform: **Teacher portal** (availability, complete lessons, PDF summ
 
 ## How to check
 
-- **Admin:** Seed creates `shachar.cygler@gmail.com`. Request code → verify → you land on `/admin`.
-- **Teacher (via invite):** As admin, POST `/api/admin/invite` with `{ "email": "teacher@test.com", "role": "teacher" }`. Then log in as that email → redirect to `/teacher`.
+- **Admin:** Seed creates `shachar.cygler@gmail.com`. Click "התחבר כאדמין" or go to `/login/admin` → verify → `/admin`.
+- **Student:** Any email can log in as student. Redirect → `/student/welcome` → profile → topics → book → `/student` (home).
+- **Teacher (via admin):** As admin, use "הגדרת מורה לפי מייל" to set a user as teacher. Then log in as that email → redirect to `/teacher`.
 - **No access:** Use an email that is neither a user nor in `invites` → request code returns “No access, contact admin”.
 - **Session:** After login, refresh `/teacher` (or your role page) — still accessible.
 - **Role redirect:** As teacher, open `/admin` → redirect to `/teacher`.

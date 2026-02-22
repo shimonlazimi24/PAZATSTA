@@ -9,7 +9,7 @@ export function Footer() {
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid gap-8 md:grid-cols-4 text-right">
           <div>
-            <Link href="/welcome" className="inline-block">
+            <Link href="/book" className="inline-block">
               <Logo alt="Paza" className="h-7 w-auto object-contain" width={100} height={28} />
             </Link>
             <p className="mt-2 text-sm text-[var(--color-text-muted)]">

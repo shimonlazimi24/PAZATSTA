@@ -60,7 +60,7 @@ export default function BookSuccessPage() {
         </p>
         <div className="mt-8 flex flex-col gap-3">
           <BackLink href="/book" label="חזרה לקביעת שיעור" />
-          <Link href="/welcome">
+          <Link href="/book">
             <Button variant="primary" showArrow className="w-full justify-center">
               חזרה לדף הבית
             </Button>

@@ -39,6 +39,7 @@ model User {
 model TeacherProfile {
   id          String   @id @default(cuid())
   userId      String   @unique
+  displayName String?
   bio         String?
   createdAt   DateTime @default(now())
 
@@ -46,11 +47,15 @@ model TeacherProfile {
 }
 
 model StudentProfile {
-  id         String   @id @default(cuid())
-  userId     String   @unique
-  parentId   String?
-  teacherId  String?
-  createdAt  DateTime @default(now())
+  id                     String    @id @default(cuid())
+  userId                 String    @unique
+  studentFullName        String?
+  parentFullName         String?
+  parentPhone            String?
+  currentScreeningType   String?   // selected topic
+  currentScreeningDate   DateTime?
+  followUpReminderSentAt DateTime?  // reminder tracking
+  createdAt              DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -68,16 +73,17 @@ model Availability {
 }
 
 model Lesson {
-  id                  String       @id @default(cuid())
-  teacherId           String
-  studentId           String
-  date                DateTime
-  startTime           String
-  endTime             String
-  status              LessonStatus @default(scheduled)
-  reportCompleted     Boolean      @default(false)
-  questionFromStudent String?
-  createdAt           DateTime     @default(now())
+  id                    String       @id @default(cuid())
+  teacherId             String
+  studentId             String
+  date                  DateTime
+  startTime             String
+  endTime               String
+  status                LessonStatus @default(scheduled)
+  reportCompleted       Boolean      @default(false)
+  followUpCompletedAt   DateTime?
+  questionFromStudent   String?
+  createdAt             DateTime     @default(now())
 
   teacher User @relation("LessonTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
   student User @relation("LessonStudent", fields: [studentId], references: [id], onDelete: Cascade)
@@ -87,12 +93,12 @@ model Lesson {
 model LessonSummary {
   id               String   @id @default(cuid())
   lessonId         String   @unique
-  summaryText      String   // סיכום כללי
-  homeworkText     String   @default("") // משימות לתרגול (optional)
-  pointsToKeep     String   @default("") // נקודות לשימור
-  pointsToImprove  String   @default("") // נקודות לשיפור
-  tips             String   @default("") // טיפים
-  recommendations  String   @default("") // המלצות להמשך
+  summaryText      String   @default("") // סיכום כללי (generalSummary)
+  homeworkText     String   @default("")
+  pointsToKeep     String   @default("") // נקודות לשימור (preservationPoints)
+  pointsToImprove  String   @default("") // נקודות לשיפור (improvementPoints)
+  tips             String   @default("")
+  recommendations  String   @default("") // המלצות להמשך (nextRecommendations)
   pdfUrl           String?
   createdAt        DateTime @default(now())
 

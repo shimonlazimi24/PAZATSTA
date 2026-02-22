@@ -14,13 +14,19 @@ export async function GET(
   const lesson = await prisma.lesson.findFirst({
     where: { id, teacherId: user.id },
     include: {
-      student: { select: { id: true, email: true, name: true } },
+      teacher: { select: { id: true, email: true, name: true } },
+      student: {
+        include: {
+          studentProfile: { select: { currentScreeningType: true, currentScreeningDate: true } },
+        },
+      },
       summary: true,
     },
   });
   if (!lesson) {
     return NextResponse.json({ error: "Lesson not found" }, { status: 404 });
   }
+  const profile = lesson.student.studentProfile;
   return NextResponse.json({
     id: lesson.id,
     date: lesson.date.toISOString().slice(0, 10),
@@ -28,7 +34,14 @@ export async function GET(
     endTime: lesson.endTime,
     status: lesson.status,
     reportCompleted: lesson.reportCompleted,
-    student: lesson.student,
+    teacher: lesson.teacher,
+    student: {
+      id: lesson.student.id,
+      email: lesson.student.email,
+      name: lesson.student.name,
+      screeningType: profile?.currentScreeningType ?? null,
+      screeningDate: profile?.currentScreeningDate?.toISOString().slice(0, 10) ?? null,
+    },
     summary: lesson.summary
       ? {
           summaryText: lesson.summary.summaryText,

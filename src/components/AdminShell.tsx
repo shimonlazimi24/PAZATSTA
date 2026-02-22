@@ -15,10 +15,10 @@ export function AdminShell({ email, children }: AdminShellProps) {
     <div className="min-h-screen bg-[var(--color-bg)]" dir="rtl">
       <header className="border-b border-[var(--color-border)] bg-white">
         <div className="mx-auto max-w-4xl px-4 py-4 sm:px-6 space-y-2">
-          <BackLink href="/welcome" label="חזרה לדף הבית" />
+          <BackLink href="/book" label="חזרה" />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link href="/welcome" className="flex shrink-0">
+              <Link href="/book" className="flex shrink-0">
                 <Logo alt="Paza" className="h-8 w-auto object-contain" width={100} height={28} />
               </Link>
               <span className="text-[var(--color-text-muted)]">/</span>

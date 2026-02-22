@@ -60,14 +60,14 @@ export default function TeacherAvailabilityPage() {
                 href="/teacher/dashboard"
                 className="rounded-[var(--radius-input)] bg-[var(--color-primary)] px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 text-center inline-block"
               >
-                המשך לדשבורד
+                המשך
               </Link>
             ) : (
               <span
                 className="rounded-[var(--radius-input)] bg-[var(--color-border)] text-[var(--color-text-muted)] px-4 py-2.5 text-sm font-medium cursor-not-allowed inline-block text-center"
                 aria-disabled
               >
-                המשך לדשבורד
+                המשך
               </span>
             )}
           </div>

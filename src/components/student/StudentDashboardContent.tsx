@@ -30,13 +30,25 @@ export function StudentDashboardContent() {
   const [loading, setLoading] = useState(true);
 
   function fetchLessons() {
+    const getJson = async (r: Response) => {
+      if (!r.ok) return [];
+      try {
+        return await r.json();
+      } catch {
+        return [];
+      }
+    };
     Promise.all([
-      fetch("/api/student/lessons?upcoming=true").then((r) => (r.ok ? r.json() : [])),
-      fetch("/api/student/lessons?past=true").then((r) => (r.ok ? r.json() : [])),
+      fetch("/api/student/lessons?upcoming=true", { credentials: "include" }).then(getJson),
+      fetch("/api/student/lessons?past=true", { credentials: "include" }).then(getJson),
     ])
       .then(([u, p]) => {
-        setUpcoming(u);
-        setPast(p);
+        setUpcoming(Array.isArray(u) ? u : []);
+        setPast(Array.isArray(p) ? p : []);
+      })
+      .catch(() => {
+        setUpcoming([]);
+        setPast([]);
       })
       .finally(() => setLoading(false));
   }

@@ -12,6 +12,7 @@ type Lesson = {
   startTime: string;
   endTime: string;
   status: string;
+  followUpCompletedAt: string | null;
   questionFromStudent: string | null;
   student: { id: string; email: string; name: string | null };
   summary: { pdfUrl: string | null } | null;
@@ -24,6 +25,7 @@ const MOCK_UPCOMING: Lesson[] = [
     startTime: "10:00",
     endTime: "10:45",
     status: "scheduled",
+    followUpCompletedAt: null,
     questionFromStudent: "אשמח להתמקד בחשיבה כמותית והכנה למא״ה.",
     student: { id: "s1", email: "student@example.com", name: "דני כהן" },
     summary: null,
@@ -34,6 +36,7 @@ const MOCK_UPCOMING: Lesson[] = [
     startTime: "14:00",
     endTime: "14:45",
     status: "scheduled",
+    followUpCompletedAt: null,
     questionFromStudent: null,
     student: { id: "s2", email: "lea@example.com", name: "ליאה לוי" },
     summary: null,
@@ -47,6 +50,7 @@ const MOCK_PAST: Lesson[] = [
     startTime: "09:00",
     endTime: "09:45",
     status: "completed",
+    followUpCompletedAt: "2025-02-16T10:00:00Z",
     questionFromStudent: null,
     student: { id: "s3", email: "yosi@example.com", name: "יוסי מזרחי" },
     summary: { pdfUrl: "#" },
@@ -57,6 +61,7 @@ const MOCK_PAST: Lesson[] = [
     startTime: "11:00",
     endTime: "11:45",
     status: "completed",
+    followUpCompletedAt: null,
     questionFromStudent: null,
     student: { id: "s4", email: "maya@example.com", name: "מאי גולן" },
     summary: null,
@@ -78,6 +83,7 @@ export function TeacherHomeLessons() {
   const [upcoming, setUpcoming] = useState<Lesson[]>([]);
   const [past, setPast] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
+  const [followUpLoadingId, setFollowUpLoadingId] = useState<string | null>(null);
 
   function load() {
     if (useMock) {
@@ -105,6 +111,26 @@ export function TeacherHomeLessons() {
     load();
   }, [useMock]);
 
+  async function handleFollowUpComplete(lessonId: string) {
+    if (lessonId.startsWith("mock-")) {
+      setFollowUpLoadingId(lessonId);
+      setTimeout(() => {
+        setFollowUpLoadingId(null);
+        load();
+      }, 400);
+      return;
+    }
+    setFollowUpLoadingId(lessonId);
+    try {
+      const res = await fetch(`/api/teacher/lessons/${lessonId}/follow-up-complete`, {
+        method: "POST",
+      });
+      if (res.ok) load();
+    } finally {
+      setFollowUpLoadingId(null);
+    }
+  }
+
   if (loading) {
     return (
       <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-8 shadow-[var(--shadow-card)] text-center">
@@ -118,7 +144,7 @@ export function TeacherHomeLessons() {
   const hasPast = past.length > 0;
   if (!hasUpcoming && !hasPast) {
     return (
-      <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-8 sm:p-10 shadow-[var(--shadow-card)] text-center">
+      <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-8 sm:p-10 shadow-[var(--shadow-card)] text-center" dir="rtl">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-highlight)] text-[var(--color-primary)]">
           <CalendarDays className="h-7 w-7" aria-hidden />
         </div>
@@ -211,12 +237,26 @@ export function TeacherHomeLessons() {
                         {l.student.name || l.student.email}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       {hasReport ? (
                         <>
                           <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
                             דוח הושלם
                           </span>
+                          {l.followUpCompletedAt ? (
+                            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">
+                              מעקב הושלם
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleFollowUpComplete(l.id)}
+                              disabled={followUpLoadingId === l.id}
+                              className="px-3 py-1.5 rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white text-sm font-medium text-[var(--color-text)] hover:bg-[var(--color-bg-muted)] disabled:opacity-50"
+                            >
+                              {followUpLoadingId === l.id ? "שולח…" : "סימון מעקב הושלם"}
+                            </button>
+                          )}
                           {l.summary?.pdfUrl && (
                             <a
                               href={l.summary.pdfUrl}

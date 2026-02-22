@@ -100,11 +100,16 @@ export async function POST(req: Request) {
             ...(phone ? { phone } : {}),
           },
         });
-        await prisma.studentProfile.upsert({
-          where: { userId: user.id },
-          create: { userId: user.id },
-          update: {},
-        });
+        try {
+          await prisma.studentProfile.upsert({
+            where: { userId: user.id },
+            create: { userId: user.id },
+            update: {},
+          });
+        } catch (profileErr) {
+          console.error("[verify-code] StudentProfile upsert failed (run migrations?):", profileErr);
+          // Continue so login succeeds; profile can be created on first /student/profile visit
+        }
       } else if (phone) {
         await prisma.user.update({
           where: { id: user.id },
@@ -121,11 +126,11 @@ export async function POST(req: Request) {
     const redirect = wantAdmin
       ? "/admin"
       : user.role === "student"
-        ? "/student/book"
+        ? "/book"
         : user.role === "teacher"
-          ? "/teacher/availability"
+          ? "/teacher/dashboard"
           : user.role === "admin"
-            ? "/admin"
+            ? "/login/admin"
             : "/";
     const res = NextResponse.json({ ok: true, role: user.role, redirect });
     res.cookies.set(SESSION_COOKIE, sign(sessionId), {
@@ -134,8 +139,12 @@ export async function POST(req: Request) {
     });
     return res;
   } catch (e) {
+    console.error("[verify-code] Error:", e);
+    const message = process.env.NODE_ENV === "development" && e instanceof Error
+      ? e.message
+      : "Verification failed";
     return NextResponse.json(
-      { error: "Verification failed" },
+      { error: message },
       { status: 500 }
     );
   }
