@@ -5,6 +5,12 @@ import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { BackLink } from "@/components/design/BackLink";
 
+type ProfileResponse = {
+  studentFullName?: string | null;
+  parentFullName?: string | null;
+  parentPhone?: string | null;
+};
+
 export default function StudentProfilePage() {
   const router = useRouter();
   const [studentFullName, setStudentFullName] = useState("");
@@ -16,7 +22,7 @@ export default function StudentProfilePage() {
 
   useEffect(() => {
     fetch("/api/student/profile")
-      .then((r) => (r.ok ? r.json() : {}))
+      .then((r) => (r.ok ? r.json() : Promise.resolve({})) as Promise<ProfileResponse>)
       .then((p) => {
         setStudentFullName(p.studentFullName ?? "");
         setParentFullName(p.parentFullName ?? "");
