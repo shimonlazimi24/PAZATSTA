@@ -3,7 +3,7 @@ import {
   getLoginCodeContent,
   getBookingConfirmationContent,
   getLessonCompletedContent,
-  getFollowUpReminderContent,
+  getScreeningFollowUpReminderContent,
   getAdminSummaryContent,
 } from "@/lib/email";
 
@@ -33,9 +33,10 @@ const PREVIEWS = [
   },
   {
     name: "תזכורת למעקב (Follow-up)",
-    ...getFollowUpReminderContent({
+    ...getScreeningFollowUpReminderContent({
       studentName: "דני כהן",
-      teacherName: "מיכל לוי",
+      screeningType: "יום המא״ה - מבחנים פסיכוטכניים",
+      screeningDate: "2025-03-01",
       lastLessonDate: "2025-02-10",
     }),
   },
