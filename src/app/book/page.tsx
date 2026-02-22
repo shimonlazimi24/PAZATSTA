@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Stepper } from "@/components/design/Stepper";
@@ -110,6 +110,13 @@ export default function BookPage() {
   const [parentPhone, setParentPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const subOptionsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (categoryId && subOptionsRef.current) {
+      subOptionsRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [categoryId]);
 
   const dateOptions = useMemo(
     () =>
@@ -223,7 +230,7 @@ export default function BookPage() {
               ))}
             </div>
             {categoryId && (
-              <div className="space-y-2 pt-4" dir="rtl">
+              <div ref={subOptionsRef} className="space-y-2 pt-4" dir="rtl">
                 <p className="text-[var(--color-text-muted)] text-right">בחרו סוג מיון</p>
                 <div className="flex flex-wrap gap-2 justify-start">
                   {CATEGORIES.find((c) => c.id === categoryId)?.subs.map((s) => (
