@@ -1,7 +1,10 @@
 "use client";
 
+import { LOGO_SVG } from "./logo-svg";
+
 /**
- * Logo as img so SVG loads reliably (Next/Image can break SVG on some hosts).
+ * Logo as inline SVG so it always displays (no request to /logo.svg needed).
+ * Works on all hosts including Netlify where static public files may not be served at root.
  */
 type Props = {
   alt?: string;
@@ -11,13 +14,22 @@ type Props = {
 };
 
 export function Logo({ alt = "Paza", className, width = 120, height = 40 }: Props) {
+  const svgWithSize = LOGO_SVG.replace(
+    "<svg ",
+    '<svg width="100%" height="100%" style="display:block;vertical-align:middle" '
+  );
   return (
-    <img
-      src="/logo.svg"
-      alt={alt}
-      width={width}
-      height={height}
+    <span
       className={className}
+      role="img"
+      aria-label={alt}
+      style={{
+        display: "inline-block",
+        width,
+        height,
+        lineHeight: 0,
+      }}
+      dangerouslySetInnerHTML={{ __html: svgWithSize }}
     />
   );
 }
