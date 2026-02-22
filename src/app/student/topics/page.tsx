@@ -7,6 +7,11 @@ import { AppShell } from "@/components/layout/AppShell";
 import { BackLink } from "@/components/design/BackLink";
 import { SCREENING_TOPICS } from "@/data/topics";
 
+type ProfileResponse = {
+  currentScreeningType?: string | null;
+  currentScreeningDate?: string | null;
+};
+
 export default function StudentTopicsPage() {
   const router = useRouter();
   const [selectedTopic, setSelectedTopic] = useState<string>("");
@@ -17,7 +22,7 @@ export default function StudentTopicsPage() {
 
   useEffect(() => {
     fetch("/api/student/profile")
-      .then((r) => (r.ok ? r.json() : {}))
+      .then((r) => (r.ok ? r.json() : Promise.resolve({})) as Promise<ProfileResponse>)
       .then((p) => {
         setSelectedTopic(p.currentScreeningType ?? "");
         setScreeningDate(p.currentScreeningDate ?? "");
