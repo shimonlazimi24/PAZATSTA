@@ -52,10 +52,16 @@ export async function GET(
       effectiveEnd = new Date(endStr + "T23:59:59.999Z");
     }
 
-    // Never return slots in the past; when start/end provided, clamp start to now if needed.
-    const from = effectiveEnd != null && effectiveStart < now ? now : effectiveStart;
+    // Slots are stored with date at midnight UTC (day-only). Exclude only past days, not same-day:
+    // use start-of-today UTC as minimum so slots for today are included.
+    const startOfTodayUTC = new Date(now);
+    startOfTodayUTC.setUTCHours(0, 0, 0, 0);
+    const from =
+      effectiveEnd != null && effectiveStart < startOfTodayUTC
+        ? startOfTodayUTC
+        : effectiveStart;
     const dateWhere =
-      effectiveEnd != null ? { gte: from, lte: effectiveEnd } : { gte: now };
+      effectiveEnd != null ? { gte: from, lte: effectiveEnd } : { gte: startOfTodayUTC };
 
     const slots = await prisma.availability.findMany({
       where: {

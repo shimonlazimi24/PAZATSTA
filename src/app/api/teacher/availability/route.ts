@@ -56,10 +56,23 @@ export async function POST(req: Request) {
   }
   try {
     const body = await req.json();
-    const date = body.date ? new Date(body.date) : null;
+    const dateStr = typeof body.date === "string" ? body.date.trim() : "";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      return NextResponse.json(
+        { error: "date (YYYY-MM-DD), startTime, endTime required" },
+        { status: 400 }
+      );
+    }
+    const date = new Date(dateStr + "T00:00:00.000Z");
+    if (isNaN(date.getTime())) {
+      return NextResponse.json(
+        { error: "Invalid date" },
+        { status: 400 }
+      );
+    }
     const startTime = typeof body.startTime === "string" ? body.startTime : "";
     const endTime = typeof body.endTime === "string" ? body.endTime : "";
-    if (!date || isNaN(date.getTime()) || !startTime || !endTime) {
+    if (!startTime || !endTime) {
       return NextResponse.json(
         { error: "date (YYYY-MM-DD), startTime, endTime required" },
         { status: 400 }
