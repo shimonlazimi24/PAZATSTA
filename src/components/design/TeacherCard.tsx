@@ -28,19 +28,25 @@ export function TeacherCard({ teacher, selected, onSelect }: TeacherCardProps) {
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="font-bold text-[var(--color-text)]">{teacher.name}</h3>
-          <p className="mt-0.5 text-sm text-[var(--color-text-muted)] line-clamp-2">{teacher.bio}</p>
-          {(teacher.email || teacher.phone) && (
-            <div className="mt-1.5 flex flex-col gap-0.5 text-sm text-[var(--color-text-muted)]">
-              {teacher.email && <span dir="ltr" className="text-left">{teacher.email}</span>}
-              {teacher.phone && <span>{teacher.phone}</span>}
-            </div>
-          )}
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-[var(--color-bg-muted)] px-2 py-0.5 text-xs text-[var(--color-text-muted)]">
-              {teacher.availabilityLabel}
-            </span>
+          <div className="text-sm">
+            <span className="text-[var(--color-text-muted)]">שם: </span>
+            <span className="font-bold text-[var(--color-text)]">{teacher.name}</span>
           </div>
+          {teacher.email && (
+            <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+              <span className="text-[var(--color-text-muted)]">אימייל: </span>
+              <span dir="ltr" className="text-[var(--color-text)] text-left inline-block">{teacher.email}</span>
+            </p>
+          )}
+          {teacher.phone && (
+            <p className="mt-0.5 text-sm text-[var(--color-text-muted)]">
+              <span className="text-[var(--color-text-muted)]">טלפון: </span>
+              <span className="text-[var(--color-text)]">{teacher.phone}</span>
+            </p>
+          )}
+          {teacher.bio && (
+            <p className="mt-1.5 text-sm text-[var(--color-text-muted)] line-clamp-2">{teacher.bio}</p>
+          )}
           <div className="mt-2 flex flex-wrap gap-1">
             {teacher.specialties.slice(0, 3).map((s) => (
               <span

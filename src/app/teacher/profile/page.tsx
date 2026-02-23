@@ -22,6 +22,7 @@ export default function TeacherProfilePage() {
   const [profileImageUrl, setProfileImageUrl] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
@@ -36,6 +37,39 @@ export default function TeacherProfilePage() {
       })
       .finally(() => setLoading(false));
   }, []);
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setError("");
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/teacher/profile/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "שגיאה בהעלאה");
+        setUploading(false);
+        return;
+      }
+      if (data.url) {
+        setProfileImageUrl(data.url);
+        await fetch("/api/teacher/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ profileImageUrl: data.url }),
+        });
+      }
+    } catch {
+      setError("שגיאת רשת בהעלאה");
+    }
+    setUploading(false);
+    e.target.value = "";
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -94,18 +128,20 @@ export default function TeacherProfilePage() {
                   )}
                 </div>
               </div>
-              <div className="flex-1 w-full min-w-0">
-                <label htmlFor="profileImageUrl" className="block text-sm font-medium text-[var(--color-text)] mb-1">
-                  קישור לתמונת פרופיל
+              <div className="flex-1 w-full min-w-0 text-right">
+                <label htmlFor="profileImageFile" className="block text-sm font-medium text-[var(--color-text)] mb-1">
+                  העלאת תמונת פרופיל
                 </label>
                 <input
-                  id="profileImageUrl"
-                  type="url"
-                  value={profileImageUrl}
-                  onChange={(e) => setProfileImageUrl(e.target.value)}
-                  placeholder="https://..."
-                  className="w-full rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-4 py-3 text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                  id="profileImageFile"
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  onChange={handleFileChange}
+                  disabled={uploading}
+                  className="w-full rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-4 py-3 text-[var(--color-text)] file:mr-2 file:rounded file:border-0 file:bg-[var(--color-primary)] file:px-3 file:py-1.5 file:text-white file:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                 />
+                {uploading && <p className="mt-1 text-xs text-[var(--color-text-muted)]">מעלה…</p>}
+                <p className="mt-1 text-xs text-[var(--color-text-muted)]">JPG, PNG, GIF או WebP. עד 3MB.</p>
               </div>
             </div>
 
