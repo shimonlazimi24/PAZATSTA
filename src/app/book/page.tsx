@@ -93,11 +93,10 @@ function isValidPhone(value: string): boolean {
   return digits.length >= 9 && digits.length <= 11;
 }
 
+// Public API does not return email/phone for privacy.
 type ApiTeacher = {
   id: string;
-  email: string;
   name: string | null;
-  phone: string | null;
   bio: string | null;
   profileImageUrl: string | null;
 };
@@ -105,7 +104,7 @@ type ApiTeacher = {
 function toMockTeacher(t: ApiTeacher): MockTeacher {
   return {
     id: t.id,
-    name: t.name || t.email,
+    name: t.name || "",
     photo: t.profileImageUrl || "",
     bio: t.bio || "",
     subjects: ["psychometric"],
@@ -113,8 +112,8 @@ function toMockTeacher(t: ApiTeacher): MockTeacher {
     reviewCount: 0,
     specialties: [],
     availabilityLabel: "פנוי",
-    email: t.email,
-    phone: t.phone ?? undefined,
+    email: "",
+    phone: undefined,
   };
 }
 
@@ -127,6 +126,8 @@ export default function BookPage() {
   const [apiTeachers, setApiTeachers] = useState<MockTeacher[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<MockSlot | null>(null);
+  const [teacherSlots, setTeacherSlots] = useState<MockSlot[]>([]);
+  const [slotsLoading, setSlotsLoading] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -153,6 +154,44 @@ export default function BookPage() {
       .catch(() => {});
   }, []);
 
+  const isRealTeacher = Boolean(teacher?.id && teacher.id.length > 10 && !teacher.id.startsWith("t"));
+
+  useEffect(() => {
+    if (!selectedDate || !teacher) {
+      setTeacherSlots([]);
+      return;
+    }
+    if (!isRealTeacher) {
+      setTeacherSlots([]);
+      return;
+    }
+    setSlotsLoading(true);
+    setSelectedSlot(null);
+    const nextDay = new Date(selectedDate + "T12:00:00");
+    nextDay.setDate(nextDay.getDate() + 1);
+    const endDate = nextDay.toISOString().slice(0, 10);
+    fetch(
+      `/api/teachers/${teacher.id}/availability?start=${selectedDate}&end=${endDate}`
+    )
+      .then((r) => (r.ok ? r.json() : []))
+      .then((list: { id: string; date: string; startTime: string; endTime: string }[]) => {
+        const forDate = list.filter((s) => s.date === selectedDate).map((s) => ({
+          id: s.id,
+          date: s.date,
+          startTime: s.startTime,
+          endTime: s.endTime,
+          available: true,
+        }));
+        setTeacherSlots(forDate);
+      })
+      .catch(() => setTeacherSlots([]))
+      .finally(() => setSlotsLoading(false));
+  }, [selectedDate, teacher?.id, isRealTeacher]);
+
+  useEffect(() => {
+    if (!selectedDate) setSelectedSlot(null);
+  }, [selectedDate]);
+
   const dateOptions = useMemo(
     () =>
       MOCK_DATES_WEEK.map((date) => ({
@@ -165,8 +204,9 @@ export default function BookPage() {
 
   const slots = useMemo(() => {
     if (!selectedDate) return [];
+    if (isRealTeacher && teacher) return teacherSlots;
     return generateMockSlotsForDate(selectedDate);
-  }, [selectedDate]);
+  }, [selectedDate, isRealTeacher, teacher, teacherSlots]);
 
   const filteredTeachers = useMemo(() => {
     const list = apiTeachers.length > 0 ? apiTeachers : MOCK_TEACHERS;
@@ -220,15 +260,19 @@ export default function BookPage() {
       const isRealTeacherId = teacher?.id && teacher.id.length > 10 && !teacher.id.startsWith("t");
       if (isRealTeacherId && selectedDate && selectedSlot) {
         try {
+          const body: { teacherId: string; date: string; startTime: string; endTime: string; availabilityId?: string } = {
+            teacherId: teacher.id,
+            date: selectedDate,
+            startTime: selectedSlot.startTime,
+            endTime: selectedSlot.endTime,
+          };
+          if (selectedSlot.id && !selectedSlot.id.startsWith("slot-")) {
+            body.availabilityId = selectedSlot.id;
+          }
           const res = await fetch("/api/book/submit", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              teacherId: teacher.id,
-              date: selectedDate,
-              startTime: selectedSlot.startTime,
-              endTime: selectedSlot.endTime,
-            }),
+            body: JSON.stringify(body),
           });
           if (res.ok) {
             router.push("/book/success");
@@ -346,11 +390,19 @@ export default function BookPage() {
             {selectedDate && (
               <>
                 <p className="text-[var(--color-text-muted)] text-right mt-6">בחרו שעה</p>
-                <TimeSlots
-                  slots={slots}
-                  selectedSlotId={selectedSlot?.id ?? null}
-                  onSelect={(s) => setSelectedSlot(s as MockSlot)}
-                />
+                {slotsLoading ? (
+                  <p className="text-sm text-[var(--color-text-muted)] text-right">טוען משבצות…</p>
+                ) : isRealTeacher && slots.length === 0 ? (
+                  <p className="text-sm text-[var(--color-text-muted)] text-right rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-bg-muted)] p-4">
+                    אין משבצות פנויות בתאריך זה. הזמנים שמוצגים כאן הם אלה שהמורה הגדיר בדשבורד — נסו תאריך אחר או צרו קשר עם המורה.
+                  </p>
+                ) : (
+                  <TimeSlots
+                    slots={slots}
+                    selectedSlotId={selectedSlot?.id ?? null}
+                    onSelect={(s) => setSelectedSlot(s as MockSlot)}
+                  />
+                )}
               </>
             )}
           </div>

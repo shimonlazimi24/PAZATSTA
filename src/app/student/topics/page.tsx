@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import { BackLink } from "@/components/design/BackLink";
+import { apiJson } from "@/lib/api";
+import { parseYYYYMMDD, todayIsraelYYYYMMDD } from "@/lib/dates";
 import { SCREENING_TOPICS } from "@/data/topics";
 
 type ProfileResponse = {
@@ -21,41 +23,47 @@ export default function StudentTopicsPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("/api/student/profile")
-      .then((r) => (r.ok ? r.json() : Promise.resolve({})) as Promise<ProfileResponse>)
-      .then((p) => {
+    apiJson<ProfileResponse>("/api/student/profile").then((r) => {
+      if (r.ok) {
+        const p = r.data;
         setSelectedTopic(p.currentScreeningType ?? "");
         setScreeningDate(p.currentScreeningDate ?? "");
-      })
-      .finally(() => setLoading(false));
+      }
+      setLoading(false);
+    });
   }, []);
 
   async function handleContinue() {
-    if (!selectedTopic.trim() || !screeningDate) {
+    if (!selectedTopic.trim() || !screeningDate.trim()) {
       setError("נא לבחור סוג מיון ותאריך המיון");
       return;
     }
-    setSaving(true);
-    setError("");
-    try {
-      const res = await fetch("/api/student/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          currentScreeningType: selectedTopic,
-          currentScreeningDate: screeningDate,
-        }),
-      });
-      if (!res.ok) {
-        setError("שגיאה בשמירה");
-        setSaving(false);
-        return;
-      }
-      router.push("/student/book");
-    } catch {
-      setError("שגיאת רשת");
+    const parsed = parseYYYYMMDD(screeningDate);
+    if (!parsed) {
+      setError("נא להזין תאריך בפורמט YYYY-MM-DD");
+      return;
     }
+    const today = todayIsraelYYYYMMDD();
+    if (screeningDate < today) {
+      setError("נא לבחור תאריך עתידי");
+      return;
+    }
+    setError("");
+    setSaving(true);
+    const result = await apiJson<{ ok?: boolean }>("/api/student/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        currentScreeningType: selectedTopic,
+        currentScreeningDate: screeningDate,
+      }),
+    });
     setSaving(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    router.push("/student/book");
   }
 
   if (loading) {
@@ -81,7 +89,10 @@ export default function StudentTopicsPage() {
                     name="topic"
                     value={topic}
                     checked={selectedTopic === topic}
-                    onChange={() => setSelectedTopic(topic)}
+                    onChange={() => {
+                      setSelectedTopic(topic);
+                      setError("");
+                    }}
                     className="rounded-full"
                   />
                   <span className="text-[var(--color-text)]">{topic}</span>
@@ -98,7 +109,10 @@ export default function StudentTopicsPage() {
             id="screeningDate"
             type="date"
             value={screeningDate}
-            onChange={(e) => setScreeningDate(e.target.value)}
+            onChange={(e) => {
+              setScreeningDate(e.target.value);
+              setError("");
+            }}
             required
             className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-input)]"
           />

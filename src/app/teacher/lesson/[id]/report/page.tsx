@@ -5,6 +5,8 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import { BackLink } from "@/components/design/BackLink";
+import { apiJson } from "@/lib/api";
+import { formatHebrewShortDate } from "@/lib/dates";
 
 type Lesson = {
   id: string;
@@ -99,10 +101,11 @@ export default function TeacherLessonReportPage() {
       return;
     }
     if (!id) return;
-    fetch(`/api/teacher/lessons/${id}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then(setLesson)
-      .catch(() => setLesson(null))
+    apiJson<Lesson>(`/api/teacher/lessons/${id}`)
+      .then((r) => {
+        if (r.ok) setLesson(r.data);
+        else setLesson(null);
+      })
       .finally(() => setLoading(false));
   }, [id, isDemo, isDemoDone]);
 
@@ -131,6 +134,7 @@ export default function TeacherLessonReportPage() {
   }, [lesson]);
 
   const alreadyCompleted = !!lesson?.reportCompleted || !!lesson?.summary;
+  const lessonDateDisplay = lesson?.date ? formatHebrewShortDate(lesson.date) : lesson?.date ?? "—";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -154,31 +158,28 @@ export default function TeacherLessonReportPage() {
       }, 500);
       return;
     }
-    try {
-      const res = await fetch(`/api/teacher/lessons/${id}/complete`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          summaryText: summaryText.trim(),
-          homeworkText: homeworkText.trim(),
-          pointsToKeep: pointsToKeep.trim(),
-          pointsToImprove: pointsToImprove.trim(),
-          tips: tips.trim(),
-          recommendations: recommendations.trim(),
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "שגיאה בשליחה");
-        setStatus("error");
-        return;
-      }
-      router.push("/teacher/dashboard");
-      router.refresh();
-    } catch {
-      setError("שגיאת רשת");
+    const result = await apiJson<{ ok?: boolean }>(`/api/teacher/lessons/${id}/complete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        summaryText: summaryText.trim(),
+        homeworkText: homeworkText.trim(),
+        pointsToKeep: pointsToKeep.trim(),
+        pointsToImprove: pointsToImprove.trim(),
+        tips: tips.trim(),
+        recommendations: recommendations.trim(),
+      }),
+    });
+    if (!result.ok) {
+      setError(result.error);
       setStatus("error");
+      if (result.status === 409) {
+        apiJson<Lesson>(`/api/teacher/lessons/${id}`).then((r) => r.ok && setLesson(r.data));
+      }
+      return;
     }
+    router.push("/teacher/dashboard");
+    router.refresh();
   }
 
   if (loading || !id) {
@@ -221,7 +222,7 @@ export default function TeacherLessonReportPage() {
           <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-4 space-y-2 text-sm">
             <p><span className="text-[var(--color-text-muted)]">שם המורה:</span> {lesson.teacher?.name ?? lesson.teacher?.email ?? "—"}</p>
             <p><span className="text-[var(--color-text-muted)]">שם תלמיד:</span> {studentName}</p>
-            <p><span className="text-[var(--color-text-muted)]">תאריך השיעור:</span> {lesson.date} {lesson.startTime}–{lesson.endTime}</p>
+            <p><span className="text-[var(--color-text-muted)]">תאריך השיעור:</span> {lessonDateDisplay} {lesson.startTime}–{lesson.endTime}</p>
             <p><span className="text-[var(--color-text-muted)]">תאריך המיון:</span> {lesson.student.screeningDate ?? "—"}</p>
             <p><span className="text-[var(--color-text-muted)]">סוג המיון:</span> {lesson.student.screeningType ?? "—"}</p>
           </div>

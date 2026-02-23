@@ -5,6 +5,11 @@ import { AppShell } from "@/components/layout/AppShell";
 import { Card } from "@/components/design/Card";
 import { Button } from "@/components/design/Button";
 import { FormField } from "@/components/design/FormField";
+import { apiJson } from "@/lib/api";
+import { isValidPhone } from "@/lib/validation";
+
+const ALLOWED_MIMES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB
 
 type ProfileResponse = {
   name: string;
@@ -27,22 +32,33 @@ export default function TeacherProfilePage() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    fetch("/api/teacher/profile")
-      .then((r) => (r.ok ? r.json() : Promise.resolve({})) as Promise<ProfileResponse>)
-      .then((p) => {
+    apiJson<ProfileResponse>("/api/teacher/profile").then((r) => {
+      if (r.ok) {
+        const p = r.data;
         setName(p.name ?? "");
         setPhone(p.phone ?? "");
         setEmail(p.email ?? "");
         setProfileImageUrl(p.profileImageUrl ?? "");
-      })
-      .finally(() => setLoading(false));
+      }
+      setLoading(false);
+    });
   }, []);
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploading(true);
     setError("");
+    if (!ALLOWED_MIMES.includes(file.type)) {
+      setError("סוג קובץ לא נתמך. השתמש ב-JPG, PNG, GIF או WebP.");
+      e.target.value = "";
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      setError("גודל הקובץ מקסימלי 3MB.");
+      e.target.value = "";
+      return;
+    }
+    setUploading(true);
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -54,18 +70,22 @@ export default function TeacherProfilePage() {
       if (!res.ok) {
         setError(data.error || "שגיאה בהעלאה");
         setUploading(false);
+        e.target.value = "";
         return;
       }
       if (data.url) {
-        setProfileImageUrl(data.url);
-        await fetch("/api/teacher/profile", {
+        setSuccess(false);
+        // Cache busting: force browser to show new image after re-upload (server may also return ?v=).
+        setProfileImageUrl(`${data.url}${data.url.includes("?") ? "&" : "?"}v=${Date.now()}`);
+        const patch = await apiJson<{ ok?: boolean }>("/api/teacher/profile", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ profileImageUrl: data.url }),
         });
+        if (!patch.ok) setError(patch.error);
       }
     } catch {
-      setError("שגיאת רשת בהעלאה");
+      setError("Network error");
     }
     setUploading(false);
     e.target.value = "";
@@ -73,29 +93,28 @@ export default function TeacherProfilePage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSaving(true);
     setError("");
     setSuccess(false);
-    try {
-      const res = await fetch("/api/teacher/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          phone: phone.trim(),
-          profileImageUrl: profileImageUrl.trim() || null,
-        }),
-      });
-      if (!res.ok) {
-        setError("שגיאה בשמירה");
-        setSaving(false);
-        return;
-      }
-      setSuccess(true);
-    } catch {
-      setError("שגיאת רשת");
+    if (!isValidPhone(phone.trim())) {
+      setError("נא להזין מספר טלפון תקין (9–11 ספרות).");
+      return;
     }
+    setSaving(true);
+    const result = await apiJson<{ ok?: boolean }>("/api/teacher/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: name.trim(),
+        phone: phone.trim(),
+        profileImageUrl: profileImageUrl.trim() || null,
+      }),
+    });
     setSaving(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    setSuccess(true);
   }
 
   if (loading) {
@@ -149,7 +168,7 @@ export default function TeacherProfilePage() {
               label="שם מלא"
               name="name"
               value={name}
-              onChange={setName}
+              onChange={(v) => { setName(v); setSuccess(false); setError(""); }}
               placeholder="השם שיוצג ללקוחות"
             />
             <FormField
@@ -157,7 +176,7 @@ export default function TeacherProfilePage() {
               name="phone"
               type="tel"
               value={phone}
-              onChange={setPhone}
+              onChange={(v) => { setPhone(v); setSuccess(false); setError(""); }}
               placeholder="050-1234567"
             />
             <div className="text-right">

@@ -4,6 +4,7 @@ import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { apiJson } from "@/lib/api";
 
 type LoginMode = "student" | "teacher" | "admin" | null;
 
@@ -19,35 +20,42 @@ function LoginForm() {
   const nextAdmin = searchParams.get("next") === "/admin";
   const [mode, setMode] = useState<LoginMode>(null);
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "loading" | "error" | "sent">("idle");
   const [message, setMessage] = useState("");
+  const [pendingVerifyUrl, setPendingVerifyUrl] = useState("");
+
+  // When next=/admin, only teacher/admin are valid — hide student for clean UX.
+  const modesToShow = nextAdmin
+    ? MODES.filter((m) => m.value !== "student")
+    : MODES;
 
   async function handleSendCode(e: React.FormEvent) {
     e.preventDefault();
+    if (mode === null) {
+      setMessage("נא לבחור סוג התחברות");
+      setStatus("error");
+      return;
+    }
     const trimmed = email.trim().toLowerCase();
     if (!trimmed) return;
     setStatus("loading");
     setMessage("");
-    try {
-      const res = await fetch("/api/auth/request-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: trimmed }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setStatus("error");
-        setMessage(data.error || "שליחת הקוד נכשלה");
-        return;
-      }
-      const verifyUrl = nextAdmin
-        ? `/verify?email=${encodeURIComponent(trimmed)}&role=${mode}&next=/admin`
-        : `/verify?email=${encodeURIComponent(trimmed)}&role=${mode}`;
-      router.push(verifyUrl);
-    } catch {
+    const result = await apiJson<{ emailSent?: boolean }>("/api/auth/request-code", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: trimmed }),
+    });
+    if (!result.ok) {
       setStatus("error");
-      setMessage("שגיאת רשת");
+      setMessage(result.error);
+      return;
     }
+    const hint = result.data.emailSent === false ? "&hint=noEmail" : "";
+    const baseVerify = `/verify?email=${encodeURIComponent(trimmed)}&role=${mode}`;
+    const verifyUrl = nextAdmin ? `${baseVerify}&next=/admin${hint}` : `${baseVerify}${hint}`;
+    setPendingVerifyUrl(verifyUrl);
+    setStatus("sent");
+    setMessage("");
   }
 
   return (
@@ -71,7 +79,7 @@ function LoginForm() {
               </p>
             )}
             <div className="grid gap-4">
-              {MODES.map((m) =>
+              {modesToShow.map((m) =>
                 m.value === "admin" ? (
                   <Link
                     key="admin"
@@ -130,22 +138,44 @@ function LoginForm() {
               {message && (
                 <p className="text-sm text-red-600">{message}</p>
               )}
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setMode(null)}
-                  className="px-4 py-2 rounded-[var(--radius-input)] border border-[var(--color-border)] text-[var(--color-text)]"
-                >
-                  חזרה
-                </button>
-                <button
-                  type="submit"
-                  disabled={status === "loading"}
-                  className="flex-1 py-2.5 rounded-[var(--radius-input)] bg-[var(--color-primary)] text-white font-medium hover:opacity-90 disabled:opacity-50"
-                >
-                  {status === "loading" ? "שולח…" : "שלח קוד"}
-                </button>
-              </div>
+              {status === "sent" ? (
+                <>
+                  <p className="text-sm text-[var(--color-text-muted)]">הקוד נשלח לאימייל. לחצו להזנת הקוד.</p>
+                  <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setMode(null)}
+                    className="px-4 py-2 rounded-[var(--radius-input)] border border-[var(--color-border)] text-[var(--color-text)]"
+                  >
+                    חזרה
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => pendingVerifyUrl && router.push(pendingVerifyUrl)}
+                    className="flex-1 py-2.5 rounded-[var(--radius-input)] bg-[var(--color-primary)] text-white font-medium hover:opacity-90"
+                  >
+                    להזנת קוד
+                  </button>
+                  </div>
+                </>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setMode(null)}
+                    className="px-4 py-2 rounded-[var(--radius-input)] border border-[var(--color-border)] text-[var(--color-text)]"
+                  >
+                    חזרה
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={status === "loading"}
+                    className="flex-1 py-2.5 rounded-[var(--radius-input)] bg-[var(--color-primary)] text-white font-medium hover:opacity-90 disabled:opacity-50"
+                  >
+                    {status === "loading" ? "שולח…" : "שלח קוד"}
+                  </button>
+                </div>
+              )}
             </form>
           </>
         )}

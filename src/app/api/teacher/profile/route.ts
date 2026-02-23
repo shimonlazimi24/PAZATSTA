@@ -4,25 +4,44 @@ import { getUserFromSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
+const MAX_LENGTHS = {
+  name: 80,
+  phone: 30,
+  displayName: 80,
+  bio: 2000,
+  profileImageUrl: 500,
+} as const;
+
+function trimAndCap(s: string | undefined, max: number): string | undefined {
+  if (s === undefined) return undefined;
+  const t = s.trim();
+  return t === "" ? undefined : t.slice(0, max);
+}
+
 export async function GET() {
   const sessionUser = await getUserFromSession();
   if (!sessionUser || sessionUser.role !== "teacher") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-  const user = await prisma.user.findUnique({
+  const row = await prisma.user.findUnique({
     where: { id: sessionUser.id },
-    select: { name: true, phone: true, email: true },
+    select: {
+      name: true,
+      phone: true,
+      email: true,
+      teacherProfile: {
+        select: { profileImageUrl: true, displayName: true, bio: true },
+      },
+    },
   });
-  const profile = await prisma.teacherProfile.findUnique({
-    where: { userId: sessionUser.id },
-  });
-  if (!user) {
+  if (!row) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+  const profile = row.teacherProfile;
   return NextResponse.json({
-    name: user.name ?? "",
-    phone: user.phone ?? "",
-    email: user.email,
+    name: row.name ?? "",
+    phone: row.phone ?? "",
+    email: row.email,
     profileImageUrl: profile?.profileImageUrl ?? null,
     displayName: profile?.displayName ?? null,
     bio: profile?.bio ?? null,
@@ -35,40 +54,40 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   try {
-    const body = await req.json();
-    const name = typeof body.name === "string" ? body.name.trim() : undefined;
-    const phone = typeof body.phone === "string" ? body.phone.trim() : undefined;
+    const body = await req.json().catch(() => ({}));
+    const name = trimAndCap(body.name, MAX_LENGTHS.name);
+    const phone = trimAndCap(body.phone, MAX_LENGTHS.phone);
     const profileImageUrl =
-      typeof body.profileImageUrl === "string" ? body.profileImageUrl.trim() || null : undefined;
-    const displayName =
-      typeof body.displayName === "string" ? body.displayName.trim() : undefined;
-    const bio = typeof body.bio === "string" ? body.bio.trim() : undefined;
+      typeof body.profileImageUrl === "string"
+        ? body.profileImageUrl.trim().slice(0, MAX_LENGTHS.profileImageUrl) || null
+        : undefined;
+    const displayName = trimAndCap(body.displayName, MAX_LENGTHS.displayName);
+    const bio = trimAndCap(body.bio, MAX_LENGTHS.bio);
 
-    if (name !== undefined) {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { name },
-      });
-    }
-    if (phone !== undefined) {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { phone },
-      });
-    }
+    const userData: { name?: string; phone?: string } = {};
+    if (name !== undefined) userData.name = name;
+    if (phone !== undefined) userData.phone = phone;
 
-    const profileData: Record<string, unknown> = {};
+    const profileData: { profileImageUrl?: string | null; displayName?: string | null; bio?: string | null } = {};
     if (profileImageUrl !== undefined) profileData.profileImageUrl = profileImageUrl;
     if (displayName !== undefined) profileData.displayName = displayName;
     if (bio !== undefined) profileData.bio = bio;
 
-    if (Object.keys(profileData).length > 0) {
-      await prisma.teacherProfile.upsert({
-        where: { userId: user.id },
-        create: { userId: user.id, ...profileData },
-        update: profileData,
-      });
-    }
+    await prisma.$transaction(async (tx) => {
+      if (Object.keys(userData).length > 0) {
+        await tx.user.update({
+          where: { id: user.id },
+          data: userData,
+        });
+      }
+      if (Object.keys(profileData).length > 0) {
+        await tx.teacherProfile.upsert({
+          where: { userId: user.id },
+          create: { userId: user.id, ...profileData },
+          update: profileData,
+        });
+      }
+    });
 
     return NextResponse.json({ ok: true });
   } catch (e) {

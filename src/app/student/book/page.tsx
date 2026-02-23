@@ -2,20 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import { BackLink } from "@/components/design/BackLink";
+import { apiJson, isAbortError } from "@/lib/api";
+import {
+  formatIsraelDateYYYYMMDD,
+  addDaysYYYYMMDD,
+  formatHebrewShortDate,
+} from "@/lib/dates";
 
-type Teacher = { id: string; email: string; name: string | null; bio: string | null };
+type Teacher = { id: string; name: string | null; bio: string | null; profileImageUrl?: string | null };
 type Slot = { id: string; date: string; startTime: string; endTime: string };
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr + "T12:00:00").toLocaleDateString("he-IL", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
-}
 
 export default function StudentBookPage() {
   const router = useRouter();
@@ -29,55 +26,75 @@ export default function StudentBookPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("/api/teachers")
-      .then((r) => (r.ok ? r.json() : []))
-      .then(setTeachers)
-      .finally(() => setLoadingTeachers(false));
+    apiJson<Teacher[]>("/api/teachers").then((r) => {
+      if (r.ok) setTeachers(r.data);
+      setLoadingTeachers(false);
+    });
   }, []);
 
+  // AbortController: avoid race where an older availability response overwrites a newer one when teacher changes quickly.
   useEffect(() => {
     if (!selectedTeacher) {
       setSlots([]);
       setSelectedSlot(null);
+      setError("");
       return;
     }
-    setLoadingSlots(true);
-    const start = new Date();
-    const end = new Date();
-    end.setDate(end.getDate() + 14);
-    fetch(
-      `/api/teachers/${selectedTeacher.id}/availability?start=${start.toISOString().slice(0, 10)}&end=${end.toISOString().slice(0, 10)}`
-    )
-      .then((r) => (r.ok ? r.json() : []))
-      .then(setSlots)
-      .finally(() => setLoadingSlots(false));
+    setError("");
     setSelectedSlot(null);
+    setLoadingSlots(true);
+    const controller = new AbortController();
+    const startStr = formatIsraelDateYYYYMMDD(new Date());
+    const endStr = addDaysYYYYMMDD(startStr, 14);
+    apiJson<Slot[]>(
+      `/api/teachers/${selectedTeacher.id}/availability?start=${encodeURIComponent(startStr)}&end=${encodeURIComponent(endStr)}`,
+      { signal: controller.signal }
+    )
+      .then((r) => {
+        if (controller.signal.aborted) return;
+        if (r.ok) setSlots(r.data);
+        else setSlots([]);
+      })
+      .catch((e) => {
+        if (!controller.signal.aborted && !isAbortError(e)) setSlots([]);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadingSlots(false);
+      });
+    return () => controller.abort();
   }, [selectedTeacher]);
 
   function handleConfirm() {
-    if (!selectedSlot) return;
+    if (!selectedSlot || !selectedTeacher) return;
     setSubmitting(true);
     setError("");
-    fetch("/api/lessons/book", {
+    apiJson<{ id: string; date: string; startTime: string; endTime: string }>("/api/lessons/book", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ availabilityId: selectedSlot.id }),
-    })
-      .then(async (r) => {
-        const data = await r.json();
-        if (!r.ok) {
-          setError(data.error || "שגיאה בקביעת השיעור");
-          setSubmitting(false);
-          return;
-        }
+    }).then((result) => {
+      if (result.ok) {
         router.push("/student");
         router.refresh();
-      })
-      .catch(() => {
-        setError("שגיאת רשת");
-        setSubmitting(false);
-      });
+        return;
+      }
+      setSubmitting(false);
+      setError(result.error);
+      if (result.status === 409) {
+        setSelectedSlot(null);
+        const startStr = formatIsraelDateYYYYMMDD(new Date());
+        const endStr = addDaysYYYYMMDD(startStr, 14);
+        apiJson<Slot[]>(
+          `/api/teachers/${selectedTeacher.id}/availability?start=${encodeURIComponent(startStr)}&end=${encodeURIComponent(endStr)}`
+        ).then((r) => {
+          if (r.ok) setSlots(r.data);
+        });
+      }
+    });
   }
+
+  const busy = loadingSlots || submitting;
+  const formatDate = formatHebrewShortDate;
 
   return (
     <AppShell title="קביעת שיעור">
@@ -101,14 +118,15 @@ export default function StudentBookPage() {
                   <button
                     type="button"
                     onClick={() => setSelectedTeacher(t)}
-                    className={`w-full text-right rounded-[var(--radius-card)] border px-4 py-3 transition ${
+                    disabled={busy}
+                    className={`w-full text-right rounded-[var(--radius-card)] border px-4 py-3 transition disabled:opacity-60 ${
                       selectedTeacher?.id === t.id
                         ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10"
                         : "border-[var(--color-border)] bg-white hover:border-[var(--color-primary)]"
                     }`}
                   >
                     <p className="font-medium text-[var(--color-text)]">
-                      {t.name || t.email}
+                      {t.name || "מורה"}
                     </p>
                     {t.bio && (
                       <p className="text-sm text-[var(--color-text-muted)] mt-0.5">
@@ -140,7 +158,8 @@ export default function StudentBookPage() {
                     <button
                       type="button"
                       onClick={() => setSelectedSlot(s)}
-                      className={`w-full text-right rounded-[var(--radius-input)] border px-3 py-2.5 text-sm transition ${
+                      disabled={submitting}
+                      className={`w-full text-right rounded-[var(--radius-input)] border px-3 py-2.5 text-sm transition disabled:opacity-60 ${
                         selectedSlot?.id === s.id
                           ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
                           : "border-[var(--color-border)] bg-white hover:border-[var(--color-primary)]"
@@ -163,7 +182,7 @@ export default function StudentBookPage() {
             <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-4 space-y-2">
               <p className="text-[var(--color-text)]">
                 <span className="font-medium">מורה:</span>{" "}
-                {selectedTeacher.name || selectedTeacher.email}
+                {selectedTeacher.name || "מורה"}
               </p>
               <p className="text-[var(--color-text)]">
                 <span className="font-medium">תאריך ושעה:</span>{" "}

@@ -35,7 +35,6 @@ export async function GET(req: Request) {
         date: s.date.toISOString().slice(0, 10),
         startTime: s.startTime,
         endTime: s.endTime,
-        isAvailable: s.isAvailable,
       }))
     );
   } catch (e) {
@@ -72,7 +71,6 @@ export async function POST(req: Request) {
         date,
         startTime,
         endTime,
-        isAvailable: body.isAvailable !== false,
       },
     });
     return NextResponse.json({
@@ -80,7 +78,6 @@ export async function POST(req: Request) {
       date: slot.date.toISOString().slice(0, 10),
       startTime: slot.startTime,
       endTime: slot.endTime,
-      isAvailable: slot.isAvailable,
     });
   } catch (e) {
     return NextResponse.json(

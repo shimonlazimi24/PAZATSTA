@@ -62,33 +62,41 @@ model StudentProfile {
 }
 
 model Availability {
-  id           String   @id @default(cuid())
-  teacherId    String
-  date         DateTime
-  startTime    String
-  endTime      String
-  isAvailable  Boolean  @default(true)
-  createdAt    DateTime @default(now())
+  id        String   @id @default(cuid())
+  teacherId String
+  date      DateTime
+  startTime String
+  endTime   String
+  createdAt DateTime @default(now())
 
   teacher User @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, date, startTime])
+  @@index([teacherId, date])
 }
 
+// TODO (time consistency): Consider startsAt/endsAt DateTime (UTC) instead of date + startTime/endTime
+// to avoid timezone bugs. Would require migration and API/UI updates.
 model Lesson {
-  id                    String       @id @default(cuid())
-  teacherId             String
-  studentId             String
-  date                  DateTime
-  startTime             String
-  endTime               String
-  status                LessonStatus @default(scheduled)
-  reportCompleted       Boolean      @default(false)
-  followUpCompletedAt   DateTime?
-  questionFromStudent   String?
-  createdAt             DateTime     @default(now())
+  id                  String       @id @default(cuid())
+  teacherId           String
+  studentId           String
+  date                DateTime
+  startTime           String
+  endTime             String
+  status              LessonStatus @default(scheduled)
+  reportCompleted     Boolean      @default(false)
+  followUpCompletedAt DateTime?
+  questionFromStudent String?
+  createdAt           DateTime     @default(now())
 
   teacher User @relation("LessonTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
   student User @relation("LessonStudent", fields: [studentId], references: [id], onDelete: Cascade)
   summary LessonSummary?
+
+  @@unique([teacherId, date, startTime])
+  @@index([teacherId, date])
+  @@index([studentId, date])
 }
 
 model LessonSummary {

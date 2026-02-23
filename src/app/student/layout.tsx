@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getUserFromSession } from "@/lib/auth";
+import { redirectByRole } from "@/lib/authRedirect";
 
 export default async function StudentLayout({
   children,
@@ -8,10 +9,6 @@ export default async function StudentLayout({
 }) {
   const user = await getUserFromSession();
   if (!user) redirect("/login");
-  if (user.role !== "student") {
-    if (user.role === "teacher") redirect("/teacher/availability");
-    if (user.role === "admin") redirect("/admin");
-    redirect("/login");
-  }
+  if (user.role !== "student") redirectByRole(user.role);
   return <>{children}</>;
 }

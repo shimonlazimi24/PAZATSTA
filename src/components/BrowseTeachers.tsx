@@ -5,9 +5,9 @@ import { BookLessonForm } from "./BookLessonForm";
 
 type Teacher = {
   id: string;
-  email: string;
   name: string | null;
   bio: string | null;
+  profileImageUrl?: string | null;
 };
 
 type Slot = {
@@ -69,7 +69,7 @@ export function BrowseTeachers() {
                     : "border-gray-200 hover:bg-gray-50"
                 }`}
               >
-                <span className="font-medium">{t.name || t.email}</span>
+                <span className="font-medium">{t.name || "מורה"}</span>
                 {t.bio && (
                   <p className="text-sm text-gray-500 mt-0.5">{t.bio}</p>
                 )}
@@ -81,7 +81,7 @@ export function BrowseTeachers() {
       {selectedTeacher && (
         <div>
           <h3 className="text-sm font-medium text-gray-700 mb-2">
-            Available slots — {selectedTeacher.name || selectedTeacher.email}
+            Available slots — {selectedTeacher.name || "מורה"}
           </h3>
           {slots.length === 0 ? (
             <p className="text-sm text-gray-500">No available slots in the next 2 weeks.</p>

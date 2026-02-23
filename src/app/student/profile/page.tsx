@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { BackLink } from "@/components/design/BackLink";
+import { apiJson } from "@/lib/api";
+import { isValidPhone } from "@/lib/validation";
 
 type ProfileResponse = {
   studentFullName?: string | null;
@@ -21,40 +23,40 @@ export default function StudentProfilePage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("/api/student/profile")
-      .then((r) => (r.ok ? r.json() : Promise.resolve({})) as Promise<ProfileResponse>)
-      .then((p) => {
+    apiJson<ProfileResponse>("/api/student/profile").then((r) => {
+      if (r.ok) {
+        const p = r.data;
         setStudentFullName(p.studentFullName ?? "");
         setParentFullName(p.parentFullName ?? "");
         setParentPhone(p.parentPhone ?? "");
-      })
-      .finally(() => setLoading(false));
+      }
+      setLoading(false);
+    });
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSaving(true);
     setError("");
-    try {
-      const res = await fetch("/api/student/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          studentFullName: studentFullName.trim(),
-          parentFullName: parentFullName.trim(),
-          parentPhone: parentPhone.trim(),
-        }),
-      });
-      if (!res.ok) {
-        setError("שגיאה בשמירה");
-        setSaving(false);
-        return;
-      }
-      router.push("/student/topics");
-    } catch {
-      setError("שגיאת רשת");
+    if (!isValidPhone(parentPhone.trim())) {
+      setError("נא להזין מספר טלפון תקין (9–11 ספרות)");
+      return;
     }
+    setSaving(true);
+    const result = await apiJson<{ ok?: boolean }>("/api/student/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        studentFullName: studentFullName.trim(),
+        parentFullName: parentFullName.trim(),
+        parentPhone: parentPhone.trim(),
+      }),
+    });
     setSaving(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    router.push("/student/topics");
   }
 
   if (loading) {
@@ -68,7 +70,7 @@ export default function StudentProfilePage() {
   return (
     <AppShell title="פרטי תלמיד">
       <div className="max-w-xl mx-auto space-y-6" dir="rtl">
-        <BackLink href="/book" label="חזרה" />
+        <BackLink href="/student" label="חזרה" />
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="studentFullName" className="block text-sm font-medium text-[var(--color-text)] mb-1">

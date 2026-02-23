@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 type Slot = { id: string; date: string; startTime: string; endTime: string };
-type Teacher = { id: string; email: string; name: string | null };
+type Teacher = { id: string; name: string | null; email?: string };
 
 type Props = {
   slot: Slot;
@@ -67,7 +67,7 @@ export function BookLessonForm({ slot, teacher, onDone, onCancel }: Props) {
   return (
     <form onSubmit={handleSubmit} className="mt-3 p-4 bg-gray-50 rounded-lg space-y-3">
       <p className="text-sm text-gray-600">
-        Book: {slot.date} {slot.startTime}–{slot.endTime} with {teacher.name || teacher.email}
+        Book: {slot.date} {slot.startTime}–{slot.endTime} with {teacher.name || teacher.email || "מורה"}
       </p>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Full name</label>

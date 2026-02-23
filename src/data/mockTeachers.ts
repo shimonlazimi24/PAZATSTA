@@ -26,6 +26,7 @@ export const MOCK_TEACHERS: MockTeacher[] = [
     reviewCount: 124,
     specialties: ["בגרות 3–5 יח׳", "חטיבה", "יסודי"],
     availabilityLabel: "פנוי השבוע",
+    phone: "050-1234567",
   },
   {
     id: "t2",
@@ -37,6 +38,7 @@ export const MOCK_TEACHERS: MockTeacher[] = [
     reviewCount: 89,
     specialties: ["אנגלית מדוברת", "הבעה", "חטיבה"],
     availabilityLabel: "פנוי מחר",
+    phone: "052-9876543",
   },
   {
     id: "t3",
@@ -48,6 +50,7 @@ export const MOCK_TEACHERS: MockTeacher[] = [
     reviewCount: 67,
     specialties: ["חשיבה כמותית", "מתמטיקה", "הכנה למא״ה"],
     availabilityLabel: "פנוי היום",
+    phone: "054-1112233",
   },
   {
     id: "t4",
@@ -59,6 +62,7 @@ export const MOCK_TEACHERS: MockTeacher[] = [
     reviewCount: 156,
     specialties: ["יסודי", "חטיבה", "לשון"],
     availabilityLabel: "פנוי השבוע",
+    phone: "053-4445566",
   },
   {
     id: "t5",
@@ -70,6 +74,7 @@ export const MOCK_TEACHERS: MockTeacher[] = [
     reviewCount: 78,
     specialties: ["אנגלית יסודי–תיכון", "בגרות"],
     availabilityLabel: "פנוי מחר",
+    phone: "050-7778899",
   },
   {
     id: "t6",
@@ -81,5 +86,6 @@ export const MOCK_TEACHERS: MockTeacher[] = [
     reviewCount: 92,
     specialties: ["הכנה לקורס טיס", "מתמטיקה", "אנגלית"],
     availabilityLabel: "פנוי השבוע",
+    phone: "052-3334455",
   },
 ];

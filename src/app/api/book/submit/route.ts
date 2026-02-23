@@ -11,39 +11,81 @@ export async function POST(req: Request) {
   }
   try {
     const body = await req.json();
+    const availabilityId = typeof body.availabilityId === "string" ? body.availabilityId.trim() : "";
     const teacherId = typeof body.teacherId === "string" ? body.teacherId.trim() : "";
     const dateStr = typeof body.date === "string" ? body.date.trim() : "";
     const startTime = typeof body.startTime === "string" ? body.startTime.trim() : "";
     const endTime = typeof body.endTime === "string" ? body.endTime.trim() : "";
-    if (!teacherId || !dateStr || !startTime || !endTime) {
-      return NextResponse.json(
-        { error: "חסרים פרטים: מורה, תאריך או שעות" },
-        { status: 400 }
-      );
-    }
-    const date = new Date(dateStr + "T12:00:00");
-    if (isNaN(date.getTime())) {
-      return NextResponse.json({ error: "תאריך לא תקין" }, { status: 400 });
-    }
 
-    const teacher = await prisma.user.findFirst({
-      where: { id: teacherId, role: "teacher" },
-    });
-    if (!teacher) {
-      return NextResponse.json({ error: "מורה לא נמצא" }, { status: 404 });
-    }
+    let lesson: { id: string; date: Date; startTime: string; endTime: string; teacher: { email: string; name: string | null }; student: { email: string; name: string | null } };
 
-    const lesson = await prisma.lesson.create({
-      data: {
-        teacherId: teacher.id,
-        studentId: user.id,
-        date,
-        startTime,
-        endTime,
-        status: "scheduled",
-      },
-      include: { teacher: true, student: true },
-    });
+    if (availabilityId) {
+      const slot = await prisma.availability.findFirst({
+        where: { id: availabilityId },
+        include: { teacher: true },
+      });
+      if (!slot) {
+        return NextResponse.json(
+          { error: "הזמן נתפס, בחר זמן אחר" },
+          { status: 409 }
+        );
+      }
+      const result = await prisma.$transaction(async (tx) => {
+        const current = await tx.availability.findFirst({
+          where: { id: availabilityId },
+          include: { teacher: true },
+        });
+        if (!current) return null;
+        const created = await tx.lesson.create({
+          data: {
+            teacherId: current.teacherId,
+            studentId: user.id,
+            date: current.date,
+            startTime: current.startTime,
+            endTime: current.endTime,
+            status: "scheduled",
+          },
+          include: { teacher: true, student: true },
+        });
+        await tx.availability.delete({ where: { id: current.id } });
+        return created;
+      });
+      if (!result) {
+        return NextResponse.json(
+          { error: "הזמן נתפס, בחר זמן אחר" },
+          { status: 409 }
+        );
+      }
+      lesson = result;
+    } else {
+      if (!teacherId || !dateStr || !startTime || !endTime) {
+        return NextResponse.json(
+          { error: "חסרים פרטים: מורה, תאריך או שעות" },
+          { status: 400 }
+        );
+      }
+      const date = new Date(dateStr + "T12:00:00");
+      if (isNaN(date.getTime())) {
+        return NextResponse.json({ error: "תאריך לא תקין" }, { status: 400 });
+      }
+      const teacher = await prisma.user.findFirst({
+        where: { id: teacherId, role: "teacher" },
+      });
+      if (!teacher) {
+        return NextResponse.json({ error: "מורה לא נמצא" }, { status: 404 });
+      }
+      lesson = await prisma.lesson.create({
+        data: {
+          teacherId: teacher.id,
+          studentId: user.id,
+          date,
+          startTime,
+          endTime,
+          status: "scheduled",
+        },
+        include: { teacher: true, student: true },
+      });
+    }
 
     const timeRange = `${lesson.startTime}–${lesson.endTime}`;
     const teacherName = lesson.teacher.name || lesson.teacher.email;
@@ -63,12 +105,13 @@ export async function POST(req: Request) {
       new Set([lesson.teacher.email, lesson.student.email, ...adminEmails])
     );
 
+    const lessonDateStr = lesson.date.toISOString().slice(0, 10);
     try {
       await sendBookingConfirmation({
         to: toEmails,
         studentName: studentName || "תלמיד",
         teacherName,
-        date: dateStr,
+        date: lessonDateStr,
         timeRange,
         topic,
         screeningDate,
@@ -79,7 +122,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       id: lesson.id,
-      date: dateStr,
+      date: lessonDateStr,
       startTime: lesson.startTime,
       endTime: lesson.endTime,
     });

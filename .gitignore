@@ -40,9 +40,3 @@ Thumbs.db
 
 # Prisma
 prisma/migrations/**/migration_lock.toml
-
-# Playwright
-test-results/
-playwright-report/
-blob-report/
-.playwright/

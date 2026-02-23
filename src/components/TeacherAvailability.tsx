@@ -1,26 +1,22 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { DateSelector } from "@/components/design/DateSelector";
-import { TimeSlots } from "@/components/design/TimeSlots";
 import { cn } from "@/lib/utils";
+import { formatIsraelYYYYMMDD, addDaysYYYYMMDD } from "@/lib/dates";
+import { apiJson } from "@/lib/api";
 
 type ApiSlot = {
   id: string;
   date: string;
   startTime: string;
   endTime: string;
-  isAvailable: boolean;
+  isAvailable?: boolean;
 };
 
 const SLOT_DURATION = 60; // minutes
 const START_HOUR = 8;
 const END_HOUR = 20;
-
-function timeToMinutes(t: string): number {
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + m;
-}
 
 function minutesToTime(min: number): string {
   const h = Math.floor(min / 60);
@@ -28,39 +24,22 @@ function minutesToTime(min: number): string {
   return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
 }
 
-function getWeekDates(): string[] {
-  const d = new Date();
-  const out: string[] = [];
-  for (let i = 0; i < 7; i++) {
-    const x = new Date(d);
-    x.setDate(d.getDate() + i);
-    out.push(x.toISOString().slice(0, 10));
-  }
+/** Israel-safe week dates (YYYY-MM-DD). Avoids UTC shift from toISOString().slice(0,10). */
+function getWeekDatesIsrael(): string[] {
+  const startStr = formatIsraelYYYYMMDD(new Date());
+  const out: string[] = [startStr];
+  for (let i = 1; i < 7; i++) out.push(addDaysYYYYMMDD(startStr, i));
   return out;
 }
 
-function getWeekRange(date: Date): { start: string; end: string } {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  const mon = new Date(d);
-  mon.setDate(diff);
-  const sun = new Date(mon);
-  sun.setDate(mon.getDate() + 6);
-  return {
-    start: mon.toISOString().slice(0, 10),
-    end: sun.toISOString().slice(0, 10),
-  };
-}
-
 function formatDateLabel(dateStr: string): string {
-  const d = new Date(dateStr + "T12:00:00");
-  return d.toLocaleDateString("he-IL", { day: "numeric", month: "short" });
+  const d = new Date(dateStr + "T12:00:00.000Z");
+  return d.toLocaleDateString("he-IL", { timeZone: "Asia/Jerusalem", day: "numeric", month: "short" });
 }
 
 function formatWeekday(dateStr: string): string {
-  const d = new Date(dateStr + "T12:00:00");
-  return d.toLocaleDateString("he-IL", { weekday: "short" });
+  const d = new Date(dateStr + "T12:00:00.000Z");
+  return d.toLocaleDateString("he-IL", { timeZone: "Asia/Jerusalem", weekday: "short" });
 }
 
 function generateTimeOptionsForDay(): { id: string; startTime: string; endTime: string }[] {
@@ -87,11 +66,12 @@ function generateTimeOptionsForDay(): { id: string; startTime: string; endTime: 
 const TIME_OPTIONS = generateTimeOptionsForDay();
 
 type TeacherAvailabilityProps = {
+  weekDates?: string[];
   onSlotsChange?: (slots: ApiSlot[]) => void;
 };
 
-export function TeacherAvailability({ onSlotsChange }: TeacherAvailabilityProps = {}) {
-  const weekDates = getWeekDates();
+export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange }: TeacherAvailabilityProps = {}) {
+  const weekDates = useMemo(() => weekDatesProp ?? getWeekDatesIsrael(), [weekDatesProp]);
   const dateOptions = weekDates.map((date) => ({
     date,
     label: formatDateLabel(date),
@@ -105,47 +85,42 @@ export function TeacherAvailability({ onSlotsChange }: TeacherAvailabilityProps 
   const [toggling, setToggling] = useState<string | null>(null);
 
   const load = useCallback(() => {
-    if (!selectedDate) return;
+    if (!selectedDate || weekDates.length === 0) return;
     const start = weekDates[0];
     const end = weekDates[weekDates.length - 1];
     setLoading(true);
     setLoadError(null);
-    fetch(`/api/teacher/availability?start=${start}&end=${end}`)
-      .then(async (r) => {
-        if (!r.ok) {
-          const data = await r.json().catch(() => ({}));
-          setLoadError(data.error || "לא ניתן לטעון זמינות");
-          return [];
+    apiJson<ApiSlot[]>(`/api/teacher/availability?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`)
+      .then((r) => {
+        if (r.ok) {
+          setSlots(r.data);
+          onSlotsChange?.(r.data);
+        } else {
+          setLoadError(r.error);
+          setSlots([]);
         }
-        return r.json();
-      })
-      .then((data) => {
-        setSlots(data);
-        onSlotsChange?.(data);
       })
       .finally(() => setLoading(false));
-  }, [selectedDate]);
+  }, [selectedDate, weekDates, onSlotsChange]);
 
   useEffect(() => {
+    if (weekDates.length === 0) return;
     const start = weekDates[0];
     const end = weekDates[weekDates.length - 1];
     setLoading(true);
     setLoadError(null);
-    fetch(`/api/teacher/availability?start=${start}&end=${end}`)
-      .then(async (r) => {
-        if (!r.ok) {
-          const data = await r.json().catch(() => ({}));
-          setLoadError(data.error || "לא ניתן לטעון זמינות");
-          return [];
+    apiJson<ApiSlot[]>(`/api/teacher/availability?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`)
+      .then((r) => {
+        if (r.ok) {
+          setSlots(r.data);
+          onSlotsChange?.(r.data);
+        } else {
+          setLoadError(r.error);
+          setSlots([]);
         }
-        return r.json();
-      })
-      .then((data) => {
-        setSlots(data);
-        onSlotsChange?.(data);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [weekDates]);
 
   const existingForDate = selectedDate
     ? slots.filter((s) => s.date === selectedDate)
@@ -183,8 +158,8 @@ export function TeacherAvailability({ onSlotsChange }: TeacherAvailabilityProps 
       }
       const start = weekDates[0];
       const end = weekDates[weekDates.length - 1];
-      const res = await fetch(`/api/teacher/availability?start=${start}&end=${end}`);
-      const data = res.ok ? await res.json() : [];
+      const r = await apiJson<ApiSlot[]>(`/api/teacher/availability?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
+      const data = r.ok ? r.data : [];
       setSlots(data);
       onSlotsChange?.(data);
     } finally {

@@ -38,12 +38,10 @@ export function TeacherCard({ teacher, selected, onSelect }: TeacherCardProps) {
               <span dir="ltr" className="text-[var(--color-text)] text-left inline-block">{teacher.email}</span>
             </p>
           )}
-          {teacher.phone && (
-            <p className="mt-0.5 text-sm text-[var(--color-text-muted)]">
-              <span className="text-[var(--color-text-muted)]">טלפון: </span>
-              <span className="text-[var(--color-text)]">{teacher.phone}</span>
-            </p>
-          )}
+          <p className="mt-0.5 text-sm text-[var(--color-text-muted)]">
+            <span className="text-[var(--color-text-muted)]">טלפון: </span>
+            <span className="text-[var(--color-text)]">{teacher.phone || "—"}</span>
+          </p>
           {teacher.bio && (
             <p className="mt-1.5 text-sm text-[var(--color-text-muted)] line-clamp-2">{teacher.bio}</p>
           )}

@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     }
 
     const slot = await prisma.availability.findFirst({
-      where: { id: availabilityId, isAvailable: true },
+      where: { id: availabilityId },
       include: { teacher: true },
     });
     if (!slot) {
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
 
     const lesson = await prisma.$transaction(async (tx) => {
       const current = await tx.availability.findFirst({
-        where: { id: availabilityId, isAvailable: true },
+        where: { id: availabilityId },
         include: { teacher: true },
       });
       if (!current) return null;
