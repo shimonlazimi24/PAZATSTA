@@ -4,6 +4,7 @@ import { canAccessAdmin } from "@/lib/admin";
 import { AdminShell } from "@/components/AdminShell";
 import { DefineTeacherForm } from "@/components/admin/DefineTeacherForm";
 import { SendSummaryButton } from "@/components/admin/SendSummaryButton";
+import { PendingLessonsBlock } from "@/components/admin/PendingLessonsBlock";
 
 export default async function AdminPage() {
   const user = await getUserFromSession();
@@ -13,6 +14,7 @@ export default async function AdminPage() {
   return (
     <AdminShell email={user.email}>
       <div className="space-y-8">
+        <PendingLessonsBlock />
         <section>
           <h2 className="text-xl font-bold text-[var(--color-text)] mb-3 text-right">
             הגדרת מורה

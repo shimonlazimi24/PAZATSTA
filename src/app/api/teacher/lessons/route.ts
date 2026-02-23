@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getUserFromSession } from "@/lib/auth";
+import type { Prisma } from "@prisma/client";
 
 export async function GET(req: Request) {
   const user = await getUserFromSession();
@@ -11,15 +12,18 @@ export async function GET(req: Request) {
   const month = searchParams.get("month");
   const year = searchParams.get("year");
   const upcoming = searchParams.get("upcoming") === "true";
-
+  const pending = searchParams.get("pending") === "true";
   const past = searchParams.get("past") === "true";
   const now = new Date();
   const startOfTodayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
 
-  const where: { teacherId: string; date?: { gte?: Date; lt?: Date } } = {
+  const where: Prisma.LessonWhereInput = {
     teacherId: user.id,
   };
-  if (month && year) {
+  if (pending) {
+    where.status = "pending_approval";
+    where.approvalExpiresAt = { gt: now };
+  } else if (month && year) {
     const y = parseInt(year, 10);
     const m = parseInt(month, 10);
     if (!Number.isNaN(y) && !Number.isNaN(m)) {
@@ -29,6 +33,7 @@ export async function GET(req: Request) {
     }
   } else if (upcoming) {
     where.date = { gte: startOfTodayUtc };
+    where.status = "scheduled";
   } else if (past) {
     where.date = { lt: startOfTodayUtc };
   }
@@ -39,8 +44,9 @@ export async function GET(req: Request) {
       student: { select: { id: true, email: true, name: true } },
       summary: true,
     },
-    orderBy:
-      past
+    orderBy: pending
+      ? [{ approvalExpiresAt: "asc" }, { date: "asc" }, { startTime: "asc" }]
+      : past
         ? [{ date: "desc" }, { startTime: "desc" }]
         : [{ date: "asc" }, { startTime: "asc" }],
   });

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { CalendarClock } from "lucide-react";
 import { TeacherHomeLessons } from "@/components/teacher/TeacherHomeLessons";
+import { PendingApprovalsBlock } from "@/components/teacher/PendingApprovalsBlock";
 
 export function TeacherDashboardContent() {
   return (
@@ -15,6 +16,8 @@ export function TeacherDashboardContent() {
           השיעורים הקרובים והשיעורים שעברו. לשיעורים שעברו — לחצו &quot;מלא דוח שיעור&quot; כדי למלא סיכום ולשלוח לתלמיד.
         </p>
       </header>
+
+      <PendingApprovalsBlock />
 
       <section id="teacher-lessons">
         <TeacherHomeLessons />

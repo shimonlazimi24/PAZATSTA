@@ -24,6 +24,7 @@ export default function StudentBookPage() {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [successPending, setSuccessPending] = useState(false);
 
   useEffect(() => {
     apiJson<Teacher[]>("/api/teachers").then((r) => {
@@ -68,14 +69,14 @@ export default function StudentBookPage() {
     if (!selectedSlot || !selectedTeacher) return;
     setSubmitting(true);
     setError("");
-    apiJson<{ id: string; date: string; startTime: string; endTime: string }>("/api/lessons/book", {
+    apiJson<{ id: string; status?: string; date: string; startTime: string; endTime: string }>("/api/lessons/book", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ availabilityId: selectedSlot.id }),
     }).then((result) => {
       if (result.ok) {
-        router.push("/student");
-        router.refresh();
+        setSuccessPending(true);
+        setError("");
         return;
       }
       setSubmitting(false);
@@ -174,7 +175,20 @@ export default function StudentBookPage() {
           </section>
         )}
 
-        {selectedTeacher && selectedSlot && (
+        {successPending ? (
+          <section className="rounded-[var(--radius-card)] border border-[var(--color-primary)] bg-[var(--color-primary)]/10 p-4 space-y-3">
+            <p className="text-[var(--color-text)] font-medium">
+              הבקשה ממתינה לאישור המנהלים/המורה. לאחר אישור יישלח אימייל.
+            </p>
+            <button
+              type="button"
+              onClick={() => { router.push("/student"); router.refresh(); }}
+              className="w-full py-2.5 rounded-[var(--radius-input)] bg-[var(--color-primary)] text-white font-medium hover:opacity-90"
+            >
+              חזרה לשיעורים שלי
+            </button>
+          </section>
+        ) : selectedTeacher && selectedSlot ? (
           <section>
             <h2 className="text-lg font-semibold text-[var(--color-text)] mb-2">
               3. אישור
@@ -202,7 +216,7 @@ export default function StudentBookPage() {
               {submitting ? "מאשר…" : "אשר קביעת שיעור"}
             </button>
           </section>
-        )}
+        ) : null}
       </div>
     </AppShell>
   );
