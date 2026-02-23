@@ -93,19 +93,28 @@ function isValidPhone(value: string): boolean {
   return digits.length >= 9 && digits.length <= 11;
 }
 
-type ApiTeacher = { id: string; email: string; name: string | null; bio: string | null };
+type ApiTeacher = {
+  id: string;
+  email: string;
+  name: string | null;
+  phone: string | null;
+  bio: string | null;
+  profileImageUrl: string | null;
+};
 
 function toMockTeacher(t: ApiTeacher): MockTeacher {
   return {
     id: t.id,
     name: t.name || t.email,
-    photo: "",
+    photo: t.profileImageUrl || "",
     bio: t.bio || "",
     subjects: ["psychometric"],
     rating: 0,
     reviewCount: 0,
     specialties: [],
     availabilityLabel: "פנוי",
+    email: t.email,
+    phone: t.phone ?? undefined,
   };
 }
 

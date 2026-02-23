@@ -98,6 +98,7 @@ export function StudentDashboardContent() {
                     className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white px-4 py-3"
                   >
                     <div>
+                      <p className="text-xs text-[var(--color-text-muted)]">מורה</p>
                       <p className="font-medium text-[var(--color-text)]">
                         {teacherLabel}
                       </p>
@@ -148,6 +149,7 @@ export function StudentDashboardContent() {
                   className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white px-4 py-3"
                 >
                   <div>
+                    <p className="text-xs text-[var(--color-text-muted)]">מורה</p>
                     <p className="font-medium text-[var(--color-text)]">
                       {l.teacher.name || l.teacher.email}
                     </p>

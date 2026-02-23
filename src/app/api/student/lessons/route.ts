@@ -45,6 +45,7 @@ export async function GET(req: Request) {
       where,
       include: {
         teacher: { select: { id: true, email: true, name: true } },
+        student: { select: { id: true, email: true, name: true, phone: true } },
         summary: true,
       },
       orderBy: [{ date: "desc" }, { startTime: "asc" }],
@@ -58,6 +59,7 @@ export async function GET(req: Request) {
         status: l.status,
         questionFromStudent: l.questionFromStudent,
         teacher: l.teacher,
+        student: l.student,
         summary: l.summary
           ? {
               id: l.summary.id,

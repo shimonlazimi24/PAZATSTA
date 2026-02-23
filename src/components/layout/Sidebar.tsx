@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Logo } from "@/components/Logo";
-import { LayoutDashboard, Calendar, Settings, LogOut, BookOpen } from "lucide-react";
+import { LayoutDashboard, Calendar, Settings, LogOut, BookOpen, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type NavItem = { href: string; label: string; icon: React.ComponentType<{ className?: string }> };
@@ -12,6 +12,7 @@ type NavItem = { href: string; label: string; icon: React.ComponentType<{ classN
 const TEACHER_NAV: NavItem[] = [
   { href: "/teacher/dashboard", label: "לוח מורה", icon: LayoutDashboard },
   { href: "/teacher/availability", label: "הגדרת זמינות", icon: Calendar },
+  { href: "/teacher/profile", label: "פרטיים אישיים", icon: User },
 ];
 const STUDENT_NAV: NavItem[] = [
   { href: "/student", label: "השיעורים שלי", icon: Calendar },

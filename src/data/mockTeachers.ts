@@ -10,6 +10,9 @@ export interface MockTeacher {
   reviewCount: number;
   specialties: string[];
   availabilityLabel: string;
+  /** From API: teacher contact details for student view */
+  email?: string;
+  phone?: string | null;
 }
 
 export const MOCK_TEACHERS: MockTeacher[] = [

@@ -12,6 +12,7 @@ type Lesson = {
   endTime: string;
   status: string;
   teacher: { name: string | null; email: string };
+  student?: { name: string | null; email: string; phone: string | null };
   summary?: { pdfUrl: string | null } | null;
 };
 
@@ -81,9 +82,17 @@ export function MyLessonsBlock() {
             >
               <div className="text-right">
                 <p className="font-medium text-[var(--color-text)]">
-                  {l.teacher.name || l.teacher.email}
+                  {l.student?.name || l.student?.email || "—"}
                 </p>
                 <p className="text-sm text-[var(--color-text-muted)]">
+                  {l.student?.email}
+                </p>
+                {l.student?.phone && (
+                  <p className="text-sm text-[var(--color-text-muted)]">
+                    {l.student.phone}
+                  </p>
+                )}
+                <p className="text-sm text-[var(--color-text-muted)] mt-1">
                   {formatLessonDate(l.date, l.startTime)}
                 </p>
               </div>
@@ -104,9 +113,17 @@ export function MyLessonsBlock() {
             >
               <div className="text-right">
                 <p className="font-medium text-[var(--color-text)]">
-                  {l.teacher.name || l.teacher.email}
+                  {l.student?.name || l.student?.email || "—"}
                 </p>
                 <p className="text-sm text-[var(--color-text-muted)]">
+                  {l.student?.email}
+                </p>
+                {l.student?.phone && (
+                  <p className="text-sm text-[var(--color-text-muted)]">
+                    {l.student.phone}
+                  </p>
+                )}
+                <p className="text-sm text-[var(--color-text-muted)] mt-1">
                   {formatLessonDate(l.date, l.startTime)}
                 </p>
               </div>

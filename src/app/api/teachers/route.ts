@@ -14,7 +14,9 @@ export async function GET() {
       id: t.id,
       email: t.email,
       name: t.name,
+      phone: t.phone ?? null,
       bio: t.teacherProfile?.bio ?? null,
+      profileImageUrl: t.teacherProfile?.profileImageUrl ?? null,
     }))
   );
 }

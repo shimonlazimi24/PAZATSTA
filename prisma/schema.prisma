@@ -37,11 +37,12 @@ model User {
 }
 
 model TeacherProfile {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  displayName String?
-  bio         String?
-  createdAt   DateTime @default(now())
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  displayName      String?
+  bio              String?
+  profileImageUrl  String?
+  createdAt        DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
