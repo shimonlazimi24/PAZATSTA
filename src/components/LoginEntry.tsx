@@ -14,9 +14,6 @@ export function LoginEntry() {
         <h1 className="text-2xl font-bold text-center text-[var(--color-text)]">
           התחברות
         </h1>
-        <p className="text-center text-[var(--color-text-muted)]">
-          בחרו איך אתם נכנסים
-        </p>
         <div className="grid gap-4 sm:grid-cols-2">
           <Link href="/login/teacher">
             <Card className="rounded-2xl shadow-soft border-border cursor-pointer transition-shadow hover:shadow-card h-full">

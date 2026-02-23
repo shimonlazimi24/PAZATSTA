@@ -70,9 +70,18 @@ export async function POST(req: Request) {
     const topic = studentProfile?.currentScreeningType ?? undefined;
     const screeningDate = studentProfile?.currentScreeningDate?.toISOString().slice(0, 10);
 
+    const admins = await prisma.user.findMany({
+      where: { role: "admin" },
+      select: { email: true },
+    });
+    const adminEmails = admins.map((a) => a.email).filter(Boolean);
+    const toEmails = Array.from(
+      new Set([lesson.teacher.email, lesson.student.email, ...adminEmails])
+    );
+
     try {
       await sendBookingConfirmation({
-        to: [lesson.teacher.email, lesson.student.email],
+        to: toEmails,
         studentName: studentName || "תלמיד",
         teacherName,
         date: dateStr,

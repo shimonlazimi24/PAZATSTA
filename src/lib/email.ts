@@ -80,7 +80,7 @@ export function getBookingConfirmationContent(params: {
   if (params.topic) text += `\nסוג המיון: ${params.topic}`;
   if (params.screeningDate) text += `\nתאריך המיון: ${params.screeningDate}`;
   return {
-    subject: "שיעור נקבע – פאזה",
+    subject: "סיכום הזמנה – פאזה",
     text,
   };
 }

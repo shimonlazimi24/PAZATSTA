@@ -7,7 +7,7 @@ export interface MockSlot {
 }
 
 const DAYS_AHEAD = 14;
-const SLOT_DURATION = 45;
+const SLOT_DURATION = 60;
 
 function generateDates(): string[] {
   const out: string[] = [];

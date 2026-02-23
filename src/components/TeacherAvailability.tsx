@@ -13,7 +13,7 @@ type ApiSlot = {
   isAvailable: boolean;
 };
 
-const SLOT_DURATION = 45; // minutes
+const SLOT_DURATION = 60; // minutes
 const START_HOUR = 8;
 const END_HOUR = 20;
 

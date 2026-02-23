@@ -70,9 +70,6 @@ function LoginForm() {
                 כניסה לאזור הניהול: בחרו &quot;התחבר כמורה&quot; והזינו אימייל עם הרשאות מנהל.
               </p>
             )}
-            <p className="text-center text-[var(--color-text-muted)]">
-              בחרו איך אתם נכנסים
-            </p>
             <div className="grid gap-4">
               {MODES.map((m) =>
                 m.value === "admin" ? (

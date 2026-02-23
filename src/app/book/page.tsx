@@ -2,9 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Stepper } from "@/components/design/Stepper";
-import { BackLink } from "@/components/design/BackLink";
 import { Button } from "@/components/design/Button";
 import { Card } from "@/components/design/Card";
 import { CategoryCard } from "@/components/design/CategoryCard";
@@ -95,12 +93,29 @@ function isValidPhone(value: string): boolean {
   return digits.length >= 9 && digits.length <= 11;
 }
 
+type ApiTeacher = { id: string; email: string; name: string | null; bio: string | null };
+
+function toMockTeacher(t: ApiTeacher): MockTeacher {
+  return {
+    id: t.id,
+    name: t.name || t.email,
+    photo: "",
+    bio: t.bio || "",
+    subjects: ["psychometric"],
+    rating: 0,
+    reviewCount: 0,
+    specialties: [],
+    availabilityLabel: "פנוי",
+  };
+}
+
 export default function BookPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [subOption, setSubOption] = useState<{ id: string; label: string } | null>(null);
   const [teacher, setTeacher] = useState<MockTeacher | null>(null);
+  const [apiTeachers, setApiTeachers] = useState<MockTeacher[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<MockSlot | null>(null);
   const [name, setName] = useState("");
@@ -118,6 +133,17 @@ export default function BookPage() {
     }
   }, [categoryId]);
 
+  useEffect(() => {
+    fetch("/api/teachers")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((list: ApiTeacher[]) => {
+        if (Array.isArray(list) && list.length > 0) {
+          setApiTeachers(list.map(toMockTeacher));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const dateOptions = useMemo(
     () =>
       MOCK_DATES_WEEK.map((date) => ({
@@ -134,9 +160,10 @@ export default function BookPage() {
   }, [selectedDate]);
 
   const filteredTeachers = useMemo(() => {
-    if (!categoryId) return MOCK_TEACHERS;
-    return MOCK_TEACHERS.filter((t) => t.subjects.includes("psychometric"));
-  }, [categoryId]);
+    const list = apiTeachers.length > 0 ? apiTeachers : MOCK_TEACHERS;
+    if (!categoryId) return list;
+    return list.filter((t) => t.subjects.includes("psychometric"));
+  }, [categoryId, apiTeachers]);
 
   const canProceedStep1 = categoryId !== null && subOption !== null;
   const canProceedStep2 = teacher !== null;
@@ -156,7 +183,7 @@ export default function BookPage() {
     return Object.keys(e).length === 0;
   }
 
-  function handleNext() {
+  async function handleNext() {
     if (step === 1 && !canProceedStep1) return;
     if (step === 2 && !canProceedStep2) return;
     if (step === 3 && !canProceedStep3) return;
@@ -181,6 +208,25 @@ export default function BookPage() {
       try {
         sessionStorage.setItem("paza_last_booking", JSON.stringify(payload));
       } catch (_) {}
+      const isRealTeacherId = teacher?.id && teacher.id.length > 10 && !teacher.id.startsWith("t");
+      if (isRealTeacherId && selectedDate && selectedSlot) {
+        try {
+          const res = await fetch("/api/book/submit", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              teacherId: teacher.id,
+              date: selectedDate,
+              startTime: selectedSlot.startTime,
+              endTime: selectedSlot.endTime,
+            }),
+          });
+          if (res.ok) {
+            router.push("/book/success");
+            return;
+          }
+        } catch (_) {}
+      }
       router.push("/book/success");
       return;
     }
@@ -197,7 +243,18 @@ export default function BookPage() {
     <div className="min-h-screen bg-[var(--color-bg)]">
       <header className="border-b border-[var(--color-border)] bg-white">
         <div className="mx-auto max-w-3xl px-4 py-4 sm:px-6">
-          <BackLink href="/login" label="חזרה" />
+          <button
+            type="button"
+            onClick={async () => {
+              await fetch("/api/auth/logout", { method: "POST" });
+              router.push("/login");
+              router.refresh();
+            }}
+            className="inline-flex items-center gap-1 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+          >
+            <span aria-hidden>←</span>
+            התנתק
+          </button>
           <h1 className="mt-2 text-2xl font-bold text-[var(--color-text)] text-right">קביעת שיעור</h1>
           <div className="mt-4">
             <Stepper steps={STEPS} currentStep={step} />
