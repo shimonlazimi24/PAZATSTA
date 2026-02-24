@@ -72,6 +72,13 @@ export async function POST(req: Request) {
       teacher: { id: lesson.teacher.id, name: teacherName, email: lesson.teacher.email },
     });
   } catch (e) {
+    const prismaErr = e as { code?: string };
+    if (prismaErr?.code === "P2002") {
+      return NextResponse.json(
+        { error: SLOT_TAKEN_ERROR },
+        { status: 409 }
+      );
+    }
     console.error("[lessons/book] Booking failed:", e);
     const message = process.env.NODE_ENV === "development" && e instanceof Error
       ? e.message

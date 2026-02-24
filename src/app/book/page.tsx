@@ -13,7 +13,7 @@ import { DateSelector } from "@/components/design/DateSelector";
 import { TimeSlots } from "@/components/design/TimeSlots";
 import { FormField } from "@/components/design/FormField";
 import { SummaryCard } from "@/components/design/SummaryCard";
-import { MyLessonsBlock } from "@/components/MyLessonsBlock";
+import { AppShell } from "@/components/layout/AppShell";
 import type { MockTeacher } from "@/data/mockTeachers";
 import { formatIsraelYYYYMMDD, addDaysYYYYMMDD } from "@/lib/dates";
 import type { MockSlot } from "@/data/mockSlots";
@@ -326,35 +326,18 @@ export default function BookPage() {
   const subjectTitle = subOption?.label ?? CATEGORIES.find((c) => c.id === categoryId)?.title ?? "";
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg)]">
-      <header className="border-b border-[var(--color-border)] bg-white">
-        <div className="mx-auto max-w-3xl px-4 py-4 sm:px-6">
-          <div className="flex items-center justify-between gap-4">
-            <button
-              type="button"
-              onClick={async () => {
-                await fetch("/api/auth/logout", { method: "POST" });
-                router.push("/login");
-                router.refresh();
-              }}
-              className="inline-flex items-center gap-1 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
-            >
-              <span aria-hidden>←</span>
-              התנתק
-            </button>
-            <Link href="/book" className="shrink-0" aria-label="Paza">
-              <Logo alt="Paza" className="h-7 w-auto object-contain" width={100} height={28} />
-            </Link>
+    <AppShell>
+      <div className="min-h-screen bg-[var(--color-bg)]">
+        <header className="border-b border-[var(--color-border)] bg-white">
+          <div className="mx-auto max-w-3xl px-4 py-4 sm:px-6">
+            <h1 className="text-2xl font-bold text-[var(--color-text)] text-right">קביעת שיעור</h1>
+            <div className="mt-4">
+              <Stepper steps={STEPS} currentStep={step} />
+            </div>
           </div>
-          <h1 className="mt-2 text-2xl font-bold text-[var(--color-text)] text-right">קביעת שיעור</h1>
-          <div className="mt-4">
-            <Stepper steps={STEPS} currentStep={step} />
-          </div>
-        </div>
-      </header>
+        </header>
 
-      <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
-        {step === 1 && <MyLessonsBlock />}
+        <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
         {step === 1 && (
           <div className="space-y-6">
             <p className="text-[var(--color-text-muted)] text-right">בחרו מסלול</p>
@@ -581,7 +564,8 @@ export default function BookPage() {
             </Button>
           )}
         </div>
-      </main>
-    </div>
+        </main>
+      </div>
+    </AppShell>
   );
 }

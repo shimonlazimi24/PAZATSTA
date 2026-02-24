@@ -37,7 +37,11 @@ function formatLessonDate(dateStr: string, startTime: string): string {
   );
 }
 
-export function MyLessonsBlock() {
+interface MyLessonsBlockProps {
+  compact?: boolean;
+}
+
+export function MyLessonsBlock({ compact }: MyLessonsBlockProps = {}) {
   const [upcoming, setUpcoming] = useState<Lesson[]>([]);
   const [past, setPast] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,23 +78,25 @@ export function MyLessonsBlock() {
   }, []);
 
   if (!allowed && !loading) return null;
+  const sectionCls = compact ? "mb-4" : "mb-8";
+  const titleCls = compact ? "text-base font-semibold" : "text-xl font-semibold";
   if (loading) {
     return (
-      <section className="mb-8">
-        <h2 className="text-xl font-semibold text-[var(--color-text)] text-right mb-2">השיעורים שלי</h2>
+      <section className={sectionCls}>
+        <h2 className={`${titleCls} text-[var(--color-text)] text-right mb-2`}>השיעורים שלי</h2>
         <p className="text-sm text-[var(--color-text-muted)] text-right">טוען…</p>
       </section>
     );
   }
 
   return (
-    <section className="mb-8">
-      <h2 className="text-xl font-semibold text-[var(--color-text)] text-right mb-1">השיעורים שלי</h2>
-      <p className="text-sm text-[var(--color-text-muted)] text-right mb-4">הבאים ועבר</p>
+    <section className={sectionCls}>
+      <h2 className={`${titleCls} text-[var(--color-text)] text-right mb-1`}>השיעורים שלי</h2>
+      <p className="text-sm text-[var(--color-text-muted)] text-right mb-3">הבאים ועבר</p>
 
-      <h3 className="text-sm font-medium text-[var(--color-text-muted)] text-right mb-2">הבאים</h3>
+      <h3 className="text-xs font-medium text-[var(--color-text-muted)] text-right mb-2">הבאים</h3>
       {upcoming.length === 0 ? (
-        <Card className="rounded-2xl border border-border p-6 mb-6">
+        <Card className={`rounded-2xl border border-border mb-6 ${compact ? "p-4" : "p-6"}`}>
           <div className="flex flex-col items-center justify-center text-center text-[var(--color-text-muted)]">
             <CalendarDays className="h-10 w-10 mb-2 opacity-60" />
             <p className="font-medium text-[var(--color-text)]">אין שיעורים קרובים</p>
@@ -131,7 +137,7 @@ export function MyLessonsBlock() {
         </ul>
       )}
 
-      <h3 className="text-sm font-medium text-[var(--color-text-muted)] text-right mb-2">עבר</h3>
+      <h3 className={`font-medium text-[var(--color-text-muted)] text-right mb-2 ${compact ? "text-xs" : "text-sm"}`}>עבר</h3>
       {past.length === 0 ? (
         <p className="text-sm text-[var(--color-text-muted)] text-right">אין שיעורים בעבר</p>
       ) : (

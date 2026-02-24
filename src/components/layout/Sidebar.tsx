@@ -33,7 +33,6 @@ export function Sidebar() {
   const router = useRouter();
   const [navItems, setNavItems] = useState<NavItem[]>([]);
   const [logoHref, setLogoHref] = useState("/book");
-
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
     router.replace("/login");
@@ -49,12 +48,12 @@ export function Sidebar() {
           setLogoHref("/book");
           return;
         }
-        const { role, canAccessAdmin } = data;
-        setLogoHref(logoHrefForRole(role, canAccessAdmin));
+        const { role: r, canAccessAdmin } = data;
+        setLogoHref(logoHrefForRole(r, canAccessAdmin));
         const items: NavItem[] = [];
-        if (role === "teacher") items.push(...TEACHER_NAV);
-        else if (role === "student") items.push(...STUDENT_NAV);
-        if (role === "admin" || canAccessAdmin) items.push(...ADMIN_NAV);
+        if (r === "teacher") items.push(...TEACHER_NAV);
+        else if (r === "student") items.push(...STUDENT_NAV);
+        if (r === "admin" || canAccessAdmin) items.push(...ADMIN_NAV);
         setNavItems(items.length ? items : [...STUDENT_NAV]);
       })
       .catch(() => setNavItems([]));

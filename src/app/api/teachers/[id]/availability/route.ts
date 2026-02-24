@@ -63,20 +63,38 @@ export async function GET(
     const dateWhere =
       effectiveEnd != null ? { gte: from, lte: effectiveEnd } : { gte: startOfTodayUTC };
 
-    const slots = await prisma.availability.findMany({
-      where: {
-        teacherId,
-        date: dateWhere,
-      },
-      select: { id: true, date: true, startTime: true, endTime: true },
-      orderBy: [{ date: "asc" }, { startTime: "asc" }],
-    });
-
-    // Return date as YYYY-MM-DD (Israel) to match client selectedDate format
     const toDateStr = (d: Date) =>
       d.toLocaleDateString("en-CA", { timeZone: "Asia/Jerusalem" });
+
+    const [slots, takenLessons] = await Promise.all([
+      prisma.availability.findMany({
+        where: {
+          teacherId,
+          date: dateWhere,
+        },
+        select: { id: true, date: true, startTime: true, endTime: true },
+        orderBy: [{ date: "asc" }, { startTime: "asc" }],
+      }),
+      prisma.lesson.findMany({
+        where: {
+          teacherId,
+          date: dateWhere,
+          status: { notIn: ["canceled"] },
+        },
+        select: { date: true, startTime: true },
+      }),
+    ]);
+
+    const takenSet = new Set(
+      takenLessons.map((l) => `${toDateStr(l.date)}_${l.startTime}`)
+    );
+
+    const available = slots.filter(
+      (s) => !takenSet.has(`${toDateStr(s.date)}_${s.startTime}`)
+    );
+
     return NextResponse.json(
-      slots.map((s) => ({
+      available.map((s) => ({
         id: s.id,
         date: toDateStr(s.date),
         startTime: s.startTime,

@@ -64,7 +64,7 @@ export function StudentDashboardContent() {
   }, []);
 
   return (
-    <AppShell title="השיעורים שלי">
+    <AppShell>
       <div className="space-y-8">
         <div className="flex justify-end">
           <Link

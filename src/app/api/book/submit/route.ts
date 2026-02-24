@@ -118,6 +118,15 @@ export async function POST(req: Request) {
           );
         }
       }
+      const existing = await prisma.lesson.findFirst({
+        where: { teacherId, date, startTime },
+      });
+      if (existing) {
+        return NextResponse.json(
+          { error: "הזמן נתפס, בחר זמן אחר" },
+          { status: 409 }
+        );
+      }
       lesson = await prisma.lesson.create({
         data: {
           teacherId: teacher.id,
@@ -162,6 +171,13 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "המורה אינו מתמחה במסלול שנבחר." },
         { status: 403 }
+      );
+    }
+    const prismaErr = e as { code?: string };
+    if (prismaErr?.code === "P2002") {
+      return NextResponse.json(
+        { error: "הזמן נתפס, בחר זמן אחר" },
+        { status: 409 }
       );
     }
     console.error("[book/submit] Failed:", e);

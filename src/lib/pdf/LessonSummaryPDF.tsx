@@ -1,3 +1,4 @@
+import path from "path";
 import React from "react";
 import {
   Document,
@@ -5,38 +6,56 @@ import {
   Text,
   View,
   StyleSheet,
+  Font,
 } from "@react-pdf/renderer";
 
-// Register a font that supports Hebrew (use system font fallback)
-// @react-pdf/renderer uses Noto by default for some scripts; we use a generic approach
+// Hebrew-compatible font: Noto Sans Hebrew
+const fontPath = path.join(process.cwd(), "src/assets/fonts/NotoSansHebrew-Regular.ttf");
+Font.register({
+  family: "NotoSansHebrew",
+  src: fontPath,
+});
+
+// Disable hyphenation for Hebrew (prevents broken word splitting)
+Font.registerHyphenationCallback((word) => [word]);
+
 const styles = StyleSheet.create({
   page: {
     padding: 40,
-    fontFamily: "Helvetica",
+    fontFamily: "NotoSansHebrew",
     direction: "rtl",
+    textAlign: "right",
   },
   title: {
     fontSize: 18,
     marginBottom: 12,
-    fontWeight: "bold",
+    fontWeight: 700,
+    fontFamily: "NotoSansHebrew",
+    textAlign: "right",
   },
   meta: {
     fontSize: 10,
     color: "#666",
     marginBottom: 20,
+    fontFamily: "NotoSansHebrew",
+    textAlign: "right",
   },
   section: {
     marginBottom: 14,
   },
   sectionTitle: {
     fontSize: 11,
-    fontWeight: "bold",
+    fontWeight: 700,
     marginBottom: 4,
+    fontFamily: "NotoSansHebrew",
+    textAlign: "right",
   },
   sectionText: {
     fontSize: 10,
     lineHeight: 1.5,
     whiteSpace: "pre-wrap",
+    fontFamily: "NotoSansHebrew",
+    textAlign: "right",
   },
 });
 
