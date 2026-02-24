@@ -73,6 +73,8 @@ export async function generateLessonPdfBuffer(
     const doc = createLessonSummaryDocument({
       studentName,
       teacherName,
+      studentEmail: lesson.student.email || undefined,
+      teacherEmail: lesson.teacher.email || undefined,
       date: dateStr,
       timeRange,
       summaryText: summary.summaryText || "—",
