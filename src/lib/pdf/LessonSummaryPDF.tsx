@@ -35,6 +35,7 @@ const styles = StyleSheet.create({
   page: {
     padding: 40,
     fontFamily: "NotoSansHebrew",
+    color: "#1a1a1a",
     ...rtl,
   },
   title: {
@@ -42,18 +43,19 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     fontWeight: 700,
     fontFamily: "NotoSansHebrew",
+    color: "#000",
     ...rtl,
   },
   metaRtl: {
     fontSize: 10,
-    color: "#666",
+    color: "#333",
     marginBottom: 2,
     fontFamily: "NotoSansHebrew",
     ...rtl,
   },
   metaLtr: {
     fontSize: 10,
-    color: "#666",
+    color: "#333",
     marginBottom: 2,
     fontFamily: "NotoSansHebrew",
     ...ltr,
@@ -69,12 +71,14 @@ const styles = StyleSheet.create({
     fontWeight: 700,
     marginBottom: 4,
     fontFamily: "NotoSansHebrew",
+    color: "#000",
     ...rtl,
   },
   sectionText: {
     fontSize: 10,
     lineHeight: 1.5,
     fontFamily: "NotoSansHebrew",
+    color: "#1a1a1a",
     ...rtl,
   },
   sectionLine: {
