@@ -184,8 +184,11 @@ export default function TeacherLessonReportPage() {
       return;
     }
     if (id && typeof sessionStorage !== "undefined") sessionStorage.removeItem(`paza_report_draft_${id}`);
+    setStatus("idle");
+    apiJson<Lesson>(`/api/teacher/lessons/${id}`).then((r) => {
+      if (r.ok) setLesson(r.data);
+    });
     router.refresh();
-    router.push("/teacher/dashboard");
     if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("teacher-lessons-refresh"));
   }
 

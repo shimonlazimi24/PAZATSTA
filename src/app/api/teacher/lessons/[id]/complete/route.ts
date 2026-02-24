@@ -92,9 +92,9 @@ export async function POST(
     if (pdfResult.pdfBuffer) {
       pdfBuffer = pdfResult.pdfBuffer;
       pdfUrl = pdfResult.pdfUrl ?? `/api/pdf/lesson-summaries/lesson-${lessonId}.pdf`;
-      console.log("[complete] PDF attachment ready, size:", pdfBuffer.length, "bytes");
+      console.log("[complete] PDF ready for email attachment, size:", pdfBuffer.length, "bytes");
     } else {
-      console.error("[pdf] generateAndStoreLessonPdf returned no pdfBuffer for", lessonId);
+      console.warn("[complete] generateAndStoreLessonPdf returned no pdfBuffer for", lessonId, "- email will send without PDF attachment");
     }
 
     const adminUsers = await prisma.user.findMany({

@@ -82,11 +82,11 @@ export async function GET(req: Request) {
   const startOfTodayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
 
   // Dashboard mode: return both upcoming and past in one request (faster)
-  // Past = lessons that have ended (by Israel time). Upcoming = not yet ended.
+  // Past = lessons that have ended (by Israel time) OR completed. Upcoming = not yet ended.
   if (upcoming && past && !month && !year && !pending) {
     const todayStr = todayIsraelYYYYMMDD();
     const nowTime = normalizeTimeForCompare(nowIsraelHHMM());
-    const [upcomingFromDb, pastFromDb] = await Promise.all([
+    const [upcomingFromDb, pastFromDb, completedTodayFromDb] = await Promise.all([
       prisma.lesson.findMany({
         where: {
           teacherId: user.id,
@@ -105,6 +105,15 @@ export async function GET(req: Request) {
         orderBy: [{ date: "desc" }, { startTime: "desc" }],
         take: 50,
       }),
+      prisma.lesson.findMany({
+        where: {
+          teacherId: user.id,
+          date: { gte: startOfTodayUtc },
+          status: "completed",
+        },
+        include: includeStudentSummary,
+        orderBy: [{ date: "desc" }, { startTime: "desc" }],
+      }),
     ]);
     const lessonDateStr = (d: Date) => formatDateInIsrael(d);
     const endedToday = upcomingFromDb.filter((l) => {
@@ -121,6 +130,7 @@ export async function GET(req: Request) {
         if (d !== 0) return d;
         return normalizeTimeForCompare(b.endTime).localeCompare(normalizeTimeForCompare(a.endTime));
       }),
+      ...completedTodayFromDb,
       ...pastFromDb,
     ].slice(0, 50);
     return NextResponse.json({

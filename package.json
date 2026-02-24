@@ -11,6 +11,7 @@
     "db:seed": "npx tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@fontsource/noto-sans-hebrew": "^5.2.8",
     "@prisma/client": "^5.22.0",
     "@react-pdf/renderer": "^4.3.2",
     "class-variance-authority": "^0.7.0",

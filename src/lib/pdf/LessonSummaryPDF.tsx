@@ -9,9 +9,15 @@ import {
   Font,
 } from "@react-pdf/renderer";
 
-// Hebrew-compatible font: public/ is included in deploy (serverless)
-const fontPath = path.join(process.cwd(), "public", "fonts", "NotoSansHebrew-Regular.ttf");
-Font.register({ family: "NotoSansHebrew", src: fontPath });
+// Hebrew font from @fontsource (WOFF supported by react-pdf)
+const fontDir = path.join(process.cwd(), "node_modules", "@fontsource", "noto-sans-hebrew", "files");
+Font.register({
+  family: "NotoSansHebrew",
+  fonts: [
+    { src: path.join(fontDir, "noto-sans-hebrew-hebrew-400-normal.woff"), fontWeight: 400 },
+    { src: path.join(fontDir, "noto-sans-hebrew-hebrew-700-normal.woff"), fontWeight: 700 },
+  ],
+});
 
 // Disable hyphenation for Hebrew (prevents broken word splitting)
 Font.registerHyphenationCallback((word) => [word]);
@@ -50,9 +56,11 @@ const styles = StyleSheet.create({
   sectionText: {
     fontSize: 10,
     lineHeight: 1.5,
-    whiteSpace: "pre-wrap",
     fontFamily: "NotoSansHebrew",
     textAlign: "right",
+  },
+  sectionLine: {
+    marginBottom: 2,
   },
 });
 
@@ -64,10 +72,17 @@ function Section({
   text: string;
 }) {
   if (!text || text === "—") return null;
+  const lines = text.split("\n");
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>
-      <Text style={styles.sectionText}>{text}</Text>
+      <View>
+        {lines.map((line, i) => (
+          <Text key={i} style={[styles.sectionText, styles.sectionLine]}>
+            {line || " "}
+          </Text>
+        ))}
+      </View>
     </View>
   );
 }

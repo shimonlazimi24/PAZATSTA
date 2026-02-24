@@ -251,6 +251,14 @@ function getLessonCompletedHtml(params: {
 </div>`;
 }
 
+const PDF_MAGIC = "%PDF-";
+
+function isValidPdfBuffer(buffer: Buffer): boolean {
+  if (!buffer || buffer.length < 5) return false;
+  const header = buffer.subarray(0, 5).toString("ascii");
+  return header === PDF_MAGIC;
+}
+
 export async function sendLessonCompleted(params: {
   to: string[];
   lessonId?: string;
@@ -274,17 +282,23 @@ export async function sendLessonCompleted(params: {
   }
   const resend = getResend();
   const filename = params.lessonId ? `lesson-${params.lessonId}.pdf` : "lesson-summary.pdf";
-  const base64 = params.pdfBuffer ? params.pdfBuffer.toString("base64") : "";
-  const attachment = base64
-    ? [{ filename, content: base64, contentType: "application/pdf" as const }]
-    : undefined;
-  if (attachment) {
-    console.log("[email] Sending lesson completed with PDF attachment, size:", params.pdfBuffer!.length, "bytes");
-  } else if (params.pdfBuffer) {
-    console.warn("[email] PDF buffer present but attachment not created");
+
+  let attachment: { filename: string; content: string; contentType: "application/pdf" }[] | undefined;
+  if (params.pdfBuffer) {
+    const size = params.pdfBuffer.length;
+    const header = params.pdfBuffer.subarray(0, 5).toString("ascii");
+    console.log("[email] PDF buffer: size=", size, "bytes, first 5 bytes:", JSON.stringify(header));
+    if (isValidPdfBuffer(params.pdfBuffer)) {
+      const base64 = params.pdfBuffer.toString("base64");
+      attachment = [{ filename, content: base64, contentType: "application/pdf" }];
+      console.log("[email] PDF validated (%PDF-), attaching to lesson completed email");
+    } else {
+      console.error("[email] Invalid PDF buffer (does not start with %PDF-), sending without attachment");
+    }
   } else {
-    console.log("[email] Sending lesson completed without PDF (generation failed)");
+    console.log("[email] No pdfBuffer provided, sending lesson completed without PDF attachment");
   }
+
   for (const email of params.to) {
     await resend.emails.send({
       from: from(),
