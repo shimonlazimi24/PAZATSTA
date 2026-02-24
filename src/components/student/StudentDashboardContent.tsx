@@ -157,16 +157,7 @@ export function StudentDashboardContent() {
                       {formatDate(l.date)} {l.startTime}–{l.endTime}
                     </p>
                   </div>
-                  <span
-                    className={
-                      l.status === "completed"
-                        ? "rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800"
-                        : "rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800"
-                    }
-                  >
-                    {l.status === "completed" ? "הושלם" : "מתוזמן"}
-                  </span>
-                  {l.status === "completed" && l.summary?.pdfUrl && (
+                  {l.summary?.pdfUrl && (
                     <a
                       href={l.summary.pdfUrl}
                       target="_blank"

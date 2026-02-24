@@ -33,13 +33,11 @@ export function TeacherHomeLessons() {
 
   function load() {
     setLoading(true);
-    Promise.all([
-      fetch("/api/teacher/lessons?upcoming=true", { cache: "no-store" }).then((r) => (r.ok ? r.json() : [])),
-      fetch("/api/teacher/lessons?past=true", { cache: "no-store" }).then((r) => (r.ok ? r.json() : [])),
-    ])
-      .then(([u, p]) => {
-        setUpcoming(u);
-        setPast(p);
+    fetch("/api/teacher/lessons?upcoming=true&past=true", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : { upcoming: [], past: [] }))
+      .then((data) => {
+        setUpcoming(data.upcoming ?? []);
+        setPast(data.past ?? []);
       })
       .finally(() => setLoading(false));
   }

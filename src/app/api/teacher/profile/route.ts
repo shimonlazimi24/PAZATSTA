@@ -13,9 +13,9 @@ const MAX_LENGTHS = {
   specialization: 200,
 } as const;
 
-function trimAndCap(s: string | undefined, max: number): string | undefined {
-  if (s === undefined) return undefined;
-  const t = s.trim();
+function trimAndCap(s: string | null | undefined, max: number): string | undefined {
+  if (s === undefined || s === null) return undefined;
+  const t = String(s).trim();
   return t === "" ? undefined : t.slice(0, max);
 }
 

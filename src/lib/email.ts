@@ -97,18 +97,39 @@ export async function sendApprovalRequest(params: {
   timeRange: string;
 }): Promise<void> {
   const { subject, text } = getApprovalRequestContent(params);
-  if (isDev && noRealKey()) {
-    console.log("[DEV] Approval request to", params.to, text.slice(0, 80));
+  const toEmails = params.to.filter(Boolean);
+  if (toEmails.length === 0) {
+    console.warn("[sendApprovalRequest] No recipients (teacher + admins)");
     return;
   }
+  if (noRealKey()) {
+    console.log("[sendApprovalRequest] DEV: would send to", toEmails, subject);
+    return;
+  }
+  const fromAddr = from();
   const resend = getResend();
-  for (const email of params.to) {
-    await resend.emails.send({
-      from: from(),
+  for (const email of toEmails) {
+    const result = await resend.emails.send({
+      from: fromAddr,
       to: email,
       subject,
       text,
     });
+    if (result.error) {
+      if (fromAddr !== RESEND_DEV_FROM && isDomainNotVerifiedError(result.error)) {
+        const retry = await resend.emails.send({
+          from: RESEND_DEV_FROM,
+          to: email,
+          subject,
+          text,
+        });
+        if (!retry.error) continue;
+        console.error("[sendApprovalRequest] Retry failed for", email, retry.error);
+      } else {
+        console.error("[sendApprovalRequest] Failed for", email, result.error);
+      }
+      throw new Error(result.error.message ?? "Failed to send approval email");
+    }
   }
 }
 

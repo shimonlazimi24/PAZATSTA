@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/design/Card";
 import { Button } from "@/components/design/Button";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, CalendarPlus } from "lucide-react";
+import { addToCalendar } from "@/lib/calendar";
 
 type Lesson = {
   id: string;
@@ -18,6 +19,14 @@ type Lesson = {
 
 function displayLabel(l: Lesson): string {
   return l.teacher?.name || l.teacher?.email || "—";
+}
+
+function getStatusLabel(status: string): string {
+  if (status === "pending_approval") return "ממתין לאישור";
+  if (status === "scheduled") return "מתוזמן";
+  if (status === "completed") return "הושלם";
+  if (status === "canceled") return "בוטל";
+  return status;
 }
 
 function formatLessonDate(dateStr: string, startTime: string): string {
@@ -91,21 +100,53 @@ export function MyLessonsBlock() {
         </Card>
       ) : (
         <ul className="space-y-2 mb-6">
-          {upcoming.map((l) => (
-            <li
-              key={l.id}
-              className="flex items-center justify-between rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 shadow-soft"
-            >
-              <div className="text-right">
-                <p className="font-medium text-[var(--color-text)]">
-                  מורה: {displayLabel(l)}
-                </p>
-                <p className="text-sm text-[var(--color-text-muted)] mt-1">
-                  {formatLessonDate(l.date, l.startTime)}
-                </p>
-              </div>
-            </li>
-          ))}
+          {upcoming.map((l) => {
+            const teacherLabel = displayLabel(l);
+            const calendarTitle = `שיעור פאזה – ${teacherLabel}`;
+            return (
+              <li
+                key={l.id}
+                className="flex items-center justify-between gap-2 rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 shadow-soft"
+              >
+                <div className="text-right min-w-0 flex-1">
+                  <p className="font-medium text-[var(--color-text)]">
+                    מורה: {teacherLabel}
+                  </p>
+                  <p className="text-sm text-[var(--color-text-muted)] mt-1">
+                    {formatLessonDate(l.date, l.startTime)}
+                  </p>
+                  <span
+                    className={`inline-block mt-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      l.status === "pending_approval"
+                        ? "bg-amber-100 text-amber-800"
+                        : l.status === "scheduled"
+                          ? "bg-[var(--color-primary)]/15 text-[var(--color-primary)]"
+                          : "bg-[var(--color-bg-muted)] text-[var(--color-text-muted)]"
+                    }`}
+                  >
+                    סטטוס: {getStatusLabel(l.status)}
+                  </span>
+                </div>
+                {l.status === "scheduled" && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      addToCalendar({
+                        date: l.date,
+                        startTime: l.startTime,
+                        endTime: l.endTime,
+                        title: calendarTitle,
+                      })
+                    }
+                    className="shrink-0 inline-flex items-center gap-1.5 rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs font-medium text-[var(--color-text)] hover:bg-[var(--color-bg-muted)]"
+                  >
+                    <CalendarPlus className="h-3.5 w-3.5" aria-hidden />
+                    הוסף ליומן
+                  </button>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
 
@@ -119,13 +160,16 @@ export function MyLessonsBlock() {
               key={l.id}
               className="flex items-center justify-between rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 shadow-soft"
             >
-              <div className="text-right">
+              <div className="text-right min-w-0 flex-1">
                 <p className="font-medium text-[var(--color-text)]">
                   מורה: {displayLabel(l)}
                 </p>
                 <p className="text-sm text-[var(--color-text-muted)] mt-1">
                   {formatLessonDate(l.date, l.startTime)}
                 </p>
+                <span className="inline-block mt-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-[var(--color-bg-muted)] text-[var(--color-text-muted)]">
+                  סטטוס: {getStatusLabel(l.status)}
+                </span>
               </div>
               {l.summary?.pdfUrl && (
                 <a
