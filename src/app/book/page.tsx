@@ -150,6 +150,7 @@ export default function BookPage() {
   const [subOption, setSubOption] = useState<{ id: string; label: string } | null>(null);
   const [teacher, setTeacher] = useState<MockTeacher | null>(null);
   const [apiTeachers, setApiTeachers] = useState<MockTeacher[]>([]);
+  const [teachersLoading, setTeachersLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<MockSlot | null>(null);
   const [teacherSlots, setTeacherSlots] = useState<MockSlot[]>([]);
@@ -172,6 +173,9 @@ export default function BookPage() {
   useEffect(() => {
     const topic = subOption?.label ?? "";
     const url = topic ? `/api/teachers?topic=${encodeURIComponent(topic)}` : "/api/teachers";
+    setTeachersLoading(true);
+    setApiTeachers([]);
+    setTeacher(null);
     fetch(url)
       .then((r) => (r.ok ? r.json() : []))
       .then((list: ApiTeacher[]) => {
@@ -179,7 +183,8 @@ export default function BookPage() {
           setApiTeachers(list.map(toMockTeacher));
         }
       })
-      .catch(() => setApiTeachers([]));
+      .catch(() => setApiTeachers([]))
+      .finally(() => setTeachersLoading(false));
   }, [subOption?.label]);
 
   const isRealTeacher = Boolean(teacher?.id && teacher.id.length > 10 && !teacher.id.startsWith("t"));
@@ -396,7 +401,11 @@ export default function BookPage() {
         {step === 2 && (
           <div className="space-y-6">
             <p className="text-[var(--color-text-muted)] text-right">בחרו מורה</p>
-            {filteredTeachers.length === 0 ? (
+            {teachersLoading ? (
+              <p className="text-sm text-[var(--color-text-muted)] text-right rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-bg-muted)] p-4">
+                טוען מורים…
+              </p>
+            ) : filteredTeachers.length === 0 ? (
               <p className="text-sm text-[var(--color-text-muted)] text-right rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-bg-muted)] p-4">
                 {subOption
                   ? "אין מורים שמתמחים במסלול שנבחר. נסו מסלול אחר או צרו קשר עם האדמין."

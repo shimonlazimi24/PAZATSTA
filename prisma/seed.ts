@@ -20,7 +20,7 @@ async function main() {
     where: { email: TEST_TEACHER_EMAIL },
     create: {
       email: TEST_TEACHER_EMAIL,
-      name: "דני כהן",
+      name: "מורה בדיקה",
       role: "teacher",
     },
     update: {},

@@ -42,7 +42,7 @@ After running `npx prisma db seed`:
 
 | Role    | Email             | Name        | How to log in                    |
 |---------|-------------------|------------|-----------------------------------|
-| Teacher | **teacher@test.com** | דני כהן   | On `/login` click **כניסה כמורה** |
+| Teacher | **teacher@test.com** | מורה בדיקה | On `/login` click **כניסה כמורה** |
 | Student | **student@test.com** | רוני ישראלי | On `/login` click **כניסה כתלמיד** |
 
 - **Admin** (for `/admin`): either  

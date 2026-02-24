@@ -15,7 +15,7 @@ const PREVIEWS = [
   {
     name: "שיעור נקבע",
     ...getBookingConfirmationContent({
-      studentName: "דני כהן",
+      studentName: "רוני ישראלי",
       teacherName: "מיכל לוי",
       date: "2025-03-02",
       timeRange: "10:00–10:45",
@@ -24,7 +24,7 @@ const PREVIEWS = [
   {
     name: "סיכום שיעור (Lesson completed)",
     ...getLessonCompletedContent({
-      studentName: "דני כהן",
+      studentName: "רוני ישראלי",
       teacherName: "מיכל לוי",
       date: "2025-02-18",
       pdfUrl: "/api/pdf/lesson-summaries/lesson-abc123.pdf",
@@ -33,7 +33,7 @@ const PREVIEWS = [
   {
     name: "תזכורת למעקב (Follow-up)",
     ...getScreeningFollowUpReminderContent({
-      studentName: "דני כהן",
+      studentName: "רוני ישראלי",
       screeningType: "יום המא״ה - מבחנים פסיכוטכניים",
       screeningDate: "2025-03-01",
       lastLessonDate: "2025-02-10",
@@ -50,7 +50,7 @@ const PREVIEWS = [
           startTime: "09:00",
           endTime: "09:45",
           teacherName: "מיכל לוי",
-          studentName: "דני כהן",
+          studentName: "רוני ישראלי",
           summaryText: "חשיבה כמותית, הכנה למא״ה.",
           homeworkText: "עמוד 42.",
         },
