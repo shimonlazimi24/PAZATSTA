@@ -18,7 +18,7 @@ export function TopBar({ title }: TopBarProps) {
   const [logoHref, setLogoHref] = useState("/book");
 
   useEffect(() => {
-    fetch("/api/auth/me")
+    fetch("/api/auth/me", { credentials: "include" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data) setLogoHref(logoHrefForRole(data.role, data.canAccessAdmin));

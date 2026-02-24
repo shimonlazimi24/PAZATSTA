@@ -11,10 +11,22 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getUserFromSession();
-  if (!user || user.role !== "teacher") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!user) {
+    if (process.env.NODE_ENV === "development") {
+      console.log("[complete] No session - returning 401");
+    }
+    return NextResponse.json({ error: "נדרשת התחברות" }, { status: 401 });
+  }
+  if (user.role !== "teacher") {
+    if (process.env.NODE_ENV === "development") {
+      console.log("[complete] User role is", user.role, "- returning 403");
+    }
+    return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
   }
   const { id: lessonId } = await params;
+  if (process.env.NODE_ENV === "development") {
+    console.log("[complete] user.id=", user.id, "role=", user.role, "lessonId=", lessonId);
+  }
   try {
     const body = await req.json();
     const summaryText = typeof body.summaryText === "string" ? body.summaryText.trim() : "";
@@ -87,14 +99,17 @@ export async function POST(
     }
 
     let pdfUrl: string | null = null;
-    let pdfBuffer: Buffer | undefined;
-    const pdfResult = await generateAndStoreLessonPdf(lessonId);
-    if (pdfResult.pdfBuffer) {
-      pdfBuffer = pdfResult.pdfBuffer;
+    try {
+      const pdfResult = await generateAndStoreLessonPdf(lessonId);
       pdfUrl = pdfResult.pdfUrl ?? `/api/pdf/lesson-summaries/lesson-${lessonId}.pdf`;
-      console.log("[complete] PDF ready for email attachment, size:", pdfBuffer.length, "bytes");
-    } else {
-      console.warn("[complete] generateAndStoreLessonPdf returned no pdfBuffer for", lessonId, "- email will send without PDF attachment");
+      if (pdfResult.pdfUrl) {
+        console.log("[complete] PDF stored, pdfUrl:", pdfResult.pdfUrl);
+      } else {
+        console.log("[complete] PDF storage failed, using on-demand URL:", pdfUrl);
+      }
+    } catch (pdfErr) {
+      console.error("[complete] PDF generation failed (lesson still completed):", pdfErr instanceof Error ? pdfErr.message : pdfErr);
+      pdfUrl = `/api/pdf/lesson-summaries/lesson-${lessonId}.pdf`;
     }
 
     const adminUsers = await prisma.user.findMany({
@@ -106,30 +121,28 @@ export async function POST(
       lesson.student.email,
       ...adminUsers.map((a) => a.email),
     ];
-    await sendLessonCompleted({
-      to: Array.from(new Set(toEmails)),
-      lessonId,
-      studentName,
-      teacherName,
-      date: dateStr,
-      summaryText: summaryText || "—",
-      homeworkText: homeworkText || "—",
-      pointsToKeep: pointsToKeep || "—",
-      pointsToImprove: pointsToImprove || "—",
-      tips: tips || "—",
-      recommendations: recommendations || "—",
-      pdfUrl: pdfUrl ?? undefined,
-      pdfBuffer,
-    });
+    try {
+      await sendLessonCompleted({
+        to: Array.from(new Set(toEmails)),
+        lessonId,
+        studentName,
+        teacherName,
+        date: dateStr,
+        pdfUrl: pdfUrl ?? undefined,
+      });
+    } catch (emailErr) {
+      console.error("[complete] Email send failed (lesson still completed):", emailErr instanceof Error ? emailErr.message : emailErr);
+    }
 
     return NextResponse.json({
       ok: true,
       pdfUrl,
     });
   } catch (e) {
-    console.error("[complete] Failed:", e);
+    console.error("[complete] Failed:", e instanceof Error ? e.message : e);
+    const message = process.env.NODE_ENV === "development" && e instanceof Error ? e.message : "שגיאה בשרת";
     return NextResponse.json(
-      { error: "Failed to complete lesson" },
+      { error: message },
       { status: 500 }
     );
   }

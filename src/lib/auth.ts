@@ -57,13 +57,15 @@ export async function getUserFromSession(): Promise<{
 }
 
 export function getSessionCookieConfig() {
-  return {
+  const base = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax" as const,
     path: "/",
     maxAge: SESSION_TTL_DAYS * 24 * 60 * 60,
   };
+  const domain = process.env.COOKIE_DOMAIN?.trim();
+  return domain ? { ...base, domain } : base;
 }
 
 export { SESSION_COOKIE, sign, unsign };

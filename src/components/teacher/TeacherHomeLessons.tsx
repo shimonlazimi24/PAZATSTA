@@ -39,7 +39,7 @@ export function TeacherHomeLessons() {
 
   function load() {
     setLoading(true);
-    fetch("/api/teacher/lessons?upcoming=true&past=true", { cache: "no-store" })
+    fetch("/api/teacher/lessons?upcoming=true&past=true", { cache: "no-store", credentials: "include" })
       .then((r) => (r.ok ? r.json() : { upcoming: [], past: [] }))
       .then((data) => {
         setUpcoming(data.upcoming ?? []);
@@ -63,6 +63,7 @@ export function TeacherHomeLessons() {
     try {
       const res = await fetch(`/api/teacher/lessons/${lessonId}/follow-up-complete`, {
         method: "POST",
+        credentials: "include",
       });
       if (res.ok) load();
     } finally {

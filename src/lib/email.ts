@@ -182,53 +182,58 @@ function getAppBaseUrl(): string {
   return base.replace(/\/$/, "");
 }
 
-/** Build lesson-completed email content (short summary + download link). */
+function buildFullPdfUrl(pdfUrl: string | undefined, lessonId?: string): string | null {
+  const base = getAppBaseUrl();
+  if (!base) return null;
+  if (pdfUrl) {
+    const path = pdfUrl.startsWith("/") ? pdfUrl : `/${pdfUrl}`;
+    return base + path;
+  }
+  if (lessonId) {
+    return `${base}/api/pdf/lesson-summaries/lesson-${lessonId}.pdf`;
+  }
+  return null;
+}
+
+/** Build lesson-completed email content (short + CTA link). */
 export function getLessonCompletedContent(params: {
   studentName: string;
   teacherName: string;
   date: string;
   pdfUrl?: string;
+  lessonId?: string;
 }) {
-  const base = getAppBaseUrl();
-  const fullUrl = params.pdfUrl && base ? `${base}${params.pdfUrl.startsWith("/") ? "" : "/"}${params.pdfUrl}` : params.pdfUrl;
+  const fullUrl = buildFullPdfUrl(params.pdfUrl, params.lessonId);
   const lines = [
     `דוח סיום שיעור: ${params.studentName} עם ${params.teacherName} — ${params.date}`,
     "",
-    "הדוח מצורף למייל כקובץ PDF.",
-    ...(fullUrl ? ["ניתן גם להוריד בקישור: " + fullUrl] : []),
+    "הדוח זמין לצפייה ולהורדה בקישור.",
+    ...(fullUrl ? ["להורדת דוח שיעור לחץ כאן: " + fullUrl] : []),
   ];
   return {
-    subject: "דוח סיום שיעור",
+    subject: "דוח סיום שיעור – פאזה",
     text: lines.join("\n"),
   };
 }
 
-/** Build HTML body for lesson-completed email (short + download button). */
+/** Build HTML body for lesson-completed email (short + CTA button). */
 function getLessonCompletedHtml(params: {
   studentName: string;
   teacherName: string;
   date: string;
   pdfUrl?: string;
+  lessonId?: string;
 }): string {
   const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const base = getAppBaseUrl();
-  const fullUrl = params.pdfUrl && base ? `${base}${params.pdfUrl.startsWith("/") ? "" : "/"}${params.pdfUrl}` : null;
+  const fullUrl = buildFullPdfUrl(params.pdfUrl, params.lessonId);
   const downloadCta = fullUrl
-    ? `<p style="margin-top:20px"><a href="${esc(fullUrl)}" style="background:#4a7c59;color:white;padding:10px 20px;text-decoration:none;border-radius:6px">הורד סיכום PDF</a></p>`
+    ? `<p style="margin-top:24px"><a href="${esc(fullUrl)}" style="background:#4a7c59;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:600;display:inline-block">להורדת דוח שיעור לחץ כאן</a></p>`
     : "";
   return `<div dir="rtl" style="font-family:Heebo,sans-serif;max-width:600px">
   <h2>דוח שיעור: ${esc(params.studentName)} עם ${esc(params.teacherName)} — ${esc(params.date)}</h2>
-  <p>הדוח מצורף למייל כקובץ PDF.</p>
+  <p>הדוח זמין לצפייה ולהורדה בקישור.</p>
   ${downloadCta}
 </div>`;
-}
-
-const PDF_MAGIC = "%PDF";
-
-function isValidPdfBuffer(buffer: Buffer): boolean {
-  if (!buffer || buffer.length < 4) return false;
-  const header = buffer.subarray(0, 4).toString("utf8");
-  return header === PDF_MAGIC;
 }
 
 export async function sendLessonCompleted(params: {
@@ -237,49 +242,31 @@ export async function sendLessonCompleted(params: {
   studentName: string;
   teacherName: string;
   date: string;
-  summaryText?: string;
-  homeworkText?: string;
-  pointsToKeep?: string;
-  pointsToImprove?: string;
-  tips?: string;
-  recommendations?: string;
   pdfUrl?: string;
-  pdfBuffer?: Buffer;
 }): Promise<void> {
+  const fullUrl = buildFullPdfUrl(params.pdfUrl, params.lessonId);
+  if (process.env.NODE_ENV === "development") {
+    console.log("[email] Lesson completed fullUrl:", fullUrl ?? "(none)");
+  }
   const { subject, text } = getLessonCompletedContent({
     studentName: params.studentName,
     teacherName: params.teacherName,
     date: params.date,
     pdfUrl: params.pdfUrl,
+    lessonId: params.lessonId,
   });
   const html = getLessonCompletedHtml({
     studentName: params.studentName,
     teacherName: params.teacherName,
     date: params.date,
     pdfUrl: params.pdfUrl,
+    lessonId: params.lessonId,
   });
   if (isDev && noRealKey()) {
-    console.log("[DEV] Lesson completed email to", params.to, params.pdfBuffer ? `+ PDF (${params.pdfBuffer.length} bytes)` : "text only");
+    console.log("[DEV] Lesson completed email to", params.to, fullUrl ? `+ CTA link: ${fullUrl}` : "no CTA");
     return;
   }
   const resend = getResend();
-  const filename = params.lessonId ? `lesson-${params.lessonId}.pdf` : "lesson-summary.pdf";
-
-  let attachments: { filename: string; content: Buffer | string; contentType: "application/pdf" }[] | undefined;
-  if (params.pdfBuffer) {
-    const size = params.pdfBuffer.length;
-    const header = params.pdfBuffer.subarray(0, 4).toString("utf8");
-    console.log("[email] Sending lesson completed with PDF attachment, size:", size, "bytes, header:", JSON.stringify(header));
-    if (isValidPdfBuffer(params.pdfBuffer)) {
-      attachments = [{ filename, content: params.pdfBuffer, contentType: "application/pdf" }];
-      console.log("[email] PDF validated (%PDF-), attachments array includes filename:", filename, "contentType: application/pdf");
-    } else {
-      console.error("[email] Invalid PDF buffer (does not start with %PDF-), sending without attachment");
-    }
-  } else {
-    console.log("[email] No pdfBuffer provided, sending lesson completed without PDF attachment");
-  }
-
   for (const email of params.to) {
     await resend.emails.send({
       from: from(),
@@ -287,7 +274,6 @@ export async function sendLessonCompleted(params: {
       subject,
       text,
       html,
-      attachments,
     });
   }
 }

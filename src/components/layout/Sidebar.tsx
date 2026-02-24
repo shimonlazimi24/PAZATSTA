@@ -34,13 +34,13 @@ export function Sidebar() {
   const [navItems, setNavItems] = useState<NavItem[]>([]);
   const [logoHref, setLogoHref] = useState("/book");
   async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
+    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
     router.replace("/login");
     router.refresh();
   }
 
   useEffect(() => {
-    fetch("/api/auth/me")
+    fetch("/api/auth/me", { credentials: "include" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (!data) {

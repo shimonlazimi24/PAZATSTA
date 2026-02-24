@@ -137,6 +137,7 @@ export async function POST(req: Request) {
       ...cookieCfg,
       maxAge: cookieCfg.maxAge,
     });
+    console.log("[verify-code] Session cookie set successfully (path=/, httpOnly, sameSite=lax)");
     return res;
   } catch (e) {
     console.error("[verify-code] Error:", e);

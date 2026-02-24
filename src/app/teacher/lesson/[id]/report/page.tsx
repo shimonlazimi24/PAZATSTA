@@ -177,6 +177,10 @@ export default function TeacherLessonReportPage() {
     if (!result.ok) {
       setError(result.error);
       setStatus("error");
+      if (result.status === 401) {
+        router.replace("/login/teacher");
+        return;
+      }
       if (result.status === 409) {
         apiJson<Lesson>(`/api/teacher/lessons/${id}`).then((r) => r.ok && setLesson(r.data));
       }

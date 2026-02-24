@@ -23,9 +23,13 @@ export async function apiJson<T>(
   input: RequestInfo | URL,
   init?: RequestInit
 ): Promise<ApiOk<T> | ApiErr> {
+  const mergedInit: RequestInit = {
+    ...init,
+    credentials: init?.credentials ?? "include",
+  };
   let res: Response;
   try {
-    res = await fetch(input, init);
+    res = await fetch(input, mergedInit);
   } catch (e) {
     if (isAbortError(e)) {
       return { ok: false, status: 0, error: "הבקשה בוטלה" };
