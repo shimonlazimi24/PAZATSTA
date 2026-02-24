@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Logo } from "@/components/Logo";
 import { Stepper } from "@/components/design/Stepper";
 import { Button } from "@/components/design/Button";
 import { Card } from "@/components/design/Card";
@@ -12,12 +14,17 @@ import { TimeSlots } from "@/components/design/TimeSlots";
 import { FormField } from "@/components/design/FormField";
 import { SummaryCard } from "@/components/design/SummaryCard";
 import { MyLessonsBlock } from "@/components/MyLessonsBlock";
-import { MOCK_TEACHERS, type MockTeacher } from "@/data/mockTeachers";
-import {
-  generateMockSlotsForDate,
-  MOCK_DATES_WEEK,
-  type MockSlot,
-} from "@/data/mockSlots";
+import type { MockTeacher } from "@/data/mockTeachers";
+import { formatIsraelYYYYMMDD, addDaysYYYYMMDD } from "@/lib/dates";
+import type { MockSlot } from "@/data/mockSlots";
+
+/** Week dates in Israel (YYYY-MM-DD) so student and teacher see the same calendar days. */
+function getBookPageWeekDates(): string[] {
+  const startStr = formatIsraelYYYYMMDD(new Date());
+  const out: string[] = [startStr];
+  for (let i = 1; i < 7; i++) out.push(addDaysYYYYMMDD(startStr, i));
+  return out;
+}
 
 const STEPS = [
   { label: "מקצוע" },
@@ -66,12 +73,30 @@ const CATEGORIES: {
       { id: "modiin-shakuf-psycho", label: "שחקים/חבצלות - מבחנים פסיכוטכניים (מיון ראשון)" },
       { id: "modiin-shakuf-interview", label: "שחקים/חבצלות - ראיון אישי/מקצועי" },
       { id: "modiin-shakuf-dynamics", label: "שחקים/חבצלות - מבחני מצב (דינמיקה קבוצתית)" },
-      { id: "modiin-sayber", label: "סייבר - מיון ראשוני (מבחנים פסיכוטכניים)" },
-      { id: "modiin-atuda", label: "עתודה אקדמאית - ראיון אישי" },
-      { id: "modiin-katzina", label: "ייעודי קצונה - ראיון אישי/דינמיקה קבוצתית" },
+    ],
+  },
+  {
+    id: "other",
+    title: "אחר",
+    subs: [
+      { id: "other-katzina", label: "ייעודי קצונה - ראיון אישי/דינמיקה קבוצתית" },
+      { id: "other-atuda", label: "עתודה אקדמאית - ראיון אישי" },
+      { id: "other-sayber", label: "סייבר - מיון ראשוני (מבחנים פסיכוטכניים)" },
+      { id: "other-dapar-mishtara", label: "דפ״ר משטרה" },
+      { id: "other-shnot-shirut", label: "שנות שירות / מכינה" },
+      { id: "other-gadna", label: "גדנע חובלים" },
     ],
   },
 ];
+
+/** P2: topic group colors — צו ראשון green, יום המאה yellow, טייס blue, כלל חמ"ן purple, אחר gray */
+const CATEGORY_COLORS: Record<string, { card: string; chip: string; ring: string }> = {
+  yom100: { card: "border-yellow-300 bg-yellow-50", chip: "bg-yellow-600 text-white border-yellow-600", ring: "ring-yellow-500" },
+  flight: { card: "border-blue-300 bg-blue-50", chip: "bg-blue-600 text-white border-blue-600", ring: "ring-blue-500" },
+  tzav: { card: "border-green-300 bg-green-50", chip: "bg-green-600 text-white border-green-600", ring: "ring-green-500" },
+  modiin: { card: "border-purple-300 bg-purple-50", chip: "bg-purple-600 text-white border-purple-600", ring: "ring-purple-500" },
+  other: { card: "border-gray-300 bg-gray-50", chip: "bg-gray-600 text-white border-gray-600", ring: "ring-gray-500" },
+};
 
 function formatDateLabel(dateStr: string): string {
   const d = new Date(dateStr + "T12:00:00");
@@ -99,6 +124,7 @@ type ApiTeacher = {
   name: string | null;
   bio: string | null;
   profileImageUrl: string | null;
+  specialization: string | null;
 };
 
 function toMockTeacher(t: ApiTeacher): MockTeacher {
@@ -112,8 +138,7 @@ function toMockTeacher(t: ApiTeacher): MockTeacher {
     reviewCount: 0,
     specialties: [],
     availabilityLabel: "פנוי",
-    email: "",
-    phone: undefined,
+    specialization: t.specialization ?? null,
   };
 }
 
@@ -194,7 +219,7 @@ export default function BookPage() {
 
   const dateOptions = useMemo(
     () =>
-      MOCK_DATES_WEEK.map((date) => ({
+      getBookPageWeekDates().map((date) => ({
         date,
         label: formatDateLabel(date),
         weekday: formatWeekday(date),
@@ -205,13 +230,12 @@ export default function BookPage() {
   const slots = useMemo(() => {
     if (!selectedDate) return [];
     if (isRealTeacher && teacher) return teacherSlots;
-    return generateMockSlotsForDate(selectedDate);
+    return [];
   }, [selectedDate, isRealTeacher, teacher, teacherSlots]);
 
   const filteredTeachers = useMemo(() => {
-    const list = apiTeachers.length > 0 ? apiTeachers : MOCK_TEACHERS;
-    if (!categoryId) return list;
-    return list.filter((t) => t.subjects.includes("psychometric"));
+    if (!categoryId) return apiTeachers;
+    return apiTeachers.filter((t) => t.subjects.includes("psychometric"));
   }, [categoryId, apiTeachers]);
 
   const canProceedStep1 = categoryId !== null && subOption !== null;
@@ -240,6 +264,7 @@ export default function BookPage() {
       if (!validateStep5()) return;
     }
     if (step === 5) {
+      const isRealTeacherId = teacher?.id && teacher.id.length > 10 && !teacher.id.startsWith("t");
       const payload = {
         subjectTitle: subOption?.label ?? "",
         categoryTitle: CATEGORIES.find((c) => c.id === categoryId)?.title ?? "",
@@ -253,11 +278,11 @@ export default function BookPage() {
         parentName,
         parentPhone,
         notes,
+        status: isRealTeacherId && selectedDate && selectedSlot ? "pending_approval" : undefined,
       };
       try {
         sessionStorage.setItem("paza_last_booking", JSON.stringify(payload));
       } catch (_) {}
-      const isRealTeacherId = teacher?.id && teacher.id.length > 10 && !teacher.id.startsWith("t");
       if (isRealTeacherId && selectedDate && selectedSlot) {
         try {
           const body: { teacherId: string; date: string; startTime: string; endTime: string; availabilityId?: string } = {
@@ -296,18 +321,23 @@ export default function BookPage() {
     <div className="min-h-screen bg-[var(--color-bg)]">
       <header className="border-b border-[var(--color-border)] bg-white">
         <div className="mx-auto max-w-3xl px-4 py-4 sm:px-6">
-          <button
-            type="button"
-            onClick={async () => {
-              await fetch("/api/auth/logout", { method: "POST" });
-              router.push("/login");
-              router.refresh();
-            }}
-            className="inline-flex items-center gap-1 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
-          >
-            <span aria-hidden>←</span>
-            התנתק
-          </button>
+          <div className="flex items-center justify-between gap-4">
+            <button
+              type="button"
+              onClick={async () => {
+                await fetch("/api/auth/logout", { method: "POST" });
+                router.push("/login");
+                router.refresh();
+              }}
+              className="inline-flex items-center gap-1 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+            >
+              <span aria-hidden>←</span>
+              התנתק
+            </button>
+            <Link href="/book" className="shrink-0" aria-label="Paza">
+              <Logo alt="Paza" className="h-7 w-auto object-contain" width={100} height={28} />
+            </Link>
+          </div>
           <h1 className="mt-2 text-2xl font-bold text-[var(--color-text)] text-right">קביעת שיעור</h1>
           <div className="mt-4">
             <Stepper steps={STEPS} currentStep={step} />
@@ -321,42 +351,51 @@ export default function BookPage() {
           <div className="space-y-6">
             <p className="text-[var(--color-text-muted)] text-right">בחרו מסלול</p>
             <div className="grid gap-4 sm:grid-cols-2">
-              {CATEGORIES.map((cat) => (
-                <div
-                  key={cat.id}
-                  onClick={() => {
-                    setCategoryId(cat.id);
-                    setSubOption(null);
-                  }}
-                  className={`cursor-pointer ${categoryId === cat.id ? "ring-2 ring-[var(--color-primary)] rounded-[var(--radius-card)]" : ""}`}
-                >
-                  <CategoryCard
-                    title={cat.title}
-                    subtitle=""
-                    href=""
-                    imagePlaceholder={false}
-                  />
-                </div>
-              ))}
+              {CATEGORIES.map((cat) => {
+                const colors = CATEGORY_COLORS[cat.id];
+                const isSelected = categoryId === cat.id;
+                return (
+                  <div
+                    key={cat.id}
+                    onClick={() => {
+                      setCategoryId(cat.id);
+                      setSubOption(null);
+                    }}
+                    className={`cursor-pointer rounded-[var(--radius-card)] ${isSelected && colors ? `ring-2 ring-offset-2 ${colors.ring}` : ""}`}
+                  >
+                    <CategoryCard
+                      title={cat.title}
+                      subtitle=""
+                      href=""
+                      imagePlaceholder={false}
+                      colorClass={colors?.card}
+                    />
+                  </div>
+                );
+              })}
             </div>
             {categoryId && (
               <div ref={subOptionsRef} className="space-y-2 pt-4" dir="rtl">
                 <p className="text-[var(--color-text-muted)] text-right">בחרו סוג מיון</p>
                 <div className="flex flex-wrap gap-2 justify-start">
-                  {CATEGORIES.find((c) => c.id === categoryId)?.subs.map((s) => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => setSubOption(s)}
-                      className={`px-4 py-2 rounded-[var(--radius-input)] border text-sm font-medium transition-colors ${
-                        subOption?.id === s.id
-                          ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
-                          : "bg-white border-[var(--color-border)] text-[var(--color-text)] hover:bg-[var(--color-bg-muted)]"
-                      }`}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
+                  {CATEGORIES.find((c) => c.id === categoryId)?.subs.map((s) => {
+                    const colors = CATEGORY_COLORS[categoryId];
+                    const isChipSelected = subOption?.id === s.id;
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => setSubOption(s)}
+                        className={`px-4 py-2 rounded-[var(--radius-input)] border text-sm font-medium transition-colors ${
+                          isChipSelected && colors
+                            ? colors.chip
+                            : "bg-white border-[var(--color-border)] text-[var(--color-text)] hover:bg-[var(--color-bg-muted)]"
+                        }`}
+                      >
+                        {s.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -366,16 +405,22 @@ export default function BookPage() {
         {step === 2 && (
           <div className="space-y-6">
             <p className="text-[var(--color-text-muted)] text-right">בחרו מורה</p>
-            <div className="space-y-3">
-              {filteredTeachers.map((t) => (
-                <TeacherCard
-                  key={t.id}
-                  teacher={t}
-                  selected={teacher?.id === t.id}
-                  onSelect={() => setTeacher(t)}
-                />
-              ))}
-            </div>
+            {filteredTeachers.length === 0 ? (
+              <p className="text-sm text-[var(--color-text-muted)] text-right rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-bg-muted)] p-4">
+                לא נמצאו מורים. צרו קשר עם האדמין או נסו מאוחר יותר.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {filteredTeachers.map((t) => (
+                  <TeacherCard
+                    key={t.id}
+                    teacher={t}
+                    selected={teacher?.id === t.id}
+                    onSelect={() => setTeacher(t)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -435,7 +480,7 @@ export default function BookPage() {
                 error={errors.phone}
               />
               <FormField
-                label="אימייל"
+                label="אימייל תלמיד"
                 name="email"
                 type="email"
                 value={email}
@@ -489,7 +534,7 @@ export default function BookPage() {
                 },
                 { label: "שם", value: name },
                 { label: "טלפון", value: phone },
-                { label: "אימייל", value: email },
+                { label: "אימייל תלמיד", value: email },
                 { label: "שם הורה", value: parentName },
                 { label: "טלפון הורה", value: parentPhone },
                 ...(notes ? [{ label: "הערות", value: notes }] : []),
@@ -502,7 +547,7 @@ export default function BookPage() {
         )}
 
         <div className="mt-10 flex justify-between gap-4">
-          {step > 1 && step < 5 ? (
+          {step > 1 ? (
             <Button variant="secondary" onClick={handleBack}>
               חזרה
             </Button>

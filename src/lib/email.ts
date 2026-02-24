@@ -67,6 +67,51 @@ export async function sendLoginCode(email: string, code: string): Promise<boolea
   throw new Error(result.error.message ?? "Failed to send email");
 }
 
+/** Build approval-request email (sent to admin + teacher when student books). */
+export function getApprovalRequestContent(params: {
+  studentName: string;
+  teacherName: string;
+  date: string;
+  timeRange: string;
+}) {
+  const text = [
+    "בקשה לאישור נשלחה — יש לאשר באפליקציה.",
+    "",
+    `תלמיד: ${params.studentName}`,
+    `מורה: ${params.teacherName}`,
+    `תאריך ושעה: ${params.date} ${params.timeRange}`,
+    "",
+    "היכנסו לאפליקציה ולחצו על 'לאשר' בסעיף 'שיעורים בהמתנה לאישור'.",
+  ].join("\n");
+  return {
+    subject: "בקשה לאישור שיעור – פאזה",
+    text,
+  };
+}
+
+export async function sendApprovalRequest(params: {
+  to: string[];
+  studentName: string;
+  teacherName: string;
+  date: string;
+  timeRange: string;
+}): Promise<void> {
+  const { subject, text } = getApprovalRequestContent(params);
+  if (isDev && noRealKey()) {
+    console.log("[DEV] Approval request to", params.to, text.slice(0, 80));
+    return;
+  }
+  const resend = getResend();
+  for (const email of params.to) {
+    await resend.emails.send({
+      from: from(),
+      to: email,
+      subject,
+      text,
+    });
+  }
+}
+
 /** Build booking confirmation email content (for preview or send). */
 export function getBookingConfirmationContent(params: {
   studentName: string;
@@ -79,6 +124,7 @@ export function getBookingConfirmationContent(params: {
   let text = `שיעור נקבע: ${params.studentName} עם ${params.teacherName} בתאריך ${params.date} בשעה ${params.timeRange}.`;
   if (params.topic) text += `\nסוג המיון: ${params.topic}`;
   if (params.screeningDate) text += `\nתאריך המיון: ${params.screeningDate}`;
+  text += "\nקישור ל-Google Meet יישלח בנפרד (או יופיע בהזמנת היומן).";
   return {
     subject: "סיכום הזמנה – פאזה",
     text,

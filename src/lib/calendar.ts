@@ -7,6 +7,9 @@ export type CalendarEvent = {
   startTime: string; // HH:MM or HH:MM:SS
   endTime: string;
   title: string;
+  /** Google Meet (or other) link; if missing, DESCRIPTION will include a placeholder. */
+  meetUrl?: string | null;
+  description?: string | null;
 };
 
 /** Normalize time to HHMM (4 chars): "10:00" or "10:00:00" -> "1000" */
@@ -52,8 +55,13 @@ export function buildIcsBlob(event: CalendarEvent): Blob {
     "Z";
   const uid = `paza-lesson-${event.date}-${normalizeTime(event.startTime)}@paza`;
   const summary = escapeIcsText(event.title);
+  const descParts: string[] = [];
+  if (event.description) descParts.push(event.description);
+  if (event.meetUrl) descParts.push("קישור ל-Google Meet: " + event.meetUrl);
+  else descParts.push("קישור ל-Google Meet יישלח בנפרד.");
+  const description = escapeIcsText(descParts.join("\\n"));
 
-  const ics = [
+  const lines: string[] = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
     "PRODID:-//Paza//Lesson//HE",
@@ -64,9 +72,12 @@ export function buildIcsBlob(event: CalendarEvent): Blob {
     `DTSTART:${start}`,
     `DTEND:${end}`,
     foldLine("SUMMARY:" + summary),
-    "END:VEVENT",
-    "END:VCALENDAR",
-  ].join("\r\n");
+    foldLine("DESCRIPTION:" + description),
+  ];
+  if (event.meetUrl) lines.push("URL:" + event.meetUrl.replace(/[\r\n]/g, ""));
+  lines.push("END:VEVENT", "END:VCALENDAR");
+
+  const ics = lines.join("\r\n");
 
   const bom = new Uint8Array([0xef, 0xbb, 0xbf]);
   return new Blob([bom, ics], { type: "text/calendar; charset=utf-8" });

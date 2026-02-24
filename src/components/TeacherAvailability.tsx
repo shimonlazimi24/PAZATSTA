@@ -16,7 +16,7 @@ type ApiSlot = {
 
 const SLOT_DURATION = 60; // minutes
 const START_HOUR = 8;
-const END_HOUR = 20;
+const END_HOUR = 22; // 20:00–22:00 included for evening slots
 
 function minutesToTime(min: number): string {
   const h = Math.floor(min / 60);
@@ -141,29 +141,60 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange }:
 
   async function toggleSlot(opt: (typeof slotOptions)[0]) {
     if (!selectedDate || toggling) return;
-    setToggling(opt.id);
+    const isRemoving = opt.isAdded && opt.id && !opt.id.startsWith("opt-");
+
+    if (isRemoving) {
+      setSlots((prev) => prev.filter((s) => s.id !== opt.id));
+      onSlotsChange?.(slots.filter((s) => s.id !== opt.id));
+      setToggling(null);
+      const res = await fetch(`/api/teacher/availability?id=${opt.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        load();
+        setLoadError("שגיאה בהסרת המשבצת. נסו שוב.");
+      }
+      return;
+    }
+
+    const pendingId = `pending-${opt.startTime}-${opt.endTime}`;
+    const newSlot: ApiSlot = {
+      id: pendingId,
+      date: selectedDate,
+      startTime: opt.startTime,
+      endTime: opt.endTime,
+    };
+    setSlots((prev) => [...prev, newSlot]);
+    onSlotsChange?.([...slots, newSlot]);
+    setToggling(null);
+
+    const res = await fetch("/api/teacher/availability", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        date: selectedDate,
+        startTime: opt.startTime,
+        endTime: opt.endTime,
+      }),
+    });
+    if (!res.ok) {
+      setSlots((prev) => prev.filter((s) => s.id !== pendingId));
+      onSlotsChange?.(slots);
+      setLoadError("שגיאה בשמירת המשבצת. נסו שוב.");
+      return;
+    }
     try {
-      if (opt.isAdded && opt.id && !opt.id.startsWith("opt-")) {
-        await fetch(`/api/teacher/availability?id=${opt.id}`, { method: "DELETE" });
-      } else {
-        await fetch("/api/teacher/availability", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            date: selectedDate,
-            startTime: opt.startTime,
-            endTime: opt.endTime,
-          }),
+      const created = await res.json();
+      if (created?.id) {
+        setSlots((prev) => {
+          const next = prev.map((s) =>
+            s.id === pendingId ? { ...s, id: created.id } : s
+          );
+          onSlotsChange?.(next);
+          return next;
         });
       }
-      const start = weekDates[0];
-      const end = weekDates[weekDates.length - 1];
-      const r = await apiJson<ApiSlot[]>(`/api/teacher/availability?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
-      const data = r.ok ? r.data : [];
-      setSlots(data);
-      onSlotsChange?.(data);
-    } finally {
-      setToggling(null);
+    } catch {
+      setSlots((prev) => prev.filter((s) => s.id !== pendingId));
+      onSlotsChange?.(slots);
     }
   }
 

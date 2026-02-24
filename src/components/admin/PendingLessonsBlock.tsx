@@ -43,7 +43,7 @@ export function PendingLessonsBlock() {
   if (loading) {
     return (
       <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 shadow-sm" dir="rtl">
-        <h2 className="text-xl font-bold text-[var(--color-text)] mb-3">שיעורים שמחכים לאישור</h2>
+        <h2 className="text-xl font-bold text-[var(--color-text)] mb-3">שיעורים בהמתנה לאישור</h2>
         <p className="text-sm text-[var(--color-text-muted)]">טוען…</p>
       </section>
     );
@@ -52,7 +52,7 @@ export function PendingLessonsBlock() {
 
   return (
     <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 shadow-sm" dir="rtl">
-      <h2 className="text-xl font-bold text-[var(--color-text)] mb-3">שיעורים שמחכים לאישור</h2>
+      <h2 className="text-xl font-bold text-[var(--color-text)] mb-3">שיעורים בהמתנה לאישור</h2>
       <ul className="space-y-3">
         {lessons.map((l) => (
           <li

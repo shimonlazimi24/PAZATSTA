@@ -32,29 +32,29 @@ export function TeacherCard({ teacher, selected, onSelect }: TeacherCardProps) {
             <span className="text-[var(--color-text-muted)]">שם: </span>
             <span className="font-bold text-[var(--color-text)]">{teacher.name}</span>
           </div>
-          {teacher.email && (
+          {(teacher.specialization ?? (teacher.specialties?.length ? teacher.specialties[0] : null)) && (
             <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-              <span className="text-[var(--color-text-muted)]">אימייל: </span>
-              <span dir="ltr" className="text-[var(--color-text)] text-left inline-block">{teacher.email}</span>
+              <span className="text-[var(--color-text-muted)]">התמחות: </span>
+              <span className="text-[var(--color-text)]">
+                {teacher.specialization ?? teacher.specialties?.slice(0, 2).join(" • ") ?? ""}
+              </span>
             </p>
           )}
-          <p className="mt-0.5 text-sm text-[var(--color-text-muted)]">
-            <span className="text-[var(--color-text-muted)]">טלפון: </span>
-            <span className="text-[var(--color-text)]">{teacher.phone || "—"}</span>
-          </p>
           {teacher.bio && (
             <p className="mt-1.5 text-sm text-[var(--color-text-muted)] line-clamp-2">{teacher.bio}</p>
           )}
-          <div className="mt-2 flex flex-wrap gap-1">
-            {teacher.specialties.slice(0, 3).map((s) => (
-              <span
-                key={s}
-                className="rounded-md bg-[var(--color-bg-muted)] px-2 py-0.5 text-xs text-[var(--color-text-muted)]"
-              >
-                {s}
-              </span>
-            ))}
-          </div>
+          {!teacher.specialization && (teacher.specialties?.length ?? 0) > 1 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {teacher.specialties!.slice(1, 4).map((s) => (
+                <span
+                  key={s}
+                  className="rounded-md bg-[var(--color-bg-muted)] px-2 py-0.5 text-xs text-[var(--color-text-muted)]"
+                >
+                  {s}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </button>

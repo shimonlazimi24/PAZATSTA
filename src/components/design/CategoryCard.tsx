@@ -8,11 +8,13 @@ export interface CategoryCardProps {
   subtitle?: string;
   imagePlaceholder?: boolean;
   href?: string;
+  /** Tailwind classes for border/background (e.g. border-green-300 bg-green-50) */
+  colorClass?: string;
 }
 
-export function CategoryCard({ title, subtitle, imagePlaceholder = true, href = "/book" }: CategoryCardProps) {
+export function CategoryCard({ title, subtitle, imagePlaceholder = true, href = "/book", colorClass }: CategoryCardProps) {
   const content = (
-    <div className="flex h-full flex-col rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white shadow-[var(--shadow-card)] transition-shadow hover:shadow-[var(--shadow-hover)] overflow-hidden">
+    <div className={`flex h-full flex-col rounded-[var(--radius-card)] border shadow-[var(--shadow-card)] transition-shadow hover:shadow-[var(--shadow-hover)] overflow-hidden ${colorClass ?? "border-[var(--color-border)] bg-white"}`}>
       {imagePlaceholder && (
         <div className="h-40 bg-[var(--color-bg-muted)] flex items-center justify-center text-[var(--color-text-muted)] text-sm border-b border-[var(--color-border)]">
           תמונה

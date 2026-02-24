@@ -33,17 +33,6 @@ type Lesson = {
   } | null;
 };
 
-const MOCK_LESSON: Lesson = {
-  id: "demo",
-  date: "2025-02-18",
-  startTime: "11:00",
-  endTime: "11:45",
-  status: "completed",
-  teacher: { name: "דני כהן", email: "teacher@test.com" },
-  student: { name: "מאי גולן", email: "maya@example.com", screeningType: "יום המא\"ה - מבחנים פסיכוטכניים", screeningDate: "2025-03-01" },
-  summary: null,
-};
-
 const TIP_TAGS = [
   "ניצול זמן",
   "הרגעה לפני מבחן",
@@ -57,29 +46,12 @@ const TIP_TAGS = [
   "אחר",
 ];
 
-const MOCK_LESSON_DONE: Lesson = {
-  ...MOCK_LESSON,
-  teacher: { name: "דני כהן", email: "teacher@test.com" },
-  student: { ...MOCK_LESSON.student, screeningType: "יום המא\"ה - מבחנים פסיכוטכניים", screeningDate: "2025-03-01" },
-  summary: {
-    summaryText: "עבדנו על חשיבה כמותית ותרגול שאלות מהמא״ה.",
-    homeworkText: "תרגול פרק 3 – 20 שאלות.",
-    pointsToKeep: "התלמידה מתקדמת יפה בשאלות מילוליות.",
-    pointsToImprove: "להתאמן יותר על גאומטריה.",
-    tips: "ניצול זמן, תרגול סימולציות",
-    recommendations: "להמשיך עם תרגול מלא סימולציה.",
-    pdfUrl: null,
-  },
-};
-
 export default function TeacherLessonReportPage() {
   const router = useRouter();
   const params = useParams();
   const id = typeof params.id === "string" ? params.id : "";
-  const isDemo = id === "demo";
-  const isDemoDone = id === "demo-done";
   const [lesson, setLesson] = useState<Lesson | null>(null);
-  const [loading, setLoading] = useState(!isDemo && !isDemoDone);
+  const [loading, setLoading] = useState(!!id);
   const [summaryText, setSummaryText] = useState("");
   const [homeworkText, setHomeworkText] = useState("");
   const [pointsToKeep, setPointsToKeep] = useState("");
@@ -90,24 +62,15 @@ export default function TeacherLessonReportPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (isDemo) {
-      setLesson(MOCK_LESSON);
-      setLoading(false);
-      return;
-    }
-    if (isDemoDone) {
-      setLesson(MOCK_LESSON_DONE);
-      setLoading(false);
-      return;
-    }
     if (!id) return;
+    setLoading(true);
     apiJson<Lesson>(`/api/teacher/lessons/${id}`)
       .then((r) => {
         if (r.ok) setLesson(r.data);
         else setLesson(null);
       })
       .finally(() => setLoading(false));
-  }, [id, isDemo, isDemoDone]);
+  }, [id]);
 
   const tipsSet = new Set(
     tips
@@ -122,6 +85,8 @@ export default function TeacherLessonReportPage() {
     setTips(Array.from(next).join(", "));
   }
 
+  const DRAFT_KEY = id ? `paza_report_draft_${id}` : "";
+
   useEffect(() => {
     if (lesson?.summary) {
       setSummaryText(lesson.summary.summaryText);
@@ -130,8 +95,44 @@ export default function TeacherLessonReportPage() {
       setPointsToImprove(lesson.summary.pointsToImprove ?? "");
       setTips(lesson.summary.tips ?? "");
       setRecommendations(lesson.summary.recommendations ?? "");
+      if (DRAFT_KEY && typeof sessionStorage !== "undefined") sessionStorage.removeItem(DRAFT_KEY);
     }
-  }, [lesson]);
+  }, [lesson, DRAFT_KEY]);
+
+  useEffect(() => {
+    if (!DRAFT_KEY || lesson?.summary) return;
+    try {
+      const raw = sessionStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const d = JSON.parse(raw) as Record<string, string>;
+        if (d.summaryText !== undefined) setSummaryText(d.summaryText);
+        if (d.homeworkText !== undefined) setHomeworkText(d.homeworkText);
+        if (d.pointsToKeep !== undefined) setPointsToKeep(d.pointsToKeep);
+        if (d.pointsToImprove !== undefined) setPointsToImprove(d.pointsToImprove);
+        if (d.tips !== undefined) setTips(d.tips);
+        if (d.recommendations !== undefined) setRecommendations(d.recommendations);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [DRAFT_KEY, lesson?.summary]);
+
+  useEffect(() => {
+    if (!DRAFT_KEY || lesson?.summary) return;
+    const payload = {
+      summaryText,
+      homeworkText,
+      pointsToKeep,
+      pointsToImprove,
+      tips,
+      recommendations,
+    };
+    try {
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify(payload));
+    } catch {
+      /* ignore */
+    }
+  }, [DRAFT_KEY, lesson?.summary, summaryText, homeworkText, pointsToKeep, pointsToImprove, tips, recommendations]);
 
   const alreadyCompleted = !!lesson?.reportCompleted || !!lesson?.summary;
   const lessonDateDisplay = lesson?.date ? formatHebrewShortDate(lesson.date) : lesson?.date ?? "—";
@@ -151,13 +152,6 @@ export default function TeacherLessonReportPage() {
     }
     setStatus("loading");
     setError("");
-    if (isDemo) {
-      setTimeout(() => {
-        setStatus("idle");
-        router.push("/teacher/dashboard");
-      }, 500);
-      return;
-    }
     const result = await apiJson<{ ok?: boolean }>(`/api/teacher/lessons/${id}/complete`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -178,8 +172,10 @@ export default function TeacherLessonReportPage() {
       }
       return;
     }
-    router.push("/teacher/dashboard");
+    if (id && typeof sessionStorage !== "undefined") sessionStorage.removeItem(`paza_report_draft_${id}`);
     router.refresh();
+    router.push("/teacher/dashboard");
+    if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("teacher-lessons-refresh"));
   }
 
   if (loading || !id) {
@@ -210,11 +206,6 @@ export default function TeacherLessonReportPage() {
   return (
     <AppShell title="דוח סיום שיעור">
       <div className="max-w-xl space-y-6" dir="rtl">
-        {(isDemo || isDemoDone) && (
-          <p className="text-center text-sm text-[var(--color-text-muted)] rounded-[var(--radius-input)] bg-[var(--color-highlight)]/50 py-2 px-3">
-            תצוגת דמו
-          </p>
-        )}
         <BackLink href="/teacher/dashboard" label="חזרה ללוח המורה" />
 
         <section>

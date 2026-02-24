@@ -18,6 +18,7 @@ type ProfileResponse = {
   profileImageUrl: string | null;
   displayName: string | null;
   bio: string | null;
+  specialization: string | null;
 };
 
 export default function TeacherProfilePage() {
@@ -25,6 +26,9 @@ export default function TeacherProfilePage() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [profileImageUrl, setProfileImageUrl] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [bio, setBio] = useState("");
+  const [specialization, setSpecialization] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -39,6 +43,9 @@ export default function TeacherProfilePage() {
         setPhone(p.phone ?? "");
         setEmail(p.email ?? "");
         setProfileImageUrl(p.profileImageUrl ?? "");
+        setDisplayName(p.displayName ?? "");
+        setBio(p.bio ?? "");
+        setSpecialization(p.specialization ?? "");
       }
       setLoading(false);
     });
@@ -107,6 +114,9 @@ export default function TeacherProfilePage() {
         name: name.trim(),
         phone: phone.trim(),
         profileImageUrl: profileImageUrl.trim() || null,
+        displayName: displayName.trim() || null,
+        bio: bio.trim() || null,
+        specialization: specialization.trim() || null,
       }),
     });
     setSaving(false);
@@ -179,6 +189,33 @@ export default function TeacherProfilePage() {
               onChange={(v) => { setPhone(v); setSuccess(false); setError(""); }}
               placeholder="050-1234567"
             />
+            <FormField
+              label="שם לתצוגה (לסטודנטים)"
+              name="displayName"
+              value={displayName}
+              onChange={(v) => { setDisplayName(v); setSuccess(false); setError(""); }}
+              placeholder="השם שיופיע בכרטיס המורה"
+            />
+            <FormField
+              label="התמחות"
+              name="specialization"
+              value={specialization}
+              onChange={(v) => { setSpecialization(v); setSuccess(false); setError(""); }}
+              placeholder="למשל: צו ראשון, יום המאה, טייס"
+            />
+            <div className="text-right">
+              <label htmlFor="bio" className="block text-sm font-medium text-[var(--color-text)] mb-1">
+                אודות (ביוגרפיה קצרה)
+              </label>
+              <textarea
+                id="bio"
+                value={bio}
+                onChange={(e) => { setBio(e.target.value); setSuccess(false); setError(""); }}
+                placeholder="טקסט קצר שיוצג לתלמידים"
+                rows={3}
+                className="w-full rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-4 py-3 text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+              />
+            </div>
             <div className="text-right">
               <label htmlFor="email" className="block text-sm font-medium text-[var(--color-text)] mb-1">
                 אימייל

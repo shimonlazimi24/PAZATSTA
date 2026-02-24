@@ -43,6 +43,7 @@ model TeacherProfile {
   displayName      String?
   bio              String?
   profileImageUrl  String?
+  specialization   String?  // התמחות - shown to students instead of phone/email
   createdAt        DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

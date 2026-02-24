@@ -10,6 +10,7 @@ const MAX_LENGTHS = {
   displayName: 80,
   bio: 2000,
   profileImageUrl: 500,
+  specialization: 200,
 } as const;
 
 function trimAndCap(s: string | undefined, max: number): string | undefined {
@@ -30,7 +31,7 @@ export async function GET() {
       phone: true,
       email: true,
       teacherProfile: {
-        select: { profileImageUrl: true, displayName: true, bio: true },
+        select: { profileImageUrl: true, displayName: true, bio: true, specialization: true },
       },
     },
   });
@@ -45,6 +46,7 @@ export async function GET() {
     profileImageUrl: profile?.profileImageUrl ?? null,
     displayName: profile?.displayName ?? null,
     bio: profile?.bio ?? null,
+    specialization: profile?.specialization ?? null,
   });
 }
 
@@ -63,15 +65,17 @@ export async function PATCH(req: Request) {
         : undefined;
     const displayName = trimAndCap(body.displayName, MAX_LENGTHS.displayName);
     const bio = trimAndCap(body.bio, MAX_LENGTHS.bio);
+    const specialization = trimAndCap(body.specialization, MAX_LENGTHS.specialization);
 
     const userData: { name?: string; phone?: string } = {};
     if (name !== undefined) userData.name = name;
     if (phone !== undefined) userData.phone = phone;
 
-    const profileData: { profileImageUrl?: string | null; displayName?: string | null; bio?: string | null } = {};
+    const profileData: { profileImageUrl?: string | null; displayName?: string | null; bio?: string | null; specialization?: string | null } = {};
     if (profileImageUrl !== undefined) profileData.profileImageUrl = profileImageUrl;
     if (displayName !== undefined) profileData.displayName = displayName;
     if (bio !== undefined) profileData.bio = bio;
+    if (specialization !== undefined) profileData.specialization = specialization;
 
     await prisma.$transaction(async (tx) => {
       if (Object.keys(userData).length > 0) {

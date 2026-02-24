@@ -16,6 +16,10 @@ type Lesson = {
   summary?: { pdfUrl: string | null } | null;
 };
 
+function displayLabel(l: Lesson): string {
+  return l.teacher?.name || l.teacher?.email || "—";
+}
+
 function formatLessonDate(dateStr: string, startTime: string): string {
   const d = new Date(dateStr + "T12:00:00");
   return (
@@ -31,10 +35,10 @@ export function MyLessonsBlock() {
   const [loading, setLoading] = useState(true);
   const [allowed, setAllowed] = useState(false);
 
-  useEffect(() => {
+  function load() {
     Promise.all([
-      fetch("/api/student/lessons?upcoming=true").then((r) => (r.ok ? r.json() : null)),
-      fetch("/api/student/lessons?past=true").then((r) => (r.ok ? r.json() : null)),
+      fetch("/api/student/lessons?upcoming=true", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)),
+      fetch("/api/student/lessons?past=true", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)),
     ])
       .then(([u, p]) => {
         if (Array.isArray(u)) {
@@ -47,6 +51,18 @@ export function MyLessonsBlock() {
         }
       })
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") load();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, []);
 
   if (!allowed && !loading) return null;
@@ -82,16 +98,8 @@ export function MyLessonsBlock() {
             >
               <div className="text-right">
                 <p className="font-medium text-[var(--color-text)]">
-                  {l.student?.name || l.student?.email || "—"}
+                  מורה: {displayLabel(l)}
                 </p>
-                <p className="text-sm text-[var(--color-text-muted)]">
-                  {l.student?.email}
-                </p>
-                {l.student?.phone && (
-                  <p className="text-sm text-[var(--color-text-muted)]">
-                    {l.student.phone}
-                  </p>
-                )}
                 <p className="text-sm text-[var(--color-text-muted)] mt-1">
                   {formatLessonDate(l.date, l.startTime)}
                 </p>
@@ -113,16 +121,8 @@ export function MyLessonsBlock() {
             >
               <div className="text-right">
                 <p className="font-medium text-[var(--color-text)]">
-                  {l.student?.name || l.student?.email || "—"}
+                  מורה: {displayLabel(l)}
                 </p>
-                <p className="text-sm text-[var(--color-text-muted)]">
-                  {l.student?.email}
-                </p>
-                {l.student?.phone && (
-                  <p className="text-sm text-[var(--color-text-muted)]">
-                    {l.student.phone}
-                  </p>
-                )}
                 <p className="text-sm text-[var(--color-text-muted)] mt-1">
                   {formatLessonDate(l.date, l.startTime)}
                 </p>

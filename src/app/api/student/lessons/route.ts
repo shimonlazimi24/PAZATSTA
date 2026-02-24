@@ -44,7 +44,14 @@ export async function GET(req: Request) {
     const lessons = await prisma.lesson.findMany({
       where,
       include: {
-        teacher: { select: { id: true, email: true, name: true } },
+        teacher: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            teacherProfile: { select: { displayName: true } },
+          },
+        },
         student: { select: { id: true, email: true, name: true, phone: true } },
         summary: true,
       },
@@ -58,7 +65,11 @@ export async function GET(req: Request) {
         endTime: l.endTime,
         status: l.status,
         questionFromStudent: l.questionFromStudent,
-        teacher: l.teacher,
+        teacher: {
+          id: l.teacher.id,
+          email: l.teacher.email,
+          name: l.teacher.teacherProfile?.displayName ?? l.teacher.name ?? null,
+        },
         student: l.student,
         summary: l.summary
           ? {

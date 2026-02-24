@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getUserFromSession } from "@/lib/auth";
+import { sendApprovalRequest } from "@/lib/email";
+import { formatDateInIsrael } from "@/lib/date-utils";
 
 const APPROVAL_WINDOW_MS = 2 * 60 * 60 * 1000; // 2 hours
 
@@ -91,6 +93,29 @@ export async function POST(req: Request) {
     }
 
     const lessonDateStr = lesson.date.toISOString().slice(0, 10);
+    const formattedDate = formatDateInIsrael(lesson.date);
+    const timeRange = `${lesson.startTime}–${lesson.endTime}`;
+    const studentName = lesson.student.name || lesson.student.email || "תלמיד";
+    const teacherName = lesson.teacher.name || lesson.teacher.email || "מורה";
+    const admins = await prisma.user.findMany({
+      where: { role: "admin" },
+      select: { email: true },
+    });
+    const adminEmails = admins.map((a) => a.email).filter(Boolean);
+    const toEmails = Array.from(
+      new Set([lesson.teacher.email, ...adminEmails])
+    ).filter(Boolean);
+    try {
+      await sendApprovalRequest({
+        to: toEmails,
+        studentName,
+        teacherName,
+        date: formattedDate,
+        timeRange,
+      });
+    } catch (emailErr) {
+      console.error("[book/submit] Approval request email failed:", emailErr);
+    }
     return NextResponse.json({
       id: lesson.id,
       status: lesson.status,

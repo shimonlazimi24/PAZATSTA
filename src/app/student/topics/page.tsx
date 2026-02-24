@@ -7,7 +7,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { BackLink } from "@/components/design/BackLink";
 import { apiJson } from "@/lib/api";
 import { parseYYYYMMDD, todayIsraelYYYYMMDD } from "@/lib/dates";
-import { SCREENING_TOPICS } from "@/data/topics";
+import { TOPIC_GROUPS, TOPIC_COLOR_OVERRIDE } from "@/data/topics";
 
 type ProfileResponse = {
   currentScreeningType?: string | null;
@@ -80,26 +80,37 @@ export default function StudentTopicsPage() {
         <BackLink href="/student/profile" label="חזרה" />
         <section>
           <h2 className="text-lg font-semibold text-[var(--color-text)] mb-2">בחר/י סוג מיון</h2>
-          <ul className="space-y-2 border border-[var(--color-border)] rounded-[var(--radius-input)] divide-y divide-[var(--color-border)] overflow-hidden bg-white">
-            {SCREENING_TOPICS.map((topic) => (
-              <li key={topic}>
-                <label className="flex items-center gap-2 p-3 cursor-pointer hover:bg-[var(--color-bg-muted)]">
-                  <input
-                    type="radio"
-                    name="topic"
-                    value={topic}
-                    checked={selectedTopic === topic}
-                    onChange={() => {
-                      setSelectedTopic(topic);
-                      setError("");
-                    }}
-                    className="rounded-full"
-                  />
-                  <span className="text-[var(--color-text)]">{topic}</span>
-                </label>
-              </li>
+          <div className="space-y-4">
+            {TOPIC_GROUPS.map((group) => (
+              <div key={group.label}>
+                <h3 className="text-sm font-medium text-[var(--color-text-muted)] mb-2">{group.label}</h3>
+                <ul className="space-y-1 rounded-[var(--radius-input)] overflow-hidden border border-[var(--color-border)]">
+                  {group.topics.map((topic) => {
+                    const override = TOPIC_COLOR_OVERRIDE[topic];
+                    const colorClass = override ?? group.color;
+                    return (
+                      <li key={topic}>
+                        <label className={`flex items-center gap-2 p-3 cursor-pointer border-b border-[var(--color-border)] last:border-b-0 ${colorClass} hover:opacity-90`}>
+                          <input
+                            type="radio"
+                            name="topic"
+                            value={topic}
+                            checked={selectedTopic === topic}
+                            onChange={() => {
+                              setSelectedTopic(topic);
+                              setError("");
+                            }}
+                            className="rounded-full"
+                          />
+                          <span>{topic}</span>
+                        </label>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
             ))}
-          </ul>
+          </div>
         </section>
         <section>
           <label htmlFor="screeningDate" className="block text-sm font-medium text-[var(--color-text)] mb-1">

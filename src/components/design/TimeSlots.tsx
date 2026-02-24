@@ -39,7 +39,7 @@ export function TimeSlots({ slots, selectedSlotId, onSelect }: TimeSlotsProps) {
                 "cursor-not-allowed border-[var(--color-border)] bg-[var(--color-bg-muted)] text-[var(--color-text-muted)] line-through"
             )}
           >
-            {slot.startTime}
+            {slot.startTime}–{slot.endTime}
             {slot.available && !isSelected && (
               <span className="mr-1 text-xs text-[var(--color-text-muted)]">פנוי</span>
             )}

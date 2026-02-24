@@ -34,7 +34,10 @@ export function PendingApprovalsBlock() {
     setApprovingId(id);
     apiJson<{ ok?: boolean }>(`/api/lessons/${id}/approve`, { method: "POST" })
       .then((r) => {
-        if (r.ok) fetchPending();
+        if (r.ok) {
+          fetchPending();
+          window.dispatchEvent(new Event("teacher-lessons-refresh"));
+        }
       })
       .finally(() => setApprovingId(null));
   }
@@ -42,7 +45,7 @@ export function PendingApprovalsBlock() {
   if (loading) {
     return (
       <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 shadow-[var(--shadow-card)]" dir="rtl">
-        <h2 className="text-lg font-semibold text-[var(--color-text)] mb-3">שיעורים שמחכים לאישור</h2>
+        <h2 className="text-lg font-semibold text-[var(--color-text)] mb-3">שיעורים בהמתנה לאישור</h2>
         <p className="text-sm text-[var(--color-text-muted)]">טוען…</p>
       </section>
     );
@@ -51,7 +54,7 @@ export function PendingApprovalsBlock() {
 
   return (
     <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 shadow-[var(--shadow-card)]" dir="rtl">
-      <h2 className="text-lg font-semibold text-[var(--color-text)] mb-3">שיעורים שמחכים לאישור</h2>
+      <h2 className="text-lg font-semibold text-[var(--color-text)] mb-3">שיעורים בהמתנה לאישור</h2>
       <ul className="space-y-3">
         {lessons.map((l) => (
           <li

@@ -41,7 +41,7 @@ export async function GET(req: Request) {
         id: true,
         name: true,
         teacherProfile: {
-          select: { displayName: true, bio: true, profileImageUrl: true },
+          select: { displayName: true, bio: true, profileImageUrl: true, specialization: true },
         },
       },
       orderBy: { email: "asc" },
@@ -55,6 +55,7 @@ export async function GET(req: Request) {
         name: t.teacherProfile?.displayName ?? t.name ?? null,
         bio: t.teacherProfile?.bio ?? null,
         profileImageUrl: t.teacherProfile?.profileImageUrl ?? null,
+        specialization: t.teacherProfile?.specialization ?? null,
       }))
     );
   } catch (e) {

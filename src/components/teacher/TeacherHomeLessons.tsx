@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { CalendarDays, CalendarPlus } from "lucide-react";
 import { addToCalendar } from "@/lib/calendar";
 
@@ -18,56 +17,6 @@ type Lesson = {
   summary: { pdfUrl: string | null } | null;
 };
 
-const MOCK_UPCOMING: Lesson[] = [
-  {
-    id: "mock-up-1",
-    date: "2025-03-02",
-    startTime: "10:00",
-    endTime: "10:45",
-    status: "scheduled",
-    followUpCompletedAt: null,
-    questionFromStudent: "אשמח להתמקד בחשיבה כמותית והכנה למא״ה.",
-    student: { id: "s1", email: "student@example.com", name: "דני כהן" },
-    summary: null,
-  },
-  {
-    id: "mock-up-2",
-    date: "2025-03-05",
-    startTime: "14:00",
-    endTime: "14:45",
-    status: "scheduled",
-    followUpCompletedAt: null,
-    questionFromStudent: null,
-    student: { id: "s2", email: "lea@example.com", name: "ליאה לוי" },
-    summary: null,
-  },
-];
-
-const MOCK_PAST: Lesson[] = [
-  {
-    id: "mock-past-1",
-    date: "2025-02-15",
-    startTime: "09:00",
-    endTime: "09:45",
-    status: "completed",
-    followUpCompletedAt: "2025-02-16T10:00:00Z",
-    questionFromStudent: null,
-    student: { id: "s3", email: "yosi@example.com", name: "יוסי מזרחי" },
-    summary: { pdfUrl: "#" },
-  },
-  {
-    id: "mock-past-2",
-    date: "2025-02-18",
-    startTime: "11:00",
-    endTime: "11:45",
-    status: "completed",
-    followUpCompletedAt: null,
-    questionFromStudent: null,
-    student: { id: "s4", email: "maya@example.com", name: "מאי גולן" },
-    summary: null,
-  },
-];
-
 function formatLessonDate(dateStr: string): string {
   return new Date(dateStr + "T12:00:00").toLocaleDateString("he-IL", {
     day: "numeric",
@@ -77,28 +26,16 @@ function formatLessonDate(dateStr: string): string {
 }
 
 export function TeacherHomeLessons() {
-  const searchParams = useSearchParams();
-  const useMock = searchParams.get("mock") === "lessons";
-
   const [upcoming, setUpcoming] = useState<Lesson[]>([]);
   const [past, setPast] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [followUpLoadingId, setFollowUpLoadingId] = useState<string | null>(null);
 
   function load() {
-    if (useMock) {
-      setLoading(true);
-      setTimeout(() => {
-        setUpcoming(MOCK_UPCOMING);
-        setPast(MOCK_PAST);
-        setLoading(false);
-      }, 400);
-      return;
-    }
     setLoading(true);
     Promise.all([
-      fetch("/api/teacher/lessons?upcoming=true").then((r) => (r.ok ? r.json() : [])),
-      fetch("/api/teacher/lessons?past=true").then((r) => (r.ok ? r.json() : [])),
+      fetch("/api/teacher/lessons?upcoming=true", { cache: "no-store" }).then((r) => (r.ok ? r.json() : [])),
+      fetch("/api/teacher/lessons?past=true", { cache: "no-store" }).then((r) => (r.ok ? r.json() : [])),
     ])
       .then(([u, p]) => {
         setUpcoming(u);
@@ -109,17 +46,15 @@ export function TeacherHomeLessons() {
 
   useEffect(() => {
     load();
-  }, [useMock]);
+  }, []);
+
+  useEffect(() => {
+    const onRefresh = () => load();
+    window.addEventListener("teacher-lessons-refresh", onRefresh);
+    return () => window.removeEventListener("teacher-lessons-refresh", onRefresh);
+  }, []);
 
   async function handleFollowUpComplete(lessonId: string) {
-    if (lessonId.startsWith("mock-")) {
-      setFollowUpLoadingId(lessonId);
-      setTimeout(() => {
-        setFollowUpLoadingId(null);
-        load();
-      }, 400);
-      return;
-    }
     setFollowUpLoadingId(lessonId);
     try {
       const res = await fetch(`/api/teacher/lessons/${lessonId}/follow-up-complete`, {
@@ -160,11 +95,6 @@ export function TeacherHomeLessons() {
 
   return (
     <div className="space-y-8" dir="rtl">
-      {useMock && (
-        <p className="text-center text-sm text-[var(--color-text-muted)] rounded-[var(--radius-input)] bg-[var(--color-highlight)]/50 py-2 px-3">
-          תצוגת דמו — נתוני שיעורים לדוגמה
-        </p>
-      )}
       {hasUpcoming && (
         <section>
           <h3 className="text-lg font-semibold text-[var(--color-text)] mb-3">
@@ -274,7 +204,7 @@ export function TeacherHomeLessons() {
                             חסר דוח
                           </span>
                           <Link
-                            href={l.id.startsWith("mock-") ? "/teacher/lesson/demo/report" : `/teacher/lesson/${l.id}/report`}
+                            href={`/teacher/lesson/${l.id}/report`}
                             className="px-3 py-1.5 rounded-[var(--radius-input)] bg-[var(--color-primary)] text-white text-sm font-medium hover:opacity-90"
                           >
                             מלא דוח שיעור
