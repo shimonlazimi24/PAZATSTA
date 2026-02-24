@@ -21,6 +21,11 @@ export async function POST(
     const pointsToImprove = typeof body.pointsToImprove === "string" ? body.pointsToImprove.trim() : "";
     const tips = typeof body.tips === "string" ? body.tips.trim() : "";
     const recommendations = typeof body.recommendations === "string" ? body.recommendations.trim() : "";
+    const screeningType = typeof body.screeningType === "string" ? body.screeningType.trim() || null : null;
+    const screeningDateStr = typeof body.screeningDate === "string" ? body.screeningDate.trim() : "";
+    const screeningDate = screeningDateStr && /^\d{4}-\d{2}-\d{2}$/.test(screeningDateStr)
+      ? new Date(screeningDateStr + "T12:00:00")
+      : null;
     const hasAny =
       summaryText || homeworkText || pointsToKeep || pointsToImprove || tips || recommendations;
     if (!hasAny) {
@@ -60,6 +65,7 @@ export async function POST(
     try {
       pdfBuffer = await htmlToPdfBuffer(html);
     } catch (pdfErr) {
+      console.error("[PDF] Generation failed:", pdfErr);
       return NextResponse.json(
         { error: "PDF generation failed" },
         { status: 500 }
@@ -92,6 +98,24 @@ export async function POST(
         data: { status: "completed", reportCompleted: true },
       }),
     ]);
+
+    if (screeningType !== null || screeningDate !== null) {
+      const createData: { userId: string; currentScreeningType?: string; currentScreeningDate?: Date } = {
+        userId: lesson.studentId,
+      };
+      if (screeningType !== null) createData.currentScreeningType = screeningType;
+      if (screeningDate !== null) createData.currentScreeningDate = screeningDate;
+
+      const updateData: { currentScreeningType?: string; currentScreeningDate?: Date } = {};
+      if (screeningType !== null) updateData.currentScreeningType = screeningType;
+      if (screeningDate !== null) updateData.currentScreeningDate = screeningDate;
+
+      await prisma.studentProfile.upsert({
+        where: { userId: lesson.studentId },
+        create: createData,
+        update: updateData,
+      });
+    }
 
     const adminUsers = await prisma.user.findMany({
       where: { role: "admin" },

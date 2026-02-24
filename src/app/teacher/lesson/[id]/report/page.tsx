@@ -7,6 +7,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { BackLink } from "@/components/design/BackLink";
 import { apiJson } from "@/lib/api";
 import { formatHebrewShortDate } from "@/lib/dates";
+import { SCREENING_TOPICS } from "@/data/topics";
 
 type Lesson = {
   id: string;
@@ -15,6 +16,7 @@ type Lesson = {
   endTime: string;
   status: string;
   reportCompleted?: boolean;
+  followUpCompletedAt?: string | null;
   teacher?: { name: string | null; email: string };
   student: {
     name: string | null;
@@ -58,7 +60,10 @@ export default function TeacherLessonReportPage() {
   const [pointsToImprove, setPointsToImprove] = useState("");
   const [tips, setTips] = useState("");
   const [recommendations, setRecommendations] = useState("");
+  const [screeningType, setScreeningType] = useState("");
+  const [screeningDate, setScreeningDate] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [followUpLoading, setFollowUpLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -88,14 +93,18 @@ export default function TeacherLessonReportPage() {
   const DRAFT_KEY = id ? `paza_report_draft_${id}` : "";
 
   useEffect(() => {
-    if (lesson?.summary) {
-      setSummaryText(lesson.summary.summaryText);
-      setHomeworkText(lesson.summary.homeworkText);
-      setPointsToKeep(lesson.summary.pointsToKeep ?? "");
-      setPointsToImprove(lesson.summary.pointsToImprove ?? "");
-      setTips(lesson.summary.tips ?? "");
-      setRecommendations(lesson.summary.recommendations ?? "");
-      if (DRAFT_KEY && typeof sessionStorage !== "undefined") sessionStorage.removeItem(DRAFT_KEY);
+    if (lesson) {
+      setScreeningType(lesson.student.screeningType ?? "");
+      setScreeningDate(lesson.student.screeningDate ?? "");
+      if (lesson.summary) {
+        setSummaryText(lesson.summary.summaryText);
+        setHomeworkText(lesson.summary.homeworkText);
+        setPointsToKeep(lesson.summary.pointsToKeep ?? "");
+        setPointsToImprove(lesson.summary.pointsToImprove ?? "");
+        setTips(lesson.summary.tips ?? "");
+        setRecommendations(lesson.summary.recommendations ?? "");
+        if (DRAFT_KEY && typeof sessionStorage !== "undefined") sessionStorage.removeItem(DRAFT_KEY);
+      }
     }
   }, [lesson, DRAFT_KEY]);
 
@@ -162,6 +171,8 @@ export default function TeacherLessonReportPage() {
         pointsToImprove: pointsToImprove.trim(),
         tips: tips.trim(),
         recommendations: recommendations.trim(),
+        screeningType: screeningType.trim() || undefined,
+        screeningDate: screeningDate.trim() || undefined,
       }),
     });
     if (!result.ok) {
@@ -176,6 +187,19 @@ export default function TeacherLessonReportPage() {
     router.refresh();
     router.push("/teacher/dashboard");
     if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("teacher-lessons-refresh"));
+  }
+
+  async function handleFollowUpComplete() {
+    setFollowUpLoading(true);
+    try {
+      const res = await fetch(`/api/teacher/lessons/${id}/follow-up-complete`, { method: "POST" });
+      if (res.ok) {
+        const r = await apiJson<Lesson>(`/api/teacher/lessons/${id}`);
+        if (r.ok) setLesson(r.data);
+      }
+    } finally {
+      setFollowUpLoading(false);
+    }
   }
 
   if (loading || !id) {
@@ -214,8 +238,39 @@ export default function TeacherLessonReportPage() {
             <p><span className="text-[var(--color-text-muted)]">שם המורה:</span> {lesson.teacher?.name ?? lesson.teacher?.email ?? "—"}</p>
             <p><span className="text-[var(--color-text-muted)]">שם תלמיד:</span> {studentName}</p>
             <p><span className="text-[var(--color-text-muted)]">תאריך השיעור:</span> {lessonDateDisplay} {lesson.startTime}–{lesson.endTime}</p>
-            <p><span className="text-[var(--color-text-muted)]">תאריך המיון:</span> {lesson.student.screeningDate ?? "—"}</p>
-            <p><span className="text-[var(--color-text-muted)]">סוג המיון:</span> {lesson.student.screeningType ?? "—"}</p>
+            {alreadyCompleted ? (
+              <>
+                <p><span className="text-[var(--color-text-muted)]">תאריך המיון:</span> {lesson.student.screeningDate ?? "—"}</p>
+                <p><span className="text-[var(--color-text-muted)]">סוג המיון:</span> {lesson.student.screeningType ?? "—"}</p>
+              </>
+            ) : (
+              <>
+                <div>
+                  <label className={labelClass}>תאריך המיון</label>
+                  <input
+                    type="date"
+                    value={screeningDate}
+                    onChange={(e) => setScreeningDate(e.target.value)}
+                    className={fieldClass}
+                    disabled={status === "loading"}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>סוג המיון</label>
+                  <select
+                    value={screeningType}
+                    onChange={(e) => setScreeningType(e.target.value)}
+                    className={fieldClass}
+                    disabled={status === "loading"}
+                  >
+                    <option value="">—</option>
+                    {SCREENING_TOPICS.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
           </div>
         </section>
 
@@ -252,6 +307,18 @@ export default function TeacherLessonReportPage() {
             <p className="text-xs text-[var(--color-text-muted)] pt-2">
               הדוח הושלם ואין אפשרות לעריכה.
             </p>
+            {!lesson.followUpCompletedAt ? (
+              <button
+                type="button"
+                onClick={handleFollowUpComplete}
+                disabled={followUpLoading}
+                className="mt-4 px-4 py-2 rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white text-sm font-medium text-[var(--color-text)] hover:bg-[var(--color-bg-muted)] disabled:opacity-50"
+              >
+                {followUpLoading ? "שולח…" : "בוצע פולואו אפ"}
+              </button>
+            ) : (
+              <p className="mt-4 text-sm text-[var(--color-text-muted)]">מעקב הושלם</p>
+            )}
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">

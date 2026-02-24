@@ -1,12 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/design/Button";
 import { Card } from "@/components/design/Card";
 import { BackLink } from "@/components/design/BackLink";
-import { addToCalendar } from "@/lib/calendar";
 
 const STORAGE_KEY = "paza_last_booking";
 
@@ -44,17 +43,6 @@ export default function BookSuccessPage() {
       if (raw) setBooking(JSON.parse(raw) as BookingInfo);
     } catch (_) {}
   }, []);
-
-  const addToCalendarClick = useCallback(() => {
-    if (!booking?.date) return;
-    const title = `שיעור פאזה${booking.subjectTitle ? ` - ${booking.subjectTitle}` : ""}${booking.teacherName ? ` (${booking.teacherName})` : ""}`;
-    addToCalendar({
-      date: booking.date,
-      startTime: booking.startTime || "09:00",
-      endTime: booking.endTime || "09:45",
-      title,
-    });
-  }, [booking]);
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] flex flex-col items-center px-4 py-12">
@@ -103,14 +91,6 @@ export default function BookSuccessPage() {
                   חזרה לדף הבית
                 </Button>
               </Link>
-              <button
-                type="button"
-                onClick={addToCalendarClick}
-                disabled={!booking?.date}
-                className="rounded-full border border-[var(--color-border)] bg-white px-6 py-3 text-sm font-semibold text-[var(--color-text)] hover:bg-[var(--color-bg-muted)] disabled:opacity-50 disabled:pointer-events-none"
-              >
-                הוספה ליומן
-              </button>
             </div>
           </>
         )}

@@ -56,11 +56,15 @@ function escapeHtml(s: string): string {
 }
 
 export async function htmlToPdfBuffer(html: string): Promise<Buffer> {
-  const puppeteer = await import("puppeteer");
+  const puppeteer = await import("puppeteer-core");
+  const chromium = await import("@sparticuz/chromium");
+
   const browser = await puppeteer.default.launch({
+    args: chromium.default.args,
+    executablePath: await chromium.default.executablePath(),
     headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
+
   try {
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "networkidle0" });

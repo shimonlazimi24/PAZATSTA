@@ -34,6 +34,7 @@ export async function GET(
     endTime: lesson.endTime,
     status: lesson.status,
     reportCompleted: lesson.reportCompleted,
+    followUpCompletedAt: lesson.followUpCompletedAt?.toISOString() ?? null,
     teacher: lesson.teacher,
     student: {
       id: lesson.student.id,
