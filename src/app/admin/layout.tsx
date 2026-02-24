@@ -9,7 +9,13 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await getUserFromSession();
+  let user;
+  try {
+    user = await getUserFromSession();
+  } catch (e) {
+    console.error("[admin/layout] getUserFromSession failed:", e);
+    redirect("/login?next=/admin");
+  }
   if (!user) redirect("/login?next=/admin");
   if (!canAccessAdmin(user)) redirect("/login?next=/admin");
 

@@ -7,7 +7,13 @@ export default async function TeacherLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await getUserFromSession();
+  let user;
+  try {
+    user = await getUserFromSession();
+  } catch (e) {
+    console.error("[teacher/layout] getUserFromSession failed:", e);
+    redirect("/login");
+  }
   if (!user) redirect("/login");
   if (user.role !== "teacher") redirectByRole(user.role);
   return <>{children}</>;
