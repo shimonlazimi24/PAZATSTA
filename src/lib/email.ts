@@ -188,6 +188,7 @@ export function getLessonCompletedContent(params: {
   pointsToImprove?: string;
   tips?: string;
   recommendations?: string;
+  pdfUrl?: string;
 }) {
   const lines = [
     `דוח שיעור: ${params.studentName} עם ${params.teacherName} — ${params.date}`,
@@ -199,6 +200,11 @@ export function getLessonCompletedContent(params: {
     "המלצות להמשך: " + (params.recommendations || "—"),
     "משימות לתרגול: " + (params.homeworkText || "—"),
   ];
+  if (params.pdfUrl) {
+    const base = process.env.APP_URL || "";
+    const fullUrl = base ? `${base.replace(/\/$/, "")}${params.pdfUrl.startsWith("/") ? "" : "/"}${params.pdfUrl}` : params.pdfUrl;
+    lines.push("", `קישור ל-PDF: ${fullUrl}`);
+  }
   return {
     subject: "דוח סיום שיעור",
     text: lines.join("\n"),
@@ -216,6 +222,7 @@ export async function sendLessonCompleted(params: {
   pointsToImprove?: string;
   tips?: string;
   recommendations?: string;
+  pdfUrl?: string;
   pdfBuffer?: Buffer;
   pdfFilename?: string;
 }): Promise<void> {

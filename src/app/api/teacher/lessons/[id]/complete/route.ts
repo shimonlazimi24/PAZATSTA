@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getUserFromSession } from "@/lib/auth";
-import { getLessonSummaryHtml, htmlToPdfBuffer, savePdfToStorage } from "@/lib/pdf";
+import { generateAndStoreLessonPdf } from "@/lib/pdf/generateLessonSummaryPdf";
 import { sendLessonCompleted } from "@/lib/email";
+
+export const runtime = "nodejs";
 
 export async function POST(
   req: Request,
@@ -44,41 +46,8 @@ export async function POST(
     }
 
     const dateStr = lesson.date.toISOString().slice(0, 10);
-    const timeRange = `${lesson.startTime}–${lesson.endTime}`;
     const teacherName = lesson.teacher.name || lesson.teacher.email;
     const studentName = lesson.student.name || lesson.student.email;
-
-    const html = getLessonSummaryHtml({
-      studentName,
-      teacherName,
-      date: dateStr,
-      timeRange,
-      summaryText: summaryText || "—",
-      homeworkText: homeworkText || "—",
-      pointsToKeep: pointsToKeep || "—",
-      pointsToImprove: pointsToImprove || "—",
-      tips: tips || "—",
-      recommendations: recommendations || "—",
-    });
-
-    let pdfBuffer: Buffer;
-    try {
-      pdfBuffer = await htmlToPdfBuffer(html);
-    } catch (pdfErr) {
-      console.error("[PDF] Generation failed:", pdfErr);
-      return NextResponse.json(
-        { error: "PDF generation failed" },
-        { status: 500 }
-      );
-    }
-
-    const filename = `${lessonId}.pdf`;
-    let pdfUrl: string | null = null;
-    try {
-      pdfUrl = await savePdfToStorage(pdfBuffer, filename);
-    } catch {
-      pdfUrl = null;
-    }
 
     await prisma.$transaction([
       prisma.lessonSummary.create({
@@ -90,7 +59,7 @@ export async function POST(
           pointsToImprove: pointsToImprove || "",
           tips: tips || "",
           recommendations: recommendations || "",
-          pdfUrl,
+          pdfUrl: null,
         },
       }),
       prisma.lesson.update({
@@ -117,6 +86,16 @@ export async function POST(
       });
     }
 
+    let pdfUrl: string | null = null;
+    let pdfBuffer: Buffer | undefined;
+    const pdfResult = await generateAndStoreLessonPdf(lessonId);
+    if (pdfResult.pdfUrl) {
+      pdfUrl = pdfResult.pdfUrl;
+      pdfBuffer = pdfResult.pdfBuffer;
+    } else {
+      console.error("[pdf] generateAndStoreLessonPdf returned no pdfUrl for", lessonId);
+    }
+
     const adminUsers = await prisma.user.findMany({
       where: { role: "admin" },
       select: { email: true },
@@ -137,8 +116,9 @@ export async function POST(
       pointsToImprove: pointsToImprove || "—",
       tips: tips || "—",
       recommendations: recommendations || "—",
+      pdfUrl: pdfUrl ?? undefined,
       pdfBuffer,
-      pdfFilename: `lesson-summary-${dateStr}.pdf`,
+      pdfFilename: pdfBuffer ? `lesson-summary-${dateStr}.pdf` : undefined,
     });
 
     return NextResponse.json({
@@ -146,6 +126,7 @@ export async function POST(
       pdfUrl,
     });
   } catch (e) {
+    console.error("[complete] Failed:", e);
     return NextResponse.json(
       { error: "Failed to complete lesson" },
       { status: 500 }
