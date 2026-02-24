@@ -27,8 +27,6 @@ const PREVIEWS = [
       studentName: "דני כהן",
       teacherName: "מיכל לוי",
       date: "2025-02-18",
-      summaryText: "עבדנו על חשיבה כמותית ותרגול שאלות מהמא״ה.",
-      homeworkText: "תרגול פרק 3 – 20 שאלות.",
       pdfUrl: "/api/pdf/lesson-summaries/lesson-abc123.pdf",
     }),
   },

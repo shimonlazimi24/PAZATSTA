@@ -63,7 +63,6 @@ export default function TeacherLessonReportPage() {
   const [screeningType, setScreeningType] = useState("");
   const [screeningDate, setScreeningDate] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
-  const [followUpLoading, setFollowUpLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -192,19 +191,6 @@ export default function TeacherLessonReportPage() {
     if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("teacher-lessons-refresh"));
   }
 
-  async function handleFollowUpComplete() {
-    setFollowUpLoading(true);
-    try {
-      const res = await fetch(`/api/teacher/lessons/${id}/follow-up-complete`, { method: "POST" });
-      if (res.ok) {
-        const r = await apiJson<Lesson>(`/api/teacher/lessons/${id}`);
-        if (r.ok) setLesson(r.data);
-      }
-    } finally {
-      setFollowUpLoading(false);
-    }
-  }
-
   if (loading || !id) {
     return (
       <AppShell title="דוח סיום שיעור">
@@ -310,28 +296,6 @@ export default function TeacherLessonReportPage() {
             <p className="text-xs text-[var(--color-text-muted)] pt-2">
               הדוח הושלם ואין אפשרות לעריכה.
             </p>
-            {lesson.followUpCompletedAt ? (
-              <p className="mt-4 text-sm text-[var(--color-text-muted)]">מעקב הושלם</p>
-            ) : (
-              <div className="mt-4 space-y-2">
-                {(lesson.student.screeningDate || lesson.student.screeningType) && (
-                  <p className="text-sm text-[var(--color-text)]">
-                    תאריך מיון: {lesson.student.screeningDate
-                      ? new Date(lesson.student.screeningDate + "T12:00:00").toLocaleDateString("he-IL")
-                      : "—"}
-                    {lesson.student.screeningType ? ` (${lesson.student.screeningType})` : ""}
-                  </p>
-                )}
-                <button
-                  type="button"
-                  onClick={handleFollowUpComplete}
-                  disabled={followUpLoading}
-                  className="px-4 py-2 rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white text-sm font-medium text-[var(--color-text)] hover:bg-[var(--color-bg-muted)] disabled:opacity-50"
-                >
-                  {followUpLoading ? "שולח…" : "בוצע פולואו אפ"}
-                </button>
-              </div>
-            )}
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">

@@ -182,80 +182,52 @@ function getAppBaseUrl(): string {
   return base.replace(/\/$/, "");
 }
 
-/** Build lesson-completed email content (for preview or send). */
+/** Build lesson-completed email content (short summary + download link). */
 export function getLessonCompletedContent(params: {
   studentName: string;
   teacherName: string;
   date: string;
-  summaryText: string;
-  homeworkText: string;
-  pointsToKeep?: string;
-  pointsToImprove?: string;
-  tips?: string;
-  recommendations?: string;
   pdfUrl?: string;
 }) {
+  const base = getAppBaseUrl();
+  const fullUrl = params.pdfUrl && base ? `${base}${params.pdfUrl.startsWith("/") ? "" : "/"}${params.pdfUrl}` : params.pdfUrl;
   const lines = [
-    `דוח שיעור: ${params.studentName} עם ${params.teacherName} — ${params.date}`,
+    `דוח סיום שיעור: ${params.studentName} עם ${params.teacherName} — ${params.date}`,
     "",
-    "סיכום כללי: " + (params.summaryText || "—"),
-    "נקודות לשימור: " + (params.pointsToKeep || "—"),
-    "נקודות לשיפור: " + (params.pointsToImprove || "—"),
-    "טיפים: " + (params.tips || "—"),
-    "המלצות להמשך: " + (params.recommendations || "—"),
-    "משימות לתרגול: " + (params.homeworkText || "—"),
+    "הדוח מצורף למייל כקובץ PDF.",
+    ...(fullUrl ? ["ניתן גם להוריד בקישור: " + fullUrl] : []),
   ];
-  if (params.pdfUrl) {
-    const base = getAppBaseUrl();
-    const fullUrl = base ? `${base}${params.pdfUrl.startsWith("/") ? "" : "/"}${params.pdfUrl}` : params.pdfUrl;
-    lines.push("", `הורדת סיכום PDF: ${fullUrl}`);
-  }
   return {
     subject: "דוח סיום שיעור",
     text: lines.join("\n"),
   };
 }
 
-/** Build HTML body for lesson-completed email with download CTA. */
+/** Build HTML body for lesson-completed email (short + download button). */
 function getLessonCompletedHtml(params: {
   studentName: string;
   teacherName: string;
   date: string;
-  summaryText: string;
-  homeworkText: string;
-  pointsToKeep?: string;
-  pointsToImprove?: string;
-  tips?: string;
-  recommendations?: string;
   pdfUrl?: string;
 }): string {
   const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const base = getAppBaseUrl();
   const fullUrl = params.pdfUrl && base ? `${base}${params.pdfUrl.startsWith("/") ? "" : "/"}${params.pdfUrl}` : null;
-  const rows = [
-    ["סיכום כללי", params.summaryText || "—"],
-    ["נקודות לשימור", params.pointsToKeep || "—"],
-    ["נקודות לשיפור", params.pointsToImprove || "—"],
-    ["טיפים", params.tips || "—"],
-    ["המלצות להמשך", params.recommendations || "—"],
-    ["משימות לתרגול", params.homeworkText || "—"],
-  ];
-  const body = rows.map(([label, val]) => `<p><strong>${esc(label)}:</strong> ${esc(val)}</p>`).join("");
   const downloadCta = fullUrl
     ? `<p style="margin-top:20px"><a href="${esc(fullUrl)}" style="background:#4a7c59;color:white;padding:10px 20px;text-decoration:none;border-radius:6px">הורד סיכום PDF</a></p>`
     : "";
   return `<div dir="rtl" style="font-family:Heebo,sans-serif;max-width:600px">
   <h2>דוח שיעור: ${esc(params.studentName)} עם ${esc(params.teacherName)} — ${esc(params.date)}</h2>
-  ${body}
+  <p>הדוח מצורף למייל כקובץ PDF.</p>
   ${downloadCta}
 </div>`;
 }
 
-const PDF_MAGIC = "%PDF-";
+const PDF_MAGIC = "%PDF";
 
 function isValidPdfBuffer(buffer: Buffer): boolean {
-  if (!buffer || buffer.length < 5) return false;
-  const header = buffer.subarray(0, 5).toString("ascii");
+  if (!buffer || buffer.length < 4) return false;
+  const header = buffer.subarray(0, 4).toString("utf8");
   return header === PDF_MAGIC;
 }
 
@@ -265,8 +237,8 @@ export async function sendLessonCompleted(params: {
   studentName: string;
   teacherName: string;
   date: string;
-  summaryText: string;
-  homeworkText: string;
+  summaryText?: string;
+  homeworkText?: string;
   pointsToKeep?: string;
   pointsToImprove?: string;
   tips?: string;
@@ -274,8 +246,18 @@ export async function sendLessonCompleted(params: {
   pdfUrl?: string;
   pdfBuffer?: Buffer;
 }): Promise<void> {
-  const { subject, text } = getLessonCompletedContent(params);
-  const html = getLessonCompletedHtml(params);
+  const { subject, text } = getLessonCompletedContent({
+    studentName: params.studentName,
+    teacherName: params.teacherName,
+    date: params.date,
+    pdfUrl: params.pdfUrl,
+  });
+  const html = getLessonCompletedHtml({
+    studentName: params.studentName,
+    teacherName: params.teacherName,
+    date: params.date,
+    pdfUrl: params.pdfUrl,
+  });
   if (isDev && noRealKey()) {
     console.log("[DEV] Lesson completed email to", params.to, params.pdfBuffer ? `+ PDF (${params.pdfBuffer.length} bytes)` : "text only");
     return;
@@ -283,15 +265,14 @@ export async function sendLessonCompleted(params: {
   const resend = getResend();
   const filename = params.lessonId ? `lesson-${params.lessonId}.pdf` : "lesson-summary.pdf";
 
-  let attachment: { filename: string; content: string; contentType: "application/pdf" }[] | undefined;
+  let attachments: { filename: string; content: Buffer | string; contentType: "application/pdf" }[] | undefined;
   if (params.pdfBuffer) {
     const size = params.pdfBuffer.length;
-    const header = params.pdfBuffer.subarray(0, 5).toString("ascii");
-    console.log("[email] PDF buffer: size=", size, "bytes, first 5 bytes:", JSON.stringify(header));
+    const header = params.pdfBuffer.subarray(0, 4).toString("utf8");
+    console.log("[email] Sending lesson completed with PDF attachment, size:", size, "bytes, header:", JSON.stringify(header));
     if (isValidPdfBuffer(params.pdfBuffer)) {
-      const base64 = params.pdfBuffer.toString("base64");
-      attachment = [{ filename, content: base64, contentType: "application/pdf" }];
-      console.log("[email] PDF validated (%PDF-), attaching to lesson completed email");
+      attachments = [{ filename, content: params.pdfBuffer, contentType: "application/pdf" }];
+      console.log("[email] PDF validated (%PDF-), attachments array includes filename:", filename, "contentType: application/pdf");
     } else {
       console.error("[email] Invalid PDF buffer (does not start with %PDF-), sending without attachment");
     }
@@ -306,7 +287,7 @@ export async function sendLessonCompleted(params: {
       subject,
       text,
       html,
-      attachments: attachment,
+      attachments,
     });
   }
 }

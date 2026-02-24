@@ -9,13 +9,13 @@ import {
   Font,
 } from "@react-pdf/renderer";
 
-// Hebrew font from @fontsource (WOFF supported by react-pdf)
-const fontDir = path.join(process.cwd(), "node_modules", "@fontsource", "noto-sans-hebrew", "files");
+// Hebrew font from @fontsource (WOFF supported by react-pdf) - filesystem path for server
+const fontDir = path.join(process.cwd(), "node_modules", "@fontsource", "heebo", "files");
 Font.register({
-  family: "NotoSansHebrew",
+  family: "Heebo",
   fonts: [
-    { src: path.join(fontDir, "noto-sans-hebrew-hebrew-400-normal.woff"), fontWeight: 400 },
-    { src: path.join(fontDir, "noto-sans-hebrew-hebrew-700-normal.woff"), fontWeight: 700 },
+    { src: path.join(fontDir, "heebo-hebrew-400-normal.woff"), fontWeight: 400 },
+    { src: path.join(fontDir, "heebo-hebrew-700-normal.woff"), fontWeight: 700 },
   ],
 });
 
@@ -25,7 +25,7 @@ Font.registerHyphenationCallback((word) => [word]);
 const styles = StyleSheet.create({
   page: {
     padding: 40,
-    fontFamily: "NotoSansHebrew",
+    fontFamily: "Heebo",
     direction: "rtl",
     textAlign: "right",
   },
@@ -33,14 +33,14 @@ const styles = StyleSheet.create({
     fontSize: 18,
     marginBottom: 12,
     fontWeight: 700,
-    fontFamily: "NotoSansHebrew",
+    fontFamily: "Heebo",
     textAlign: "right",
   },
   meta: {
     fontSize: 10,
     color: "#666",
     marginBottom: 20,
-    fontFamily: "NotoSansHebrew",
+    fontFamily: "Heebo",
     textAlign: "right",
   },
   section: {
@@ -50,13 +50,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: 700,
     marginBottom: 4,
-    fontFamily: "NotoSansHebrew",
+    fontFamily: "Heebo",
     textAlign: "right",
   },
   sectionText: {
     fontSize: 10,
     lineHeight: 1.5,
-    fontFamily: "NotoSansHebrew",
+    fontFamily: "Heebo",
     textAlign: "right",
   },
   sectionLine: {

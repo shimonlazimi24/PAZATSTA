@@ -28,26 +28,21 @@ export async function GET(
 
   const fullPath = path.join(STORAGE_DIR, filename);
   const dispositionFilename = path.basename(filename);
+  const pdfHeaders = {
+    "Content-Type": "application/pdf",
+    "Content-Disposition": `inline; filename="${dispositionFilename}"`,
+    "Cache-Control": "no-store",
+  };
   if (fs.existsSync(fullPath) && fs.statSync(fullPath).isFile()) {
     const buffer = fs.readFileSync(fullPath);
-    return new NextResponse(buffer, {
-      headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${dispositionFilename}"`,
-      },
-    });
+    return new NextResponse(buffer, { headers: pdfHeaders });
   }
 
   const lessonId = parseLessonIdFromPath(filename);
   if (lessonId) {
     const buffer = await generateLessonPdfBuffer(lessonId);
     if (buffer) {
-      return new NextResponse(new Uint8Array(buffer), {
-        headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename="${dispositionFilename}"`,
-        },
-      });
+      return new NextResponse(new Uint8Array(buffer), { headers: pdfHeaders });
     }
   }
 

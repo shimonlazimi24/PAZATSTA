@@ -50,7 +50,13 @@ export async function generateLessonPdfBuffer(
       recommendations: summary.recommendations || "",
     });
     const buffer = await renderToBuffer(doc);
-    return Buffer.from(buffer);
+    const buf = Buffer.from(buffer);
+    const header = buf.slice(0, 4).toString("utf8");
+    if (header !== "%PDF") {
+      console.error("[pdf] generateLessonPdfBuffer: invalid PDF header, got", JSON.stringify(header), "for", lessonId);
+      return null;
+    }
+    return buf;
   } catch (e) {
     console.error("[pdf] generateLessonPdfBuffer failed for", lessonId, e);
     return null;
