@@ -9,13 +9,12 @@ import {
   Font,
 } from "@react-pdf/renderer";
 
-// Hebrew font from public/fonts - included in deployment (Netlify, Vercel, etc.)
+// Hebrew font from public/fonts - TTF required (WOFF causes fontkit "Offset outside bounds" crash)
 const fontDir = path.join(process.cwd(), "public", "fonts");
 Font.register({
-  family: "Heebo",
+  family: "NotoSansHebrew",
   fonts: [
-    { src: path.join(fontDir, "heebo-hebrew-400-normal.woff"), fontWeight: 400 },
-    { src: path.join(fontDir, "heebo-hebrew-700-normal.woff"), fontWeight: 700 },
+    { src: path.join(fontDir, "NotoSansHebrew-Regular.ttf"), fontWeight: 400 },
   ],
 });
 
@@ -35,28 +34,28 @@ const ltr = { direction: "ltr" as const, textAlign: "left" as const };
 const styles = StyleSheet.create({
   page: {
     padding: 40,
-    fontFamily: "Heebo",
+    fontFamily: "NotoSansHebrew",
     ...rtl,
   },
   title: {
     fontSize: 18,
     marginBottom: 12,
     fontWeight: 700,
-    fontFamily: "Heebo",
+    fontFamily: "NotoSansHebrew",
     ...rtl,
   },
   metaRtl: {
     fontSize: 10,
     color: "#666",
     marginBottom: 2,
-    fontFamily: "Heebo",
+    fontFamily: "NotoSansHebrew",
     ...rtl,
   },
   metaLtr: {
     fontSize: 10,
     color: "#666",
     marginBottom: 2,
-    fontFamily: "Heebo",
+    fontFamily: "NotoSansHebrew",
     ...ltr,
   },
   metaBlock: {
@@ -69,13 +68,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: 700,
     marginBottom: 4,
-    fontFamily: "Heebo",
+    fontFamily: "NotoSansHebrew",
     ...rtl,
   },
   sectionText: {
     fontSize: 10,
     lineHeight: 1.5,
-    fontFamily: "Heebo",
+    fontFamily: "NotoSansHebrew",
     ...rtl,
   },
   sectionLine: {

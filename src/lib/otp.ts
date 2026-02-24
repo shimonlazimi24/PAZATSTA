@@ -15,7 +15,9 @@ export function hashOTP(code: string): string {
 export function verifyOTP(code: string, codeHash: string): boolean {
   const computed = hashOTP(code);
   if (computed.length !== codeHash.length) return false;
-  const a = Buffer.from(computed, "utf8");
-  const b = Buffer.from(codeHash, "utf8");
+  // Compare as hex buffers (SHA256 hex = 64 chars = 32 bytes)
+  const a = Buffer.from(computed, "hex");
+  const b = Buffer.from(codeHash, "hex");
+  if (a.length !== b.length) return false;
   return crypto.timingSafeEqual(a, b);
 }
