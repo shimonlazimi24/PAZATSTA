@@ -43,19 +43,17 @@ export async function GET(
   const lessonId = parseLessonIdFromPath(filename);
   console.log("[pdf] lessonId:", lessonId ?? "(none)");
   if (lessonId) {
-    try {
-      const buffer = await generateLessonPdfBuffer(lessonId);
-      console.log("[pdf] generateLessonPdfBuffer result:", !!buffer);
-      if (buffer) {
-        return new NextResponse(new Uint8Array(buffer), { headers: pdfHeaders });
-      }
-    } catch (e) {
-      console.error("[pdf] generateLessonPdfBuffer threw for", lessonId, e);
-      return NextResponse.json(
-        { error: "Failed to generate PDF" },
-        { status: 500 }
-      );
+    const result = await generateLessonPdfBuffer(lessonId);
+    if (result.ok) {
+      return new NextResponse(new Uint8Array(result.buffer), { headers: pdfHeaders });
     }
+    const code = result.code;
+    const details = result.details ?? code;
+    console.error("[pdf] generateLessonPdfBuffer failed, code:", code, "details:", details);
+    return NextResponse.json(
+      { error: "Failed to generate PDF", code, details },
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
   }
 
   return NextResponse.json({ error: "Not found" }, { status: 404 });

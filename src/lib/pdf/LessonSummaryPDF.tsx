@@ -9,8 +9,8 @@ import {
   Font,
 } from "@react-pdf/renderer";
 
-// Hebrew font from @fontsource (WOFF supported by react-pdf) - filesystem path for server
-const fontDir = path.join(process.cwd(), "node_modules", "@fontsource", "heebo", "files");
+// Hebrew font from public/fonts - included in deployment (Netlify, Vercel, etc.)
+const fontDir = path.join(process.cwd(), "public", "fonts");
 Font.register({
   family: "Heebo",
   fonts: [

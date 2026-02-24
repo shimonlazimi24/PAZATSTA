@@ -8,22 +8,36 @@ import { createLessonSummaryDocument } from "./LessonSummaryPDF";
 const STORAGE_DIR = process.env.STORAGE_PATH || path.join(process.cwd(), "storage", "pdfs");
 const SUBDIR = "lesson-summaries";
 
+export type PdfErrorCode = "LESSON_NOT_FOUND" | "SUMMARY_MISSING" | "RENDER_FAILED" | "DB_FAILED";
+
+export type GeneratePdfResult =
+  | { ok: true; buffer: Buffer }
+  | { ok: false; code: PdfErrorCode; details?: string };
+
 function safeFilename(lessonId: string): string {
-  // Ensure no path traversal; only alphanumeric and hyphens
   const sanitized = lessonId.replace(/[^a-zA-Z0-9-_]/g, "");
   if (!sanitized) throw new Error("Invalid lessonId");
   return `lesson-${sanitized}.pdf`;
 }
 
+function safeDateStr(date: unknown): string {
+  const dateObj = date instanceof Date ? date : new Date(date as string | number);
+  if (isNaN(dateObj.getTime())) return String(date ?? "—");
+  return dateObj.toISOString().slice(0, 10);
+}
+
 /**
  * Generate PDF buffer for a lesson summary (no storage).
- * Used when serving PDF on-demand (e.g. serverless where disk doesn't persist).
+ * Returns typed result - never swallows errors; throws only for unexpected failures.
  */
 export async function generateLessonPdfBuffer(
   lessonId: string
-): Promise<Buffer | null> {
+): Promise<GeneratePdfResult> {
+  console.log("[pdf] generateLessonPdfBuffer start, lessonId:", lessonId);
+
+  let lesson;
   try {
-    const lesson = await prisma.lesson.findUnique({
+    lesson = await prisma.lesson.findUnique({
       where: { id: lessonId },
       include: {
         teacher: { select: { name: true, email: true } },
@@ -31,19 +45,31 @@ export async function generateLessonPdfBuffer(
         summary: true,
       },
     });
-    if (!lesson) {
-      console.log("[pdf] generateLessonPdfBuffer: lesson not found for id", lessonId);
-      return null;
-    }
-    if (!lesson.summary) {
-      console.log("[pdf] generateLessonPdfBuffer: lesson has no summary for id", lessonId);
-      return null;
-    }
-    const summary = lesson.summary;
-    const studentName = lesson.student.name || lesson.student.email;
-    const teacherName = lesson.teacher.name || lesson.teacher.email;
-    const dateStr = lesson.date.toISOString().slice(0, 10);
-    const timeRange = `${lesson.startTime}–${lesson.endTime}`;
+  } catch (e) {
+    console.error("[pdf] DB query failed for lessonId:", lessonId, e);
+    console.error("[pdf] DB error stack:", e instanceof Error ? e.stack : "no stack");
+    return { ok: false, code: "DB_FAILED", details: e instanceof Error ? e.message : "Database error" };
+  }
+
+  if (!lesson) {
+    console.log("[pdf] lesson not found, lessonId:", lessonId);
+    return { ok: false, code: "LESSON_NOT_FOUND" };
+  }
+
+  console.log("[pdf] lesson exists, lesson.date type:", typeof lesson.date, "value:", lesson.date);
+
+  if (!lesson.summary) {
+    console.log("[pdf] lesson has no summary, lessonId:", lessonId);
+    return { ok: false, code: "SUMMARY_MISSING" };
+  }
+
+  const summary = lesson.summary;
+  const studentName = lesson.student.name || lesson.student.email;
+  const teacherName = lesson.teacher.name || lesson.teacher.email;
+  const dateStr = safeDateStr(lesson.date);
+  const timeRange = `${lesson.startTime}–${lesson.endTime}`;
+
+  try {
     const doc = createLessonSummaryDocument({
       studentName,
       teacherName,
@@ -60,33 +86,35 @@ export async function generateLessonPdfBuffer(
     const buf = Buffer.from(buffer);
     const header = buf.slice(0, 4).toString("utf8");
     if (header !== "%PDF") {
-      console.error("[pdf] generateLessonPdfBuffer: invalid PDF header, got", JSON.stringify(header), "for", lessonId);
-      return null;
+      console.error("[pdf] invalid PDF header, got:", JSON.stringify(header), "lessonId:", lessonId);
+      return { ok: false, code: "RENDER_FAILED", details: "Invalid PDF output" };
     }
-    console.log("[pdf] generateLessonPdfBuffer: success for", lessonId, "size:", buf.length);
-    return buf;
+    console.log("[pdf] generateLessonPdfBuffer success, lessonId:", lessonId, "buffer length:", buf.length);
+    return { ok: true, buffer: buf };
   } catch (e) {
-    console.error("[pdf] generateLessonPdfBuffer failed for", lessonId, e);
-    throw e;
+    console.error("[pdf] renderToBuffer failed for lessonId:", lessonId, e);
+    console.error("[pdf] render error stack:", e instanceof Error ? e.stack : "no stack");
+    return {
+      ok: false,
+      code: "RENDER_FAILED",
+      details: e instanceof Error ? e.message : "PDF render failed",
+    };
   }
 }
 
 /**
  * Generate PDF for a lesson summary and store it.
  * Updates lesson.summary.pdfUrl in DB.
- * @returns { pdfUrl, pdfBuffer } if successful, {} if failed (errors logged)
  */
 export async function generateAndStoreLessonPdf(
   lessonId: string
 ): Promise<{ pdfUrl?: string; pdfBuffer?: Buffer }> {
-  let buffer: Buffer | null = null;
-  try {
-    buffer = await generateLessonPdfBuffer(lessonId);
-    if (!buffer) return {};
-  } catch (e) {
-    console.error("[pdf] generateLessonPdfBuffer failed for", lessonId, e);
+  const result = await generateLessonPdfBuffer(lessonId);
+  if (!result.ok) {
+    console.warn("[pdf] generateAndStoreLessonPdf: generateLessonPdfBuffer failed, code:", result.code);
     return {};
   }
+  const buffer = result.buffer;
 
   try {
     const filename = safeFilename(lessonId);
@@ -102,7 +130,6 @@ export async function generateAndStoreLessonPdf(
     return { pdfUrl, pdfBuffer: Buffer.from(buffer) };
   } catch (e) {
     console.error("[pdf] storage failed for", lessonId, e);
-    // Still return buffer so email can attach it (storage may be ephemeral on serverless)
-    return { pdfBuffer: Buffer.from(buffer!) };
+    return { pdfBuffer: Buffer.from(buffer) };
   }
 }
