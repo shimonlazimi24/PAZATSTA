@@ -31,7 +31,14 @@ export async function generateLessonPdfBuffer(
         summary: true,
       },
     });
-    if (!lesson?.summary) return null;
+    if (!lesson) {
+      console.log("[pdf] generateLessonPdfBuffer: lesson not found for id", lessonId);
+      return null;
+    }
+    if (!lesson.summary) {
+      console.log("[pdf] generateLessonPdfBuffer: lesson has no summary for id", lessonId);
+      return null;
+    }
     const summary = lesson.summary;
     const studentName = lesson.student.name || lesson.student.email;
     const teacherName = lesson.teacher.name || lesson.teacher.email;
@@ -56,10 +63,11 @@ export async function generateLessonPdfBuffer(
       console.error("[pdf] generateLessonPdfBuffer: invalid PDF header, got", JSON.stringify(header), "for", lessonId);
       return null;
     }
+    console.log("[pdf] generateLessonPdfBuffer: success for", lessonId, "size:", buf.length);
     return buf;
   } catch (e) {
     console.error("[pdf] generateLessonPdfBuffer failed for", lessonId, e);
-    return null;
+    throw e;
   }
 }
 

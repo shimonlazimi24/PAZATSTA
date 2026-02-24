@@ -7,12 +7,12 @@ export const runtime = "nodejs";
 
 const STORAGE_DIR = process.env.STORAGE_PATH || path.join(process.cwd(), "storage", "pdfs");
 
-/** Match lesson-summaries/lesson-<lessonId>.pdf */
+/** Match lesson-summaries/lesson-<lessonId>.pdf - lessonId is alphanumeric, hyphens, underscores (CUID-like) */
 function parseLessonIdFromPath(filePath: string): string | null {
-  const match = filePath.match(/^lesson-summaries\/lesson-(.+)\.pdf$/);
+  const match = filePath.match(/^lesson-summaries\/lesson-([a-zA-Z0-9_-]+)\.pdf$/);
   if (!match) return null;
   const id = match[1];
-  if (!id || id.length < 10) return null;
+  if (!id || id.length < 3) return null;
   return id;
 }
 
@@ -22,6 +22,8 @@ export async function GET(
 ) {
   const { path: pathSegments } = await params;
   const filename = pathSegments.join("/");
+  console.log("[pdf] filename:", filename);
+
   if (!filename || filename.includes("..")) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
@@ -39,10 +41,20 @@ export async function GET(
   }
 
   const lessonId = parseLessonIdFromPath(filename);
+  console.log("[pdf] lessonId:", lessonId ?? "(none)");
   if (lessonId) {
-    const buffer = await generateLessonPdfBuffer(lessonId);
-    if (buffer) {
-      return new NextResponse(new Uint8Array(buffer), { headers: pdfHeaders });
+    try {
+      const buffer = await generateLessonPdfBuffer(lessonId);
+      console.log("[pdf] generateLessonPdfBuffer result:", !!buffer);
+      if (buffer) {
+        return new NextResponse(new Uint8Array(buffer), { headers: pdfHeaders });
+      }
+    } catch (e) {
+      console.error("[pdf] generateLessonPdfBuffer threw for", lessonId, e);
+      return NextResponse.json(
+        { error: "Failed to generate PDF" },
+        { status: 500 }
+      );
     }
   }
 
