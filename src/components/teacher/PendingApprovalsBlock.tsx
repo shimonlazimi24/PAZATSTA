@@ -32,11 +32,14 @@ export function PendingApprovalsBlock() {
 
   function handleApprove(id: string) {
     setApprovingId(id);
-    apiJson<{ ok?: boolean }>(`/api/lessons/${id}/approve`, { method: "POST" })
+    apiJson<{ ok?: boolean }>(`/api/lessons/${id}/approve`, { method: "POST", credentials: "include" })
       .then((r) => {
         if (r.ok) {
           fetchPending();
-          window.dispatchEvent(new Event("teacher-lessons-refresh"));
+          // Brief delay so DB commit is visible before refresh
+          setTimeout(() => {
+            window.dispatchEvent(new Event("teacher-lessons-refresh"));
+          }, 150);
         }
       })
       .finally(() => setApprovingId(null));
@@ -50,11 +53,13 @@ export function PendingApprovalsBlock() {
       </section>
     );
   }
-  if (lessons.length === 0) return null;
 
   return (
     <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 shadow-[var(--shadow-card)]" dir="rtl">
       <h2 className="text-lg font-semibold text-[var(--color-text)] mb-3">שיעורים בהמתנה לאישור</h2>
+      {lessons.length === 0 ? (
+        <p className="text-sm text-[var(--color-text-muted)]">אין שיעורים בהמתנה. שיעורים שאושרו מופיעים בשיעורים הקרובים למטה.</p>
+      ) : (
       <ul className="space-y-3">
         {lessons.map((l) => (
           <li
@@ -75,6 +80,7 @@ export function PendingApprovalsBlock() {
           </li>
         ))}
       </ul>
+      )}
     </section>
   );
 }

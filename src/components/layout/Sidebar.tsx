@@ -22,17 +22,10 @@ const ADMIN_NAV: NavItem[] = [
   { href: "/admin", label: "ניהול", icon: Settings },
 ];
 
-function logoHrefForRole(role: string | undefined, canAccessAdmin?: boolean): string {
-  if (role === "teacher") return "/teacher/dashboard";
-  if (role === "admin" || canAccessAdmin) return "/admin";
-  return "/book";
-}
-
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [navItems, setNavItems] = useState<NavItem[]>([]);
-  const [logoHref, setLogoHref] = useState("/book");
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
     router.replace("/login");
@@ -45,11 +38,9 @@ export function Sidebar() {
       .then((data) => {
         if (!data) {
           setNavItems([]);
-          setLogoHref("/book");
           return;
         }
         const { role: r, canAccessAdmin } = data;
-        setLogoHref(logoHrefForRole(r, canAccessAdmin));
         const items: NavItem[] = [];
         if (r === "teacher") items.push(...TEACHER_NAV);
         else if (r === "student") items.push(...STUDENT_NAV);
@@ -62,9 +53,9 @@ export function Sidebar() {
   return (
     <aside className="hidden w-64 shrink-0 border-s border-border bg-card md:block">
       <div className="sticky top-0 flex h-screen flex-col p-4">
-        <Link href={logoHref} className="mb-8 flex items-center gap-2 px-2">
+        <div className="mb-8 flex items-center gap-2 px-2">
           <Logo alt="Paza" className="h-7 w-auto object-contain" width={100} height={28} />
-        </Link>
+        </div>
         <nav className="flex flex-1 flex-col gap-1">
           {navItems.map((item) => {
             const Icon = item.icon;

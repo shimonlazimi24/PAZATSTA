@@ -56,9 +56,9 @@ export function AdminShell({ email, children }: AdminShellProps) {
             <BackLink href="/book" label="חזרה" />
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <Link href="/book" className="flex shrink-0">
+                <div className="flex shrink-0">
                   <Logo alt="Paza" className="h-8 w-auto object-contain" width={100} height={28} />
-                </Link>
+                </div>
                 <span className="text-[var(--color-text-muted)]">/</span>
                 <h1 className="text-lg font-semibold text-[var(--color-text)]">
                   ניהול
