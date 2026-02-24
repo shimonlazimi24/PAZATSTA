@@ -232,8 +232,9 @@ export async function sendLessonCompleted(params: {
     return;
   }
   const resend = getResend();
+  // Resend requires base64 string for attachments, not Buffer
   const attachment = params.pdfBuffer && params.pdfFilename
-    ? [{ filename: params.pdfFilename, content: params.pdfBuffer }]
+    ? [{ filename: params.pdfFilename, content: params.pdfBuffer.toString("base64") }]
     : undefined;
   for (const email of params.to) {
     await resend.emails.send({
