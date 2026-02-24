@@ -27,12 +27,13 @@ export async function GET(
   }
 
   const fullPath = path.join(STORAGE_DIR, filename);
+  const dispositionFilename = path.basename(filename);
   if (fs.existsSync(fullPath) && fs.statSync(fullPath).isFile()) {
     const buffer = fs.readFileSync(fullPath);
     return new NextResponse(buffer, {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename="${path.basename(filename)}"`,
+        "Content-Disposition": `attachment; filename="${dispositionFilename}"`,
       },
     });
   }
@@ -44,7 +45,7 @@ export async function GET(
       return new NextResponse(new Uint8Array(buffer), {
         headers: {
           "Content-Type": "application/pdf",
-          "Content-Disposition": `inline; filename="${path.basename(filename)}"`,
+          "Content-Disposition": `attachment; filename="${dispositionFilename}"`,
         },
       });
     }

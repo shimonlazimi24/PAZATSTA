@@ -65,27 +65,30 @@ export async function generateLessonPdfBuffer(
 export async function generateAndStoreLessonPdf(
   lessonId: string
 ): Promise<{ pdfUrl?: string; pdfBuffer?: Buffer }> {
+  let buffer: Buffer | null = null;
   try {
-    const buffer = await generateLessonPdfBuffer(lessonId);
+    buffer = await generateLessonPdfBuffer(lessonId);
     if (!buffer) return {};
+  } catch (e) {
+    console.error("[pdf] generateLessonPdfBuffer failed for", lessonId, e);
+    return {};
+  }
 
+  try {
     const filename = safeFilename(lessonId);
     const relativePath = path.join(SUBDIR, filename);
     const fullPath = path.join(STORAGE_DIR, relativePath);
-
     await fs.mkdir(path.dirname(fullPath), { recursive: true });
     await fs.writeFile(fullPath, buffer);
-
     const pdfUrl = `/api/pdf/${SUBDIR}/${filename}`;
-
     await prisma.lessonSummary.update({
       where: { lessonId },
       data: { pdfUrl },
     });
-
     return { pdfUrl, pdfBuffer: Buffer.from(buffer) };
   } catch (e) {
-    console.error("[pdf] generateAndStoreLessonPdf failed for", lessonId, e);
-    return {};
+    console.error("[pdf] storage failed for", lessonId, e);
+    // Still return buffer so email can attach it (storage may be ephemeral on serverless)
+    return { pdfBuffer: Buffer.from(buffer!) };
   }
 }

@@ -9,12 +9,9 @@ import {
   Font,
 } from "@react-pdf/renderer";
 
-// Hebrew-compatible font: Noto Sans Hebrew
-const fontPath = path.join(process.cwd(), "src/assets/fonts/NotoSansHebrew-Regular.ttf");
-Font.register({
-  family: "NotoSansHebrew",
-  src: fontPath,
-});
+// Hebrew-compatible font: public/ is included in deploy (serverless)
+const fontPath = path.join(process.cwd(), "public", "fonts", "NotoSansHebrew-Regular.ttf");
+Font.register({ family: "NotoSansHebrew", src: fontPath });
 
 // Disable hyphenation for Hebrew (prevents broken word splitting)
 Font.registerHyphenationCallback((word) => [word]);

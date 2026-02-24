@@ -8,7 +8,10 @@ const APPROVAL_WINDOW_MS = 2 * 60 * 60 * 1000; // 2 hours
 
 /** Create a lesson as pending_approval; email sent only after teacher/admin approve. */
 export async function POST(req: Request) {
-  const user = await getUserFromSession();
+  const [user, adminsPreload] = await Promise.all([
+    getUserFromSession(),
+    prisma.user.findMany({ where: { role: "admin" }, select: { email: true } }),
+  ]);
   if (!user || user.role !== "student") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -25,11 +28,6 @@ export async function POST(req: Request) {
     let admins: { email: string }[] = [];
 
     if (availabilityId) {
-      // Run admins fetch in parallel with transaction — saves ~200–500ms
-      const adminsPromise = prisma.user.findMany({
-        where: { role: "admin" },
-        select: { email: true },
-      });
       const result = await prisma.$transaction(async (tx) => {
         const current = await tx.availability.findFirst({
           where: { id: availabilityId },
@@ -64,7 +62,7 @@ export async function POST(req: Request) {
         );
       }
       lesson = result;
-      admins = await adminsPromise;
+      admins = adminsPreload;
       const adminEmails = admins.map((a) => a.email).filter(Boolean);
       const toEmails = Array.from(
         new Set([lesson.teacher.email, ...adminEmails])
@@ -94,18 +92,11 @@ export async function POST(req: Request) {
       if (isNaN(date.getTime())) {
         return NextResponse.json({ error: "תאריך לא תקין" }, { status: 400 });
       }
-      const adminsPromise = prisma.user.findMany({
-        where: { role: "admin" },
-        select: { email: true },
+      const teacher = await prisma.user.findFirst({
+        where: { id: teacherId, role: "teacher" },
+        include: { teacherProfile: true },
       });
-      const [teacher, adminsResult] = await Promise.all([
-        prisma.user.findFirst({
-          where: { id: teacherId, role: "teacher" },
-          include: { teacherProfile: true },
-        }),
-        adminsPromise,
-      ]);
-      admins = adminsResult;
+      admins = adminsPreload;
       if (!teacher) {
         return NextResponse.json({ error: "מורה לא נמצא" }, { status: 404 });
       }

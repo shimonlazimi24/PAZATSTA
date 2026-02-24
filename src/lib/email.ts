@@ -177,6 +177,11 @@ export async function sendBookingConfirmation(params: {
   }
 }
 
+function getAppBaseUrl(): string {
+  const base = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "";
+  return base.replace(/\/$/, "");
+}
+
 /** Build lesson-completed email content (for preview or send). */
 export function getLessonCompletedContent(params: {
   studentName: string;
@@ -201,9 +206,9 @@ export function getLessonCompletedContent(params: {
     "משימות לתרגול: " + (params.homeworkText || "—"),
   ];
   if (params.pdfUrl) {
-    const base = process.env.APP_URL || "";
-    const fullUrl = base ? `${base.replace(/\/$/, "")}${params.pdfUrl.startsWith("/") ? "" : "/"}${params.pdfUrl}` : params.pdfUrl;
-    lines.push("", `קישור ל-PDF: ${fullUrl}`);
+    const base = getAppBaseUrl();
+    const fullUrl = base ? `${base}${params.pdfUrl.startsWith("/") ? "" : "/"}${params.pdfUrl}` : params.pdfUrl;
+    lines.push("", `הורדת סיכום PDF: ${fullUrl}`);
   }
   return {
     subject: "דוח סיום שיעור",
@@ -211,8 +216,44 @@ export function getLessonCompletedContent(params: {
   };
 }
 
+/** Build HTML body for lesson-completed email with download CTA. */
+function getLessonCompletedHtml(params: {
+  studentName: string;
+  teacherName: string;
+  date: string;
+  summaryText: string;
+  homeworkText: string;
+  pointsToKeep?: string;
+  pointsToImprove?: string;
+  tips?: string;
+  recommendations?: string;
+  pdfUrl?: string;
+}): string {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const base = getAppBaseUrl();
+  const fullUrl = params.pdfUrl && base ? `${base}${params.pdfUrl.startsWith("/") ? "" : "/"}${params.pdfUrl}` : null;
+  const rows = [
+    ["סיכום כללי", params.summaryText || "—"],
+    ["נקודות לשימור", params.pointsToKeep || "—"],
+    ["נקודות לשיפור", params.pointsToImprove || "—"],
+    ["טיפים", params.tips || "—"],
+    ["המלצות להמשך", params.recommendations || "—"],
+    ["משימות לתרגול", params.homeworkText || "—"],
+  ];
+  const body = rows.map(([label, val]) => `<p><strong>${esc(label)}:</strong> ${esc(val)}</p>`).join("");
+  const downloadCta = fullUrl
+    ? `<p style="margin-top:20px"><a href="${esc(fullUrl)}" style="background:#4a7c59;color:white;padding:10px 20px;text-decoration:none;border-radius:6px">הורד סיכום PDF</a></p>`
+    : "";
+  return `<div dir="rtl" style="font-family:Heebo,sans-serif;max-width:600px">
+  <h2>דוח שיעור: ${esc(params.studentName)} עם ${esc(params.teacherName)} — ${esc(params.date)}</h2>
+  ${body}
+  ${downloadCta}
+</div>`;
+}
+
 export async function sendLessonCompleted(params: {
   to: string[];
+  lessonId?: string;
   studentName: string;
   teacherName: string;
   date: string;
@@ -224,24 +265,33 @@ export async function sendLessonCompleted(params: {
   recommendations?: string;
   pdfUrl?: string;
   pdfBuffer?: Buffer;
-  pdfFilename?: string;
 }): Promise<void> {
   const { subject, text } = getLessonCompletedContent(params);
+  const html = getLessonCompletedHtml(params);
   if (isDev && noRealKey()) {
-    console.log("[DEV] Lesson completed email to", params.to, params.summaryText?.slice(0, 50));
+    console.log("[DEV] Lesson completed email to", params.to, params.pdfBuffer ? `+ PDF (${params.pdfBuffer.length} bytes)` : "text only");
     return;
   }
   const resend = getResend();
-  // Resend requires base64 string for attachments, not Buffer
-  const attachment = params.pdfBuffer && params.pdfFilename
-    ? [{ filename: params.pdfFilename, content: params.pdfBuffer.toString("base64") }]
+  const filename = params.lessonId ? `lesson-${params.lessonId}.pdf` : "lesson-summary.pdf";
+  const base64 = params.pdfBuffer ? params.pdfBuffer.toString("base64") : "";
+  const attachment = base64
+    ? [{ filename, content: base64, contentType: "application/pdf" as const }]
     : undefined;
+  if (attachment) {
+    console.log("[email] Sending lesson completed with PDF attachment, size:", params.pdfBuffer!.length, "bytes");
+  } else if (params.pdfBuffer) {
+    console.warn("[email] PDF buffer present but attachment not created");
+  } else {
+    console.log("[email] Sending lesson completed without PDF (generation failed)");
+  }
   for (const email of params.to) {
     await resend.emails.send({
       from: from(),
       to: email,
       subject,
       text,
+      html,
       attachments: attachment,
     });
   }

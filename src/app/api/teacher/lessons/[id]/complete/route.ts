@@ -89,11 +89,12 @@ export async function POST(
     let pdfUrl: string | null = null;
     let pdfBuffer: Buffer | undefined;
     const pdfResult = await generateAndStoreLessonPdf(lessonId);
-    if (pdfResult.pdfUrl) {
-      pdfUrl = pdfResult.pdfUrl;
+    if (pdfResult.pdfBuffer) {
       pdfBuffer = pdfResult.pdfBuffer;
+      pdfUrl = pdfResult.pdfUrl ?? `/api/pdf/lesson-summaries/lesson-${lessonId}.pdf`;
+      console.log("[complete] PDF attachment ready, size:", pdfBuffer.length, "bytes");
     } else {
-      console.error("[pdf] generateAndStoreLessonPdf returned no pdfUrl for", lessonId);
+      console.error("[pdf] generateAndStoreLessonPdf returned no pdfBuffer for", lessonId);
     }
 
     const adminUsers = await prisma.user.findMany({
@@ -107,6 +108,7 @@ export async function POST(
     ];
     await sendLessonCompleted({
       to: Array.from(new Set(toEmails)),
+      lessonId,
       studentName,
       teacherName,
       date: dateStr,
@@ -118,7 +120,6 @@ export async function POST(
       recommendations: recommendations || "—",
       pdfUrl: pdfUrl ?? undefined,
       pdfBuffer,
-      pdfFilename: pdfBuffer ? `lesson-summary-${dateStr}.pdf` : undefined,
     });
 
     return NextResponse.json({

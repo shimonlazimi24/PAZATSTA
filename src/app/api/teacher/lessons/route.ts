@@ -6,7 +6,19 @@ import { formatDateInIsrael } from "@/lib/date-utils";
 import type { Prisma } from "@prisma/client";
 
 const includeStudentSummary = {
-  student: { select: { id: true, email: true, name: true } },
+  student: {
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      studentProfile: {
+        select: {
+          currentScreeningDate: true,
+          currentScreeningType: true,
+        },
+      },
+    },
+  },
   summary: true,
 } as const;
 
@@ -18,9 +30,16 @@ function mapLesson(l: {
   status: string;
   followUpCompletedAt: Date | null;
   questionFromStudent: string | null;
-  student: { id: string; email: string; name: string | null };
+  student: {
+    id: string;
+    email: string;
+    name: string | null;
+    studentProfile: { currentScreeningDate: Date | null; currentScreeningType: string | null } | null;
+  };
   summary: { id: string; summaryText: string; homeworkText: string; pdfUrl: string | null; createdAt: Date } | null;
 }) {
+  const student = l.student;
+  const profile = student.studentProfile;
   return {
     id: l.id,
     date: l.date.toISOString().slice(0, 10),
@@ -29,7 +48,13 @@ function mapLesson(l: {
     status: l.status,
     followUpCompletedAt: l.followUpCompletedAt?.toISOString() ?? null,
     questionFromStudent: l.questionFromStudent,
-    student: l.student,
+    student: {
+      id: student.id,
+      email: student.email,
+      name: student.name,
+      screeningDate: profile?.currentScreeningDate?.toISOString().slice(0, 10) ?? null,
+      screeningType: profile?.currentScreeningType ?? null,
+    },
     summary: l.summary
       ? {
           id: l.summary.id,

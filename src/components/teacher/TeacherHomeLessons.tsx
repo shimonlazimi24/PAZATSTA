@@ -13,7 +13,13 @@ type Lesson = {
   status: string;
   followUpCompletedAt: string | null;
   questionFromStudent: string | null;
-  student: { id: string; email: string; name: string | null };
+  student: {
+    id: string;
+    email: string;
+    name: string | null;
+    screeningDate?: string | null;
+    screeningType?: string | null;
+  };
   summary: { pdfUrl: string | null } | null;
 };
 
@@ -177,14 +183,24 @@ export function TeacherHomeLessons() {
                               מעקב הושלם
                             </span>
                           ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleFollowUpComplete(l.id)}
-                              disabled={followUpLoadingId === l.id}
-                              className="px-3 py-1.5 rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white text-sm font-medium text-[var(--color-text)] hover:bg-[var(--color-bg-muted)] disabled:opacity-50"
-                            >
-                              {followUpLoadingId === l.id ? "שולח…" : "סימון מעקב הושלם"}
-                            </button>
+                            <div className="flex flex-wrap items-center gap-2">
+                              {(l.student.screeningDate || l.student.screeningType) && (
+                                <span className="text-xs text-[var(--color-text-muted)]">
+                                  תאריך מיון: {l.student.screeningDate
+                                    ? new Date(l.student.screeningDate + "T12:00:00").toLocaleDateString("he-IL")
+                                    : "—"}
+                                  {l.student.screeningType ? ` (${l.student.screeningType})` : ""}
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleFollowUpComplete(l.id)}
+                                disabled={followUpLoadingId === l.id}
+                                className="px-3 py-1.5 rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white text-sm font-medium text-[var(--color-text)] hover:bg-[var(--color-bg-muted)] disabled:opacity-50"
+                              >
+                                {followUpLoadingId === l.id ? "שולח…" : "סימון מעקב הושלם"}
+                              </button>
+                            </div>
                           )}
                           {l.summary?.pdfUrl && (
                             <a
