@@ -58,3 +58,19 @@ export function formatHebrewShortDate(dateStr: string): string {
 export function todayIsraelYYYYMMDD(): string {
   return formatIsraelDateYYYYMMDD(new Date());
 }
+
+/** Current time in Israel as HH:MM (24h) for lesson end-time comparison. */
+export function nowIsraelHHMM(): string {
+  return new Date().toLocaleTimeString("en-GB", {
+    timeZone: TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
+/** Normalize time string to HH:MM for comparison (handles "9:00" -> "09:00"). */
+export function normalizeTimeForCompare(t: string): string {
+  const parts = (t || "00:00").trim().split(/[:\s]/).map((p) => p.replace(/\D/g, "").padStart(2, "0"));
+  return `${(parts[0] || "00").slice(-2)}:${(parts[1] || "00").slice(-2)}`;
+}

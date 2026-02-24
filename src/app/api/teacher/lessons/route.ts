@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getUserFromSession } from "@/lib/auth";
+import { todayIsraelYYYYMMDD, nowIsraelHHMM, normalizeTimeForCompare } from "@/lib/dates";
+import { formatDateInIsrael } from "@/lib/date-utils";
 import type { Prisma } from "@prisma/client";
 
 const includeStudentSummary = {
@@ -55,8 +57,11 @@ export async function GET(req: Request) {
   const startOfTodayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
 
   // Dashboard mode: return both upcoming and past in one request (faster)
+  // Past = lessons that have ended (by Israel time). Upcoming = not yet ended.
   if (upcoming && past && !month && !year && !pending) {
-    const [upcomingLessons, pastLessons] = await Promise.all([
+    const todayStr = todayIsraelYYYYMMDD();
+    const nowTime = normalizeTimeForCompare(nowIsraelHHMM());
+    const [upcomingFromDb, pastFromDb] = await Promise.all([
       prisma.lesson.findMany({
         where: {
           teacherId: user.id,
@@ -76,9 +81,26 @@ export async function GET(req: Request) {
         take: 50,
       }),
     ]);
+    const lessonDateStr = (d: Date) => formatDateInIsrael(d);
+    const endedToday = upcomingFromDb.filter((l) => {
+      const dateStr = lessonDateStr(l.date);
+      return dateStr === todayStr && normalizeTimeForCompare(l.endTime) <= nowTime;
+    });
+    const stillUpcoming = upcomingFromDb.filter((l) => {
+      const dateStr = lessonDateStr(l.date);
+      return dateStr !== todayStr || normalizeTimeForCompare(l.endTime) > nowTime;
+    });
+    const allPast = [
+      ...endedToday.sort((a, b) => {
+        const d = b.date.getTime() - a.date.getTime();
+        if (d !== 0) return d;
+        return normalizeTimeForCompare(b.endTime).localeCompare(normalizeTimeForCompare(a.endTime));
+      }),
+      ...pastFromDb,
+    ].slice(0, 50);
     return NextResponse.json({
-      upcoming: upcomingLessons.map(mapLesson),
-      past: pastLessons.map(mapLesson),
+      upcoming: stillUpcoming.map((l) => mapLesson(l as Parameters<typeof mapLesson>[0])),
+      past: allPast.map((l) => mapLesson(l as Parameters<typeof mapLesson>[0])),
     });
   }
 

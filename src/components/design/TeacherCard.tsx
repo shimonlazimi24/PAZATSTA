@@ -32,28 +32,16 @@ export function TeacherCard({ teacher, selected, onSelect }: TeacherCardProps) {
             <span className="text-[var(--color-text-muted)]">שם: </span>
             <span className="font-bold text-[var(--color-text)]">{teacher.name}</span>
           </div>
-          {(teacher.specialization ?? (teacher.specialties?.length ? teacher.specialties[0] : null)) && (
-            <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-              <span className="text-[var(--color-text-muted)]">התמחות: </span>
+          {(teacher.specialties?.length ?? 0) > 0 && (
+            <p className="mt-1 text-sm">
+              <span className="text-[var(--color-text-muted)]">התמחויות: </span>
               <span className="text-[var(--color-text)]">
-                {teacher.specialization ?? teacher.specialties?.slice(0, 2).join(" • ") ?? ""}
+                {teacher.specialties!.join(" • ")}
               </span>
             </p>
           )}
           {teacher.bio && (
             <p className="mt-1.5 text-sm text-[var(--color-text-muted)] line-clamp-2">{teacher.bio}</p>
-          )}
-          {!teacher.specialization && (teacher.specialties?.length ?? 0) > 1 && (
-            <div className="mt-2 flex flex-wrap gap-1">
-              {teacher.specialties!.slice(1, 4).map((s) => (
-                <span
-                  key={s}
-                  className="rounded-md bg-[var(--color-bg-muted)] px-2 py-0.5 text-xs text-[var(--color-text-muted)]"
-                >
-                  {s}
-                </span>
-              ))}
-            </div>
           )}
         </div>
       </div>

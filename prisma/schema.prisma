@@ -43,7 +43,8 @@ model TeacherProfile {
   displayName      String?
   bio              String?
   profileImageUrl  String?
-  specialization   String?  // התמחות - shown to students instead of phone/email
+  specialization   String?  // legacy single string
+  specialties      String[] @default([]) // multi-select, must match booking topic labels exactly
   createdAt        DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

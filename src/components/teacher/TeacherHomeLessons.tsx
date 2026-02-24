@@ -127,6 +127,7 @@ export function TeacherHomeLessons() {
                             startTime: l.startTime,
                             endTime: l.endTime,
                             title: calendarTitle,
+                            attendees: [l.student.email],
                           })
                         }
                         className="inline-flex items-center gap-1.5 rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs font-medium text-[var(--color-text)] hover:bg-[var(--color-bg-muted)]"

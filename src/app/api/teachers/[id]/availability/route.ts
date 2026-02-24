@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { parseDateParam, formatDateInIsrael } from "@/lib/date-utils";
+import { parseDateParam } from "@/lib/date-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -72,10 +72,13 @@ export async function GET(
       orderBy: [{ date: "asc" }, { startTime: "asc" }],
     });
 
+    // Return date as YYYY-MM-DD (Israel) to match client selectedDate format
+    const toDateStr = (d: Date) =>
+      d.toLocaleDateString("en-CA", { timeZone: "Asia/Jerusalem" });
     return NextResponse.json(
       slots.map((s) => ({
         id: s.id,
-        date: formatDateInIsrael(s.date),
+        date: toDateStr(s.date),
         startTime: s.startTime,
         endTime: s.endTime,
       }))

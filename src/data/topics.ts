@@ -1,4 +1,31 @@
 /**
+ * All topic labels used in booking flow. Must match CATEGORIES.subs[].label in book page exactly.
+ * Used for teacher specialties chip selector and server-side validation.
+ */
+export const BOOKING_TOPIC_LABELS = [
+  "יום המא״ה - תחנות קבוצתיות",
+  "יום המא״ה - מבחנים פסיכוטכניים",
+  "קורס טיס - ירפ״א א׳ (מבחנים פסיכוטכניים)",
+  "קורס טיס - ירפא ב׳ (ראיון פסיכולוג)",
+  "צו ראשון - מבחן דפר",
+  "צו ראשון - ראיון אישי",
+  "כלל חמ״ן - מבחנים פסיכוטכניים (מיון ראשון)",
+  "כלל חמ״ן - ראיון אישי/מקצועי",
+  "כלל חמ״ן - מבחני מצב (דינמיקה קבוצתית)",
+  "שחקים/חבצלות - מבחנים פסיכוטכניים (מיון ראשון)",
+  "שחקים/חבצלות - ראיון אישי/מקצועי",
+  "שחקים/חבצלות - מבחני מצב (דינמיקה קבוצתית)",
+  "ייעודי קצונה - ראיון אישי/דינמיקה קבוצתית",
+  "עתודה אקדמאית - ראיון אישי",
+  "סייבר - מיון ראשוני (מבחנים פסיכוטכניים)",
+  "דפ״ר משטרה",
+  "שנות שירות / מכינה",
+  "גדנע חובלים",
+] as const;
+
+export type BookingTopicLabel = (typeof BOOKING_TOPIC_LABELS)[number];
+
+/**
  * Screening topics: flat list for storage (currentScreeningType), grouped for UI with colors.
  */
 

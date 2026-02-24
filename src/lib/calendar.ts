@@ -10,6 +10,8 @@ export type CalendarEvent = {
   /** Google Meet (or other) link; if missing, DESCRIPTION will include a placeholder. */
   meetUrl?: string | null;
   description?: string | null;
+  /** Guest email addresses (e.g. student for teacher flow). */
+  attendees?: string[];
 };
 
 /** Normalize time to HHMM (4 chars): "10:00" or "10:00:00" -> "1000" */
@@ -75,6 +77,10 @@ export function buildIcsBlob(event: CalendarEvent): Blob {
     foldLine("DESCRIPTION:" + description),
   ];
   if (event.meetUrl) lines.push("URL:" + event.meetUrl.replace(/[\r\n]/g, ""));
+  const attendees = event.attendees?.filter((e) => e && e.includes("@")) ?? [];
+  for (const email of attendees) {
+    lines.push(`ATTENDEE;RSVP=TRUE:mailto:${email.trim()}`);
+  }
   lines.push("END:VEVENT", "END:VCALENDAR");
 
   const ics = lines.join("\r\n");
@@ -87,7 +93,16 @@ export function buildGoogleCalendarUrl(event: CalendarEvent): string {
   const title = encodeURIComponent(event.title);
   const start = formatIcsDateTime(event.date, event.startTime);
   const end = formatIcsDateTime(event.date, event.endTime);
-  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${start}/${end}`;
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: event.title,
+    dates: `${start}/${end}`,
+  });
+  const attendees = event.attendees?.filter((e) => e && e.includes("@")) ?? [];
+  for (const email of attendees) {
+    params.append("add", email.trim());
+  }
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
 export function downloadIcs(event: CalendarEvent): void {

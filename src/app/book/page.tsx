@@ -125,6 +125,7 @@ type ApiTeacher = {
   bio: string | null;
   profileImageUrl: string | null;
   specialization: string | null;
+  specialties?: string[];
 };
 
 function toMockTeacher(t: ApiTeacher): MockTeacher {
@@ -136,7 +137,7 @@ function toMockTeacher(t: ApiTeacher): MockTeacher {
     subjects: ["psychometric"],
     rating: 0,
     reviewCount: 0,
-    specialties: [],
+    specialties: t.specialties ?? [],
     availabilityLabel: "פנוי",
     specialization: t.specialization ?? null,
   };
@@ -169,15 +170,17 @@ export default function BookPage() {
   }, [categoryId]);
 
   useEffect(() => {
-    fetch("/api/teachers")
+    const topic = subOption?.label ?? "";
+    const url = topic ? `/api/teachers?topic=${encodeURIComponent(topic)}` : "/api/teachers";
+    fetch(url)
       .then((r) => (r.ok ? r.json() : []))
       .then((list: ApiTeacher[]) => {
-        if (Array.isArray(list) && list.length > 0) {
+        if (Array.isArray(list)) {
           setApiTeachers(list.map(toMockTeacher));
         }
       })
-      .catch(() => {});
-  }, []);
+      .catch(() => setApiTeachers([]));
+  }, [subOption?.label]);
 
   const isRealTeacher = Boolean(teacher?.id && teacher.id.length > 10 && !teacher.id.startsWith("t"));
 
@@ -233,10 +236,8 @@ export default function BookPage() {
     return [];
   }, [selectedDate, isRealTeacher, teacher, teacherSlots]);
 
-  const filteredTeachers = useMemo(() => {
-    if (!categoryId) return apiTeachers;
-    return apiTeachers.filter((t) => t.subjects.includes("psychometric"));
-  }, [categoryId, apiTeachers]);
+  // Teachers are already filtered by API when subOption (topic) is selected
+  const filteredTeachers = useMemo(() => apiTeachers, [apiTeachers]);
 
   const canProceedStep1 = categoryId !== null && subOption !== null;
   const canProceedStep2 = teacher !== null;
@@ -285,25 +286,32 @@ export default function BookPage() {
       } catch (_) {}
       if (isRealTeacherId && selectedDate && selectedSlot) {
         try {
-          const body: { teacherId: string; date: string; startTime: string; endTime: string; availabilityId?: string } = {
+          const body: { teacherId: string; date: string; startTime: string; endTime: string; availabilityId?: string; selectedTopic?: string } = {
             teacherId: teacher.id,
             date: selectedDate,
             startTime: selectedSlot.startTime,
             endTime: selectedSlot.endTime,
           };
-          if (selectedSlot.id && !selectedSlot.id.startsWith("slot-")) {
+          if (selectedSlot.id && typeof selectedSlot.id === "string" && selectedSlot.id.length > 10 && !selectedSlot.id.startsWith("slot-")) {
             body.availabilityId = selectedSlot.id;
           }
+          if (subOption?.label) body.selectedTopic = subOption.label;
           const res = await fetch("/api/book/submit", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body),
           });
+          const data = await res.json().catch(() => ({}));
           if (res.ok) {
             router.push("/book/success");
             return;
           }
-        } catch (_) {}
+          setErrors({ submit: (data as { error?: string }).error ?? "שגיאה בקביעת השיעור" });
+          return;
+        } catch (_) {
+          setErrors({ submit: "שגיאה בקביעת השיעור" });
+          return;
+        }
       }
       router.push("/book/success");
       return;
@@ -407,7 +415,9 @@ export default function BookPage() {
             <p className="text-[var(--color-text-muted)] text-right">בחרו מורה</p>
             {filteredTeachers.length === 0 ? (
               <p className="text-sm text-[var(--color-text-muted)] text-right rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-bg-muted)] p-4">
-                לא נמצאו מורים. צרו קשר עם האדמין או נסו מאוחר יותר.
+                {subOption
+                  ? "אין מורים שמתמחים במסלול שנבחר. נסו מסלול אחר או צרו קשר עם האדמין."
+                  : "לא נמצאו מורים. צרו קשר עם האדמין או נסו מאוחר יותר."}
               </p>
             ) : (
               <div className="space-y-3">
@@ -540,6 +550,9 @@ export default function BookPage() {
                 ...(notes ? [{ label: "הערות", value: notes }] : []),
               ].filter((r): r is { label: string; value: string } => Boolean(r.value))}
             />
+            {errors.submit && (
+              <p className="text-sm text-red-600 text-right">{errors.submit}</p>
+            )}
             <Button onClick={handleNext} showArrow className="w-full justify-center">
               אישור וקביעת שיעור
             </Button>

@@ -7,6 +7,7 @@ import { Button } from "@/components/design/Button";
 import { FormField } from "@/components/design/FormField";
 import { apiJson } from "@/lib/api";
 import { isValidPhone } from "@/lib/validation";
+import { BOOKING_TOPIC_LABELS } from "@/data/topics";
 
 const ALLOWED_MIMES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB
@@ -19,6 +20,7 @@ type ProfileResponse = {
   displayName: string | null;
   bio: string | null;
   specialization: string | null;
+  specialties: string[];
 };
 
 export default function TeacherProfilePage() {
@@ -29,6 +31,7 @@ export default function TeacherProfilePage() {
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [specialization, setSpecialization] = useState("");
+  const [specialties, setSpecialties] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -46,6 +49,7 @@ export default function TeacherProfilePage() {
         setDisplayName(p.displayName ?? "");
         setBio(p.bio ?? "");
         setSpecialization(p.specialization ?? "");
+        setSpecialties(new Set(p.specialties ?? []));
       }
       setLoading(false);
     });
@@ -117,6 +121,7 @@ export default function TeacherProfilePage() {
         displayName: displayName.trim() || null,
         bio: bio.trim() || null,
         specialization: specialization.trim() || null,
+        specialties: Array.from(specialties),
       }),
     });
     setSaving(false);
@@ -196,13 +201,42 @@ export default function TeacherProfilePage() {
               onChange={(v) => { setDisplayName(v); setSuccess(false); setError(""); }}
               placeholder="השם שיופיע בכרטיס המורה"
             />
-            <FormField
-              label="התמחות"
-              name="specialization"
-              value={specialization}
-              onChange={(v) => { setSpecialization(v); setSuccess(false); setError(""); }}
-              placeholder="למשל: צו ראשון, יום המאה, טייס"
-            />
+            <div className="text-right">
+              <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+                התמחויות (לחיצה להפעלה/ביטול)
+              </label>
+              <p className="text-xs text-[var(--color-text-muted)] mb-2">
+                בחרו את המסלולים שבהם אתם מתמחים. רק מורים שמתאימים למסלול יופיעו לתלמידים.
+              </p>
+              <div className="flex flex-wrap gap-2 justify-start">
+                {BOOKING_TOPIC_LABELS.map((topic) => {
+                  const isSelected = specialties.has(topic);
+                  return (
+                    <button
+                      key={topic}
+                      type="button"
+                      onClick={() => {
+                        setSpecialties((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(topic)) next.delete(topic);
+                          else next.add(topic);
+                          return next;
+                        });
+                        setSuccess(false);
+                        setError("");
+                      }}
+                      className={`px-3 py-1.5 rounded-[var(--radius-input)] border text-sm font-medium transition-colors ${
+                        isSelected
+                          ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                          : "bg-white border-[var(--color-border)] text-[var(--color-text)] hover:bg-[var(--color-bg-muted)]"
+                      }`}
+                    >
+                      {topic}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
             <div className="text-right">
               <label htmlFor="bio" className="block text-sm font-medium text-[var(--color-text)] mb-1">
                 אודות (ביוגרפיה קצרה)

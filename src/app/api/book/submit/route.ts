@@ -16,29 +16,32 @@ export async function POST(req: Request) {
     const body = await req.json();
     const availabilityId = typeof body.availabilityId === "string" ? body.availabilityId.trim() : "";
     const teacherId = typeof body.teacherId === "string" ? body.teacherId.trim() : "";
+    const selectedTopic = typeof body.selectedTopic === "string" ? body.selectedTopic.trim() : "";
     const dateStr = typeof body.date === "string" ? body.date.trim() : "";
     const startTime = typeof body.startTime === "string" ? body.startTime.trim() : "";
     const endTime = typeof body.endTime === "string" ? body.endTime.trim() : "";
 
     let lesson: { id: string; status: string; date: Date; startTime: string; endTime: string; teacher: { email: string; name: string | null }; student: { email: string; name: string | null } };
+    let admins: { email: string }[] = [];
 
     if (availabilityId) {
-      const slot = await prisma.availability.findFirst({
-        where: { id: availabilityId },
-        include: { teacher: true },
+      // Run admins fetch in parallel with transaction — saves ~200–500ms
+      const adminsPromise = prisma.user.findMany({
+        where: { role: "admin" },
+        select: { email: true },
       });
-      if (!slot) {
-        return NextResponse.json(
-          { error: "הזמן נתפס, בחר זמן אחר" },
-          { status: 409 }
-        );
-      }
       const result = await prisma.$transaction(async (tx) => {
         const current = await tx.availability.findFirst({
           where: { id: availabilityId },
-          include: { teacher: true },
+          include: { teacher: { include: { teacherProfile: true } } },
         });
         if (!current) return null;
+        if (selectedTopic) {
+          const specialties = current.teacher.teacherProfile?.specialties ?? [];
+          if (!specialties.includes(selectedTopic)) {
+            throw new Error("SPECIALIZATION_MISMATCH");
+          }
+        }
         const created = await tx.lesson.create({
           data: {
             teacherId: current.teacherId,
@@ -61,6 +64,25 @@ export async function POST(req: Request) {
         );
       }
       lesson = result;
+      admins = await adminsPromise;
+      const adminEmails = admins.map((a) => a.email).filter(Boolean);
+      const toEmails = Array.from(
+        new Set([lesson.teacher.email, ...adminEmails])
+      ).filter(Boolean);
+      void sendApprovalRequest({
+        to: toEmails,
+        studentName: lesson.student.name || lesson.student.email || "תלמיד",
+        teacherName: lesson.teacher.name || lesson.teacher.email || "מורה",
+        date: formatDateInIsrael(lesson.date),
+        timeRange: `${lesson.startTime}–${lesson.endTime}`,
+      }).catch((err) => console.error("[book/submit] Approval request email failed:", err));
+      return NextResponse.json({
+        id: lesson.id,
+        status: lesson.status,
+        date: lesson.date.toISOString().slice(0, 10),
+        startTime: lesson.startTime,
+        endTime: lesson.endTime,
+      });
     } else {
       if (!teacherId || !dateStr || !startTime || !endTime) {
         return NextResponse.json(
@@ -72,11 +94,29 @@ export async function POST(req: Request) {
       if (isNaN(date.getTime())) {
         return NextResponse.json({ error: "תאריך לא תקין" }, { status: 400 });
       }
-      const teacher = await prisma.user.findFirst({
-        where: { id: teacherId, role: "teacher" },
+      const adminsPromise = prisma.user.findMany({
+        where: { role: "admin" },
+        select: { email: true },
       });
+      const [teacher, adminsResult] = await Promise.all([
+        prisma.user.findFirst({
+          where: { id: teacherId, role: "teacher" },
+          include: { teacherProfile: true },
+        }),
+        adminsPromise,
+      ]);
+      admins = adminsResult;
       if (!teacher) {
         return NextResponse.json({ error: "מורה לא נמצא" }, { status: 404 });
+      }
+      if (selectedTopic) {
+        const specialties = teacher.teacherProfile?.specialties ?? [];
+        if (!specialties.includes(selectedTopic)) {
+          return NextResponse.json(
+            { error: "המורה אינו מתמחה במסלול שנבחר." },
+            { status: 403 }
+          );
+        }
       }
       lesson = await prisma.lesson.create({
         data: {
@@ -97,25 +137,19 @@ export async function POST(req: Request) {
     const timeRange = `${lesson.startTime}–${lesson.endTime}`;
     const studentName = lesson.student.name || lesson.student.email || "תלמיד";
     const teacherName = lesson.teacher.name || lesson.teacher.email || "מורה";
-    const admins = await prisma.user.findMany({
-      where: { role: "admin" },
-      select: { email: true },
-    });
     const adminEmails = admins.map((a) => a.email).filter(Boolean);
     const toEmails = Array.from(
       new Set([lesson.teacher.email, ...adminEmails])
     ).filter(Boolean);
-    try {
-      await sendApprovalRequest({
-        to: toEmails,
-        studentName,
-        teacherName,
-        date: formattedDate,
-        timeRange,
-      });
-    } catch (emailErr) {
-      console.error("[book/submit] Approval request email failed:", emailErr);
-    }
+    // Send approval email in background — don't block response
+    void sendApprovalRequest({
+      to: toEmails,
+      studentName,
+      teacherName,
+      date: formattedDate,
+      timeRange,
+    }).catch((err) => console.error("[book/submit] Approval request email failed:", err));
+
     return NextResponse.json({
       id: lesson.id,
       status: lesson.status,
@@ -124,6 +158,12 @@ export async function POST(req: Request) {
       endTime: lesson.endTime,
     });
   } catch (e) {
+    if (e instanceof Error && e.message === "SPECIALIZATION_MISMATCH") {
+      return NextResponse.json(
+        { error: "המורה אינו מתמחה במסלול שנבחר." },
+        { status: 403 }
+      );
+    }
     console.error("[book/submit] Failed:", e);
     const message =
       process.env.NODE_ENV === "development" && e instanceof Error

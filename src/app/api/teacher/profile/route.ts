@@ -31,7 +31,7 @@ export async function GET() {
       phone: true,
       email: true,
       teacherProfile: {
-        select: { profileImageUrl: true, displayName: true, bio: true, specialization: true },
+        select: { profileImageUrl: true, displayName: true, bio: true, specialization: true, specialties: true },
       },
     },
   });
@@ -47,6 +47,7 @@ export async function GET() {
     displayName: profile?.displayName ?? null,
     bio: profile?.bio ?? null,
     specialization: profile?.specialization ?? null,
+    specialties: profile?.specialties ?? [],
   });
 }
 
@@ -66,16 +67,21 @@ export async function PATCH(req: Request) {
     const displayName = trimAndCap(body.displayName, MAX_LENGTHS.displayName);
     const bio = trimAndCap(body.bio, MAX_LENGTHS.bio);
     const specialization = trimAndCap(body.specialization, MAX_LENGTHS.specialization);
+    const specialties =
+      Array.isArray(body.specialties) && body.specialties.every((x: unknown) => typeof x === "string")
+        ? (body.specialties as string[]).map((s) => s.trim()).filter(Boolean)
+        : undefined;
 
     const userData: { name?: string; phone?: string } = {};
     if (name !== undefined) userData.name = name;
     if (phone !== undefined) userData.phone = phone;
 
-    const profileData: { profileImageUrl?: string | null; displayName?: string | null; bio?: string | null; specialization?: string | null } = {};
+    const profileData: { profileImageUrl?: string | null; displayName?: string | null; bio?: string | null; specialization?: string | null; specialties?: string[] } = {};
     if (profileImageUrl !== undefined) profileData.profileImageUrl = profileImageUrl;
     if (displayName !== undefined) profileData.displayName = displayName;
     if (bio !== undefined) profileData.bio = bio;
     if (specialization !== undefined) profileData.specialization = specialization;
+    if (specialties !== undefined) profileData.specialties = specialties;
 
     await prisma.$transaction(async (tx) => {
       if (Object.keys(userData).length > 0) {
