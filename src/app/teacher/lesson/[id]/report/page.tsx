@@ -68,13 +68,19 @@ export default function TeacherLessonReportPage() {
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    apiJson<Lesson>(`/api/teacher/lessons/${id}`)
+    apiJson<Lesson>(`/api/teacher/lessons/${id}`, { credentials: "include" })
       .then((r) => {
-        if (r.ok) setLesson(r.data);
-        else setLesson(null);
+        if (r.ok) {
+          setLesson(r.data);
+        } else if (r.status === 401 || r.status === 403) {
+          router.replace("/login/teacher");
+          return;
+        } else {
+          setLesson(null);
+        }
       })
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, router]);
 
   const tipsSet = new Set(
     tips
