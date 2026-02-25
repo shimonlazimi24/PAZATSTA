@@ -28,21 +28,12 @@ export function StudentDashboardContent() {
   const [loading, setLoading] = useState(true);
 
   function fetchLessons() {
-    const getJson = async (r: Response) => {
-      if (!r.ok) return [];
-      try {
-        return await r.json();
-      } catch {
-        return [];
-      }
-    };
-    Promise.all([
-      fetch("/api/student/lessons?upcoming=true", { credentials: "include" }).then(getJson),
-      fetch("/api/student/lessons?past=true", { credentials: "include" }).then(getJson),
-    ])
-      .then(([u, p]) => {
-        setUpcoming(Array.isArray(u) ? u : []);
-        setPast(Array.isArray(p) ? p : []);
+    setLoading(true);
+    fetch("/api/student/lessons?upcoming=true&past=true", { credentials: "include", cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : { upcoming: [], past: [] }))
+      .then((data) => {
+        setUpcoming(Array.isArray(data.upcoming) ? data.upcoming : []);
+        setPast(Array.isArray(data.past) ? data.past : []);
       })
       .catch(() => {
         setUpcoming([]);
@@ -65,7 +56,7 @@ export function StudentDashboardContent() {
 
   return (
     <AppShell>
-      <div className="space-y-8">
+      <div className="space-y-6">
         <div className="flex justify-end">
           <Link
             href="/student/book"
@@ -76,9 +67,9 @@ export function StudentDashboardContent() {
         </div>
 
         <section>
-          <h2 className="text-xl font-semibold text-[var(--color-text)] mb-2">
+          <h3 className="text-lg font-semibold text-[var(--color-text)] mb-3">
             שיעורים שיהיו
-          </h2>
+          </h3>
           {loading ? (
             <p className="text-sm text-[var(--color-text-muted)]">טוען…</p>
           ) : upcoming.length === 0 ? (
@@ -86,66 +77,57 @@ export function StudentDashboardContent() {
               אין שיעורים קרובים. קבע שיעור בלחיצה על &quot;קבע שיעור נוסף&quot;.
             </p>
           ) : (
-            <ul className="space-y-2">
-              {upcoming.map((l) => {
-                const teacherLabel = l.teacher.name || l.teacher.email;
-                return (
-                  <li
-                    key={l.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white px-4 py-3"
-                  >
-                    <div>
-                      <p className="text-xs text-[var(--color-text-muted)]">מורה</p>
-                      <p className="font-medium text-[var(--color-text)]">
-                        {teacherLabel}
-                      </p>
-                      <p className="text-sm text-[var(--color-text-muted)]">
-                        {formatDate(l.date)} {l.startTime}–{l.endTime}
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-[var(--color-primary)]/15 px-2.5 py-0.5 text-xs font-medium text-[var(--color-primary)]">
-                      מתוזמן
-                    </span>
-                  </li>
-                );
-              })}
+            <ul className="divide-y divide-[var(--color-border)] rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white overflow-hidden">
+              {upcoming.map((l) => (
+                <li key={l.id} className="flex items-center justify-between gap-2 px-3 py-2.5">
+                  <div>
+                    <p className="font-medium text-[var(--color-text)] text-sm">
+                      {formatDate(l.date)} {l.startTime}–{l.endTime}
+                    </p>
+                    <p className="text-xs text-[var(--color-text-muted)]">
+                      {l.teacher.name || l.teacher.email}
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-[var(--color-primary)]/15 px-2 py-0.5 text-xs font-medium text-[var(--color-primary)]">
+                    מתוזמן
+                  </span>
+                </li>
+              ))}
             </ul>
           )}
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-[var(--color-text)] mb-2">
+          <h3 className="text-lg font-semibold text-[var(--color-text)] mb-3">
             שיעורים שהיו
-          </h2>
+          </h3>
           {loading ? (
             <p className="text-sm text-[var(--color-text-muted)]">טוען…</p>
           ) : past.length === 0 ? (
             <p className="text-sm text-[var(--color-text-muted)]">אין שיעורים בעבר</p>
           ) : (
-            <ul className="space-y-2">
+            <ul className="divide-y divide-[var(--color-border)] rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white overflow-hidden">
               {past.map((l) => (
-                <li
-                  key={l.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white px-4 py-3"
-                >
+                <li key={l.id} className="flex items-center justify-between gap-2 px-3 py-2.5">
                   <div>
-                    <p className="text-xs text-[var(--color-text-muted)]">מורה</p>
-                    <p className="font-medium text-[var(--color-text)]">
-                      {l.teacher.name || l.teacher.email}
-                    </p>
-                    <p className="text-sm text-[var(--color-text-muted)]">
+                    <p className="font-medium text-[var(--color-text)] text-sm">
                       {formatDate(l.date)} {l.startTime}–{l.endTime}
                     </p>
+                    <p className="text-xs text-[var(--color-text-muted)]">
+                      {l.teacher.name || l.teacher.email}
+                    </p>
                   </div>
-                  {l.summary && (
+                  {l.summary ? (
                     <a
                       href={l.summary.pdfUrl ?? `/api/pdf/lesson-summaries/lesson-${l.id}.pdf`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm text-[var(--color-primary)] hover:underline"
+                      className="text-xs font-medium text-[var(--color-primary)] hover:underline shrink-0"
                     >
                       צפייה ב-PDF
                     </a>
+                  ) : (
+                    <span className="text-xs text-[var(--color-text-muted)]">חסר דוח</span>
                   )}
                 </li>
               ))}
