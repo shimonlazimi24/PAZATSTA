@@ -145,6 +145,7 @@ function toMockTeacher(t: ApiTeacher): MockTeacher {
 
 export default function BookPage() {
   const router = useRouter();
+  const [roleChecked, setRoleChecked] = useState(false);
   const [step, setStep] = useState(1);
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [subOption, setSubOption] = useState<{ id: string; label: string } | null>(null);
@@ -165,12 +166,30 @@ export default function BookPage() {
   const subOptionsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    fetch("/api/auth/me", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.role === "teacher") {
+          router.replace("/teacher/dashboard");
+          return;
+        }
+        if (data?.role === "admin" || data?.canAccessAdmin) {
+          router.replace("/admin");
+          return;
+        }
+        setRoleChecked(true);
+      })
+      .catch(() => setRoleChecked(true));
+  }, [router]);
+
+  useEffect(() => {
     if (categoryId && subOptionsRef.current) {
       subOptionsRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, [categoryId]);
 
   useEffect(() => {
+    if (step !== 2) return;
     const topic = subOption?.label ?? "";
     const url = topic ? `/api/teachers?topic=${encodeURIComponent(topic)}` : "/api/teachers";
     setTeachersLoading(true);
@@ -185,7 +204,7 @@ export default function BookPage() {
       })
       .catch(() => setApiTeachers([]))
       .finally(() => setTeachersLoading(false));
-  }, [subOption?.label]);
+  }, [step, subOption?.label]);
 
   const isRealTeacher = Boolean(teacher?.id && teacher.id.length > 10 && !teacher.id.startsWith("t"));
 
@@ -329,6 +348,16 @@ export default function BookPage() {
   }
 
   const subjectTitle = subOption?.label ?? CATEGORIES.find((c) => c.id === categoryId)?.title ?? "";
+
+  if (!roleChecked) {
+    return (
+      <AppShell>
+        <div className="min-h-screen flex items-center justify-center">
+          <p className="text-[var(--color-text-muted)]">טוען…</p>
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell>

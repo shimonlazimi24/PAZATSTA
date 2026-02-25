@@ -35,7 +35,7 @@ export async function GET(req: Request) {
     orderBy: [{ date: "asc" }, { startTime: "asc" }],
   });
 
-  return NextResponse.json(
+  const res = NextResponse.json(
     lessons.map((l) => ({
       id: l.id,
       date: l.date.toISOString().slice(0, 10),
@@ -47,4 +47,6 @@ export async function GET(req: Request) {
       student: l.student,
     }))
   );
+  res.headers.set("Cache-Control", "no-store, max-age=0");
+  return res;
 }

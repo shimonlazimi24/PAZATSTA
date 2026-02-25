@@ -1,16 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { sendScreeningFollowUpReminder } from "@/lib/email";
-
-const CRON_SECRET = process.env.CRON_SECRET;
+import { validateCronAuth } from "@/lib/cron-auth";
 
 /** Run daily: find lessons with completed report where student's screening date is today;
  *  send reminder to teacher; set followUpReminderSentAt on StudentProfile to avoid duplicates. */
 export async function GET(req: Request) {
-  const auth = req.headers.get("authorization");
-  if (CRON_SECRET && auth !== `Bearer ${CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authError = validateCronAuth(req);
+  if (authError) return authError;
 
   const now = new Date();
   const startOfToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));

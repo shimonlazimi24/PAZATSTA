@@ -53,7 +53,10 @@ export function AdminWeeklyCalendar() {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/admin/weekly-lessons?start=${weekStart.start}&end=${weekStart.end}`)
+    fetch(`/api/admin/weekly-lessons?start=${weekStart.start}&end=${weekStart.end}`, {
+      cache: "no-store",
+      credentials: "include",
+    })
       .then((r) => (r.ok ? r.json() : []))
       .then(setLessons)
       .catch(() => setLessons([]))

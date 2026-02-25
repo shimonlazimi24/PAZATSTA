@@ -1,11 +1,16 @@
 /**
- * Teacher with this email can access /admin (same as role "admin").
- * Change this to the teacher email you want to grant admin access.
+ * Teacher emails that can access /admin (comma-separated in env).
+ * Falls back to teacher@test.com in development.
  */
-export const ADMIN_TEACHER_EMAIL = "teacher@test.com";
+const ADMIN_EMAILS_RAW = process.env.ADMIN_TEACHER_EMAILS ?? "";
+const ADMIN_TEACHER_EMAILS = ADMIN_EMAILS_RAW
+  ? ADMIN_EMAILS_RAW.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean)
+  : process.env.NODE_ENV === "production"
+    ? []
+    : ["teacher@test.com"];
 
 export function canAccessAdmin(user: { role: string; email: string }): boolean {
   if (user.role === "admin") return true;
-  if (user.role === "teacher" && user.email === ADMIN_TEACHER_EMAIL) return true;
+  if (user.role === "teacher" && ADMIN_TEACHER_EMAILS.includes(user.email.toLowerCase())) return true;
   return false;
 }

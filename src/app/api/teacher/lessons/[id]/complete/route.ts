@@ -98,10 +98,11 @@ export async function POST(
       });
     }
 
+    const fallbackPdfUrl = `/api/pdf/lesson-summaries/lesson-${lessonId}.pdf`;
     let pdfUrl: string | null = null;
     try {
       const pdfResult = await generateAndStoreLessonPdf(lessonId);
-      pdfUrl = pdfResult.pdfUrl ?? `/api/pdf/lesson-summaries/lesson-${lessonId}.pdf`;
+      pdfUrl = pdfResult.pdfUrl ?? fallbackPdfUrl;
       if (pdfResult.pdfUrl) {
         console.log("[complete] PDF stored, pdfUrl:", pdfResult.pdfUrl);
       } else {
@@ -109,7 +110,15 @@ export async function POST(
       }
     } catch (pdfErr) {
       console.error("[complete] PDF generation failed (lesson still completed):", pdfErr instanceof Error ? pdfErr.message : pdfErr);
-      pdfUrl = `/api/pdf/lesson-summaries/lesson-${lessonId}.pdf`;
+      pdfUrl = fallbackPdfUrl;
+    }
+
+    // Always persist pdfUrl so the UI shows "צפייה ב-PDF" for completed reports
+    if (pdfUrl) {
+      await prisma.lessonSummary.update({
+        where: { lessonId },
+        data: { pdfUrl },
+      });
     }
 
     const adminUsers = await prisma.user.findMany({

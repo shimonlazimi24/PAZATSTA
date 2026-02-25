@@ -137,9 +137,9 @@ export function StudentDashboardContent() {
                       {formatDate(l.date)} {l.startTime}–{l.endTime}
                     </p>
                   </div>
-                  {l.summary?.pdfUrl && (
+                  {l.summary && (
                     <a
-                      href={l.summary.pdfUrl}
+                      href={l.summary.pdfUrl ?? `/api/pdf/lesson-summaries/lesson-${l.id}.pdf`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-sm text-[var(--color-primary)] hover:underline"

@@ -141,11 +141,14 @@ export default function TeacherLessonReportPage() {
       tips,
       recommendations,
     };
-    try {
-      sessionStorage.setItem(DRAFT_KEY, JSON.stringify(payload));
-    } catch {
-      /* ignore */
-    }
+    const t = setTimeout(() => {
+      try {
+        sessionStorage.setItem(DRAFT_KEY, JSON.stringify(payload));
+      } catch {
+        /* ignore */
+      }
+    }, 500);
+    return () => clearTimeout(t);
   }, [DRAFT_KEY, lesson?.summary, summaryText, homeworkText, pointsToKeep, pointsToImprove, tips, recommendations]);
 
   const alreadyCompleted = !!lesson?.reportCompleted || !!lesson?.summary;

@@ -1,4 +1,5 @@
 import path from "path";
+import fs from "fs";
 import React from "react";
 import {
   Document,
@@ -10,11 +11,15 @@ import {
 } from "@react-pdf/renderer";
 
 // Hebrew font from public/fonts - TTF required (WOFF causes fontkit "Offset outside bounds" crash)
+// Register Regular + Bold. Use NotoSansHebrew-Bold.ttf if present for true bold titles.
 const fontDir = path.join(process.cwd(), "public", "fonts");
+const regularTtf = path.join(fontDir, "NotoSansHebrew-Regular.ttf");
+const boldTtf = path.join(fontDir, "NotoSansHebrew-Bold.ttf");
 Font.register({
   family: "NotoSansHebrew",
   fonts: [
-    { src: path.join(fontDir, "NotoSansHebrew-Regular.ttf"), fontWeight: 400 },
+    { src: regularTtf, fontWeight: 400 },
+    { src: fs.existsSync(boldTtf) ? boldTtf : regularTtf, fontWeight: 700 },
   ],
 });
 
@@ -35,54 +40,61 @@ const styles = StyleSheet.create({
   page: {
     padding: 40,
     fontFamily: "NotoSansHebrew",
-    color: "#1a1a1a",
+    color: "#111",
+    lineHeight: 1.55,
     ...rtl,
   },
   title: {
-    fontSize: 18,
-    marginBottom: 12,
+    fontSize: 20,
+    marginBottom: 16,
     fontWeight: 700,
     fontFamily: "NotoSansHebrew",
     color: "#000",
+    lineHeight: 1.3,
     ...rtl,
   },
   metaRtl: {
-    fontSize: 10,
-    color: "#333",
+    fontSize: 12,
+    fontWeight: 700,
+    color: "#000",
     marginBottom: 2,
     fontFamily: "NotoSansHebrew",
+    lineHeight: 1.5,
     ...rtl,
   },
   metaLtr: {
-    fontSize: 10,
-    color: "#333",
+    fontSize: 12,
+    fontWeight: 700,
+    color: "#000",
     marginBottom: 2,
     fontFamily: "NotoSansHebrew",
+    lineHeight: 1.5,
     ...ltr,
   },
   metaBlock: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   section: {
-    marginBottom: 14,
+    marginBottom: 18,
   },
   sectionTitle: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: 700,
-    marginBottom: 4,
+    marginBottom: 6,
     fontFamily: "NotoSansHebrew",
     color: "#000",
+    lineHeight: 1.4,
     ...rtl,
   },
   sectionText: {
-    fontSize: 10,
-    lineHeight: 1.5,
+    fontSize: 11,
+    lineHeight: 1.6,
     fontFamily: "NotoSansHebrew",
-    color: "#1a1a1a",
+    color: "#111",
     ...rtl,
   },
   sectionLine: {
-    marginBottom: 2,
+    marginBottom: 3,
   },
 });
 

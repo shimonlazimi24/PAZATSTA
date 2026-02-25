@@ -5,6 +5,17 @@ import { sendLoginCode } from "@/lib/email";
 
 const OTP_TTL_MINUTES = 10;
 const MAX_ATTEMPTS = 5;
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+const MAX_REQUESTS_PER_EMAIL = 5;
+const MAX_REQUESTS_PER_IP = 10;
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function getClientIp(req: Request): string | null {
+  const forwarded = req.headers.get("x-forwarded-for");
+  if (forwarded) return forwarded.split(",")[0]?.trim() ?? null;
+  return req.headers.get("x-real-ip") ?? null;
+}
 
 export async function POST(req: Request) {
   let body: { email?: string };
@@ -16,6 +27,29 @@ export async function POST(req: Request) {
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
   if (!email) {
     return NextResponse.json({ error: "Email required" }, { status: 400 });
+  }
+  if (!EMAIL_REGEX.test(email)) {
+    return NextResponse.json({ error: "נא להזין כתובת אימייל תקינה" }, { status: 400 });
+  }
+
+  const ip = getClientIp(req);
+  const since = new Date(Date.now() - RATE_LIMIT_WINDOW_MS);
+
+  const [emailCount, ipCount] = await Promise.all([
+    prisma.otpRequest.count({ where: { email, createdAt: { gte: since } } }),
+    ip ? prisma.otpRequest.count({ where: { ip, createdAt: { gte: since } } }) : 0,
+  ]);
+  if (emailCount >= MAX_REQUESTS_PER_EMAIL) {
+    return NextResponse.json(
+      { error: "יותר מדי בקשות. נסו שוב בעוד 15 דקות." },
+      { status: 429 }
+    );
+  }
+  if (ipCount >= MAX_REQUESTS_PER_IP) {
+    return NextResponse.json(
+      { error: "יותר מדי בקשות. נסו שוב בעוד 15 דקות." },
+      { status: 429 }
+    );
   }
 
   let code: string;
@@ -29,10 +63,14 @@ export async function POST(req: Request) {
   const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
 
   try {
-    await prisma.loginCode.deleteMany({ where: { email } });
-    await prisma.loginCode.create({
-      data: { email, codeHash, expiresAt, attempts: 0 },
-    });
+    await prisma.$transaction([
+      prisma.loginCode.deleteMany({ where: { email } }),
+      prisma.loginCode.create({
+        data: { email, codeHash, expiresAt, attempts: 0 },
+      }),
+      prisma.otpRequest.create({ data: { email, ip } }),
+      prisma.otpRequest.deleteMany({ where: { createdAt: { lt: since } } }),
+    ]);
   } catch (e) {
     console.error("[request-code] Database error:", (e as Error)?.message ?? e);
     return NextResponse.json(

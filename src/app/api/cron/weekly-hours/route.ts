@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { sendWeeklyHoursSummaryToAdmin } from "@/lib/email";
-
-const CRON_SECRET = process.env.CRON_SECRET;
+import { validateCronAuth } from "@/lib/cron-auth";
 
 /** Parse "HH:MM" or "HHMM" to minutes since midnight. */
 function timeToMinutes(t: string): number {
@@ -34,10 +33,8 @@ function getLastWeekRange(): { start: Date; end: Date } {
 
 /** Run weekly: sum completed lesson hours per teacher for last week; email admin(s). */
 export async function GET(req: Request) {
-  const auth = req.headers.get("authorization");
-  if (CRON_SECRET && auth !== `Bearer ${CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authError = validateCronAuth(req);
+  if (authError) return authError;
 
   const { start, end } = getLastWeekRange();
   const startStr = start.toISOString().slice(0, 10);

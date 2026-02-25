@@ -5,10 +5,17 @@ import type { Role } from "@/types";
 
 const SESSION_COOKIE = "session";
 const SESSION_TTL_DAYS = 14;
-const COOKIE_SECRET = process.env.COOKIE_SECRET!;
+const COOKIE_SECRET = process.env.COOKIE_SECRET;
+const isProd = process.env.NODE_ENV === "production";
+
+function getCookieSecret(): string {
+  if (COOKIE_SECRET && COOKIE_SECRET.length >= 32) return COOKIE_SECRET;
+  if (isProd) throw new Error("COOKIE_SECRET must be set (min 32 chars) in production");
+  return "fallback-dev-only-min-32-characters";
+}
 
 function sign(value: string): string {
-  const hmac = crypto.createHmac("sha256", COOKIE_SECRET || "fallback");
+  const hmac = crypto.createHmac("sha256", getCookieSecret());
   hmac.update(value);
   return `${value}.${hmac.digest("hex")}`;
 }

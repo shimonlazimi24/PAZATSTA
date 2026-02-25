@@ -167,13 +167,29 @@ export async function sendBookingConfirmation(params: {
     return;
   }
   const resend = getResend();
+  const fromAddr = from();
   for (const email of params.to) {
-    await resend.emails.send({
-      from: from(),
+    const result = await resend.emails.send({
+      from: fromAddr,
       to: email,
       subject,
       text,
     });
+    if (result.error) {
+      if (fromAddr !== RESEND_DEV_FROM && isDomainNotVerifiedError(result.error)) {
+        const retry = await resend.emails.send({
+          from: RESEND_DEV_FROM,
+          to: email,
+          subject,
+          text,
+        });
+        if (!retry.error) continue;
+        console.error("[sendBookingConfirmation] Retry failed for", email, retry.error);
+      } else {
+        console.error("[sendBookingConfirmation] Failed for", email, result.error);
+      }
+      throw new Error(result.error.message ?? "Failed to send booking confirmation");
+    }
   }
 }
 
@@ -267,14 +283,31 @@ export async function sendLessonCompleted(params: {
     return;
   }
   const resend = getResend();
+  const fromAddr = from();
   for (const email of params.to) {
-    await resend.emails.send({
-      from: from(),
+    const result = await resend.emails.send({
+      from: fromAddr,
       to: email,
       subject,
       text,
       html,
     });
+    if (result.error) {
+      if (fromAddr !== RESEND_DEV_FROM && isDomainNotVerifiedError(result.error)) {
+        const retry = await resend.emails.send({
+          from: RESEND_DEV_FROM,
+          to: email,
+          subject,
+          text,
+          html,
+        });
+        if (!retry.error) continue;
+        console.error("[sendLessonCompleted] Retry failed for", email, retry.error);
+      } else {
+        console.error("[sendLessonCompleted] Failed for", email, result.error);
+      }
+      throw new Error(result.error.message ?? "Failed to send lesson completed email");
+    }
   }
 }
 
@@ -367,12 +400,16 @@ export async function sendAdminSummary(params: {
     console.log("[DEV] Admin summary to", params.to, params.lessons.length, "lessons");
     return;
   }
-  await getResend().emails.send({
+  const result = await getResend().emails.send({
     from: from(),
     to: params.to,
     subject,
     text,
   });
+  if (result.error) {
+    console.error("[sendAdminSummary] Failed:", result.error);
+    throw new Error(result.error.message ?? "Failed to send admin summary");
+  }
 }
 
 /** Build weekly hours summary for admin (payment). */
@@ -411,11 +448,15 @@ export async function sendWeeklyHoursSummaryToAdmin(params: {
   }
   const resend = getResend();
   for (const email of params.to) {
-    await resend.emails.send({
+    const result = await resend.emails.send({
       from: from(),
       to: email,
       subject,
       text,
     });
+    if (result.error) {
+      console.error("[sendWeeklyHoursSummaryToAdmin] Failed for", email, result.error);
+      throw new Error(result.error.message ?? "Failed to send weekly hours summary");
+    }
   }
 }

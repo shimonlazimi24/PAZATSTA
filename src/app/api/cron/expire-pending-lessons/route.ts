@@ -1,14 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-
-const CRON_SECRET = process.env.CRON_SECRET;
+import { validateCronAuth } from "@/lib/cron-auth";
 
 /** Run every few minutes: cancel pending lessons past approvalExpiresAt and restore slots. */
 export async function GET(req: Request) {
-  const auth = req.headers.get("authorization");
-  if (CRON_SECRET && auth !== `Bearer ${CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authError = validateCronAuth(req);
+  if (authError) return authError;
 
   const now = new Date();
   const expired = await prisma.lesson.findMany({

@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";
+import { prisma } from "@/lib/db";
+import { getUserFromSession } from "@/lib/auth";
+import { canAccessAdmin } from "@/lib/admin";
 import { generateLessonPdfBuffer } from "@/lib/pdf/generateLessonSummaryPdf";
 
 export const runtime = "nodejs";
@@ -14,6 +17,22 @@ function parseLessonIdFromPath(filePath: string): string | null {
   const id = match[1];
   if (!id || id.length < 3) return null;
   return id;
+}
+
+/** Verify user is teacher, student, or admin for this lesson. */
+async function canAccessLessonPdf(userId: string, role: string, lessonId: string): Promise<boolean> {
+  const lesson = await prisma.lesson.findUnique({
+    where: { id: lessonId },
+    select: { teacherId: true, studentId: true },
+  });
+  if (!lesson) return false;
+  if (lesson.teacherId === userId || lesson.studentId === userId) return true;
+  if (role === "admin") return true;
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true },
+  });
+  return !!user && canAccessAdmin({ role, email: user.email });
 }
 
 export async function GET(
@@ -35,13 +54,25 @@ export async function GET(
     "Content-Disposition": `inline; filename="${dispositionFilename}"`,
     "Cache-Control": "no-store",
   };
+
+  const lessonId = parseLessonIdFromPath(filename);
+
+  if (lessonId) {
+    const user = await getUserFromSession();
+    if (!user) {
+      return NextResponse.json({ error: "נדרשת התחברות" }, { status: 401 });
+    }
+    const allowed = await canAccessLessonPdf(user.id, user.role, lessonId);
+    if (!allowed) {
+      return NextResponse.json({ error: "אין הרשאה לצפייה בדוח זה" }, { status: 403 });
+    }
+  }
+
   if (fs.existsSync(fullPath) && fs.statSync(fullPath).isFile()) {
     const buffer = fs.readFileSync(fullPath);
     return new NextResponse(buffer, { headers: pdfHeaders });
   }
 
-  const lessonId = parseLessonIdFromPath(filename);
-  console.log("[pdf] lessonId:", lessonId ?? "(none)");
   if (lessonId) {
     const result = await generateLessonPdfBuffer(lessonId);
     if (result.ok) {
