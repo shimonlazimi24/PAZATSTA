@@ -4,7 +4,7 @@
 # The plugin transforms the Next.js build into Netlify Functions + Edge Functions.
 
 [build]
-  command = "npm run build"
+  command = "npx prisma migrate deploy && npm run build"
   # Do NOT set publish - @netlify/plugin-nextjs manages output/functions
 
 [build.environment]
