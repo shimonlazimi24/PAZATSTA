@@ -11,7 +11,7 @@ import {
 } from "@react-pdf/renderer";
 
 // Hebrew font from public/fonts - TTF required (WOFF causes fontkit "Offset outside bounds" crash)
-// Register Regular + Bold. Use NotoSansHebrew-Bold.ttf if present for true bold titles.
+// Register Regular + Bold. Prioritize NotoSansHebrew-Bold.ttf for high-contrast rendering; fallback to regular only if bold missing.
 const fontDir = path.join(process.cwd(), "public", "fonts");
 const regularTtf = path.join(fontDir, "NotoSansHebrew-Regular.ttf");
 const boldTtf = path.join(fontDir, "NotoSansHebrew-Bold.ttf");
@@ -40,8 +40,8 @@ const styles = StyleSheet.create({
   page: {
     padding: 40,
     fontFamily: "NotoSansHebrew",
-    color: "#111",
-    lineHeight: 1.55,
+    color: "#000",
+    lineHeight: 1.2,
     ...rtl,
   },
   title: {
@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
     fontWeight: 700,
     fontFamily: "NotoSansHebrew",
     color: "#000",
-    lineHeight: 1.3,
+    lineHeight: 1.2,
     ...rtl,
   },
   metaRtl: {
@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
     color: "#000",
     marginBottom: 2,
     fontFamily: "NotoSansHebrew",
-    lineHeight: 1.5,
+    lineHeight: 1.3,
     ...rtl,
   },
   metaLtr: {
@@ -68,29 +68,29 @@ const styles = StyleSheet.create({
     color: "#000",
     marginBottom: 2,
     fontFamily: "NotoSansHebrew",
-    lineHeight: 1.5,
+    lineHeight: 1.3,
     ...ltr,
   },
   metaBlock: {
     marginBottom: 24,
   },
   section: {
-    marginBottom: 18,
+    marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: 700,
     marginBottom: 6,
     fontFamily: "NotoSansHebrew",
     color: "#000",
-    lineHeight: 1.4,
+    lineHeight: 1.3,
     ...rtl,
   },
   sectionText: {
-    fontSize: 11,
-    lineHeight: 1.6,
+    fontSize: 12.5,
+    lineHeight: 1.3,
     fontFamily: "NotoSansHebrew",
-    color: "#111",
+    color: "#000",
     ...rtl,
   },
   sectionLine: {
