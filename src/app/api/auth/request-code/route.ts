@@ -35,17 +35,22 @@ export async function POST(req: Request) {
   const ip = getClientIp(req);
   const since = new Date(Date.now() - RATE_LIMIT_WINDOW_MS);
 
-  const [emailCount, ipCount] = await Promise.all([
-    prisma.otpRequest.count({ where: { email, createdAt: { gte: since } } }),
-    ip ? prisma.otpRequest.count({ where: { ip, createdAt: { gte: since } } }) : 0,
-  ]);
-  if (emailCount >= MAX_REQUESTS_PER_EMAIL) {
-    return NextResponse.json(
-      { error: "יותר מדי בקשות. נסו שוב בעוד 15 דקות." },
-      { status: 429 }
-    );
-  }
-  if (ipCount >= MAX_REQUESTS_PER_IP) {
+  const useOtpRateLimit = await (async () => {
+    try {
+      const [emailCount, ipCount] = await Promise.all([
+        prisma.otpRequest.count({ where: { email, createdAt: { gte: since } } }),
+        ip ? prisma.otpRequest.count({ where: { ip, createdAt: { gte: since } } }) : 0,
+      ]);
+      if (emailCount >= MAX_REQUESTS_PER_EMAIL || ipCount >= MAX_REQUESTS_PER_IP) {
+        return "rate_limited" as const;
+      }
+      return true as const;
+    } catch {
+      return false as const;
+    }
+  })();
+
+  if (useOtpRateLimit === "rate_limited") {
     return NextResponse.json(
       { error: "יותר מדי בקשות. נסו שוב בעוד 15 דקות." },
       { status: 429 }
@@ -63,14 +68,23 @@ export async function POST(req: Request) {
   const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
 
   try {
-    await prisma.$transaction([
-      prisma.loginCode.deleteMany({ where: { email } }),
-      prisma.loginCode.create({
-        data: { email, codeHash, expiresAt, attempts: 0 },
-      }),
-      prisma.otpRequest.create({ data: { email, ip } }),
-      prisma.otpRequest.deleteMany({ where: { createdAt: { lt: since } } }),
-    ]);
+    if (useOtpRateLimit) {
+      await prisma.$transaction([
+        prisma.loginCode.deleteMany({ where: { email } }),
+        prisma.loginCode.create({
+          data: { email, codeHash, expiresAt, attempts: 0 },
+        }),
+        prisma.otpRequest.create({ data: { email, ip } }),
+        prisma.otpRequest.deleteMany({ where: { createdAt: { lt: since } } }),
+      ]);
+    } else {
+      await prisma.$transaction([
+        prisma.loginCode.deleteMany({ where: { email } }),
+        prisma.loginCode.create({
+          data: { email, codeHash, expiresAt, attempts: 0 },
+        }),
+      ]);
+    }
   } catch (e) {
     console.error("[request-code] Database error:", (e as Error)?.message ?? e);
     return NextResponse.json(
