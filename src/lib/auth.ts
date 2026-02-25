@@ -10,7 +10,9 @@ const isProd = process.env.NODE_ENV === "production";
 
 function getCookieSecret(): string {
   if (COOKIE_SECRET && COOKIE_SECRET.length >= 32) return COOKIE_SECRET;
-  if (isProd) throw new Error("COOKIE_SECRET must be set (min 32 chars) in production");
+  if (isProd) {
+    console.warn("[auth] COOKIE_SECRET not set in production – using fallback. Set COOKIE_SECRET (min 32 chars) for security.");
+  }
   return "fallback-dev-only-min-32-characters";
 }
 

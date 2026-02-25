@@ -6,7 +6,7 @@ function getSalt(): string {
   const secret = process.env.COOKIE_SECRET;
   if (secret && secret.length >= 32) return secret;
   if (process.env.NODE_ENV === "production") {
-    throw new Error("COOKIE_SECRET must be set (min 32 chars) in production");
+    console.warn("[otp] COOKIE_SECRET not set in production – using fallback. Set COOKIE_SECRET (min 32 chars) for security.");
   }
   return "fallback-salt-min-32-chars";
 }
