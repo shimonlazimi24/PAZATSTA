@@ -20,9 +20,8 @@ function LoginForm() {
   const nextAdmin = searchParams.get("next") === "/admin";
   const [mode, setMode] = useState<LoginMode>(null);
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading" | "error" | "sent">("idle");
+  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [message, setMessage] = useState("");
-  const [pendingVerifyUrl, setPendingVerifyUrl] = useState("");
 
   // When next=/admin, only teacher/admin are valid — hide student for clean UX.
   const modesToShow = nextAdmin
@@ -53,9 +52,7 @@ function LoginForm() {
     const hint = result.data.emailSent === false ? "&hint=noEmail" : "";
     const baseVerify = `/verify?email=${encodeURIComponent(trimmed)}&role=${mode}`;
     const verifyUrl = nextAdmin ? `${baseVerify}&next=/admin${hint}` : `${baseVerify}${hint}`;
-    setPendingVerifyUrl(verifyUrl);
-    setStatus("sent");
-    setMessage("");
+    router.push(verifyUrl);
   }
 
   return (
@@ -138,28 +135,7 @@ function LoginForm() {
               {message && (
                 <p className="text-sm text-red-600">{message}</p>
               )}
-              {status === "sent" ? (
-                <>
-                  <p className="text-sm text-[var(--color-text-muted)]">הקוד נשלח לאימייל. לחצו להזנת הקוד.</p>
-                  <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setMode(null)}
-                    className="px-4 py-2 rounded-[var(--radius-input)] border border-[var(--color-border)] text-[var(--color-text)]"
-                  >
-                    חזרה
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => pendingVerifyUrl && router.push(pendingVerifyUrl)}
-                    className="flex-1 py-2.5 rounded-[var(--radius-input)] bg-[var(--color-primary)] text-white font-medium hover:opacity-90"
-                  >
-                    להזנת קוד
-                  </button>
-                  </div>
-                </>
-              ) : (
-                <div className="flex gap-2">
+              <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() => setMode(null)}
@@ -175,7 +151,6 @@ function LoginForm() {
                     {status === "loading" ? "שולח…" : "שלח קוד"}
                   </button>
                 </div>
-              )}
             </form>
           </>
         )}
