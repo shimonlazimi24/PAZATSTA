@@ -4,7 +4,6 @@ import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
-import { apiJson } from "@/lib/api";
 
 type LoginMode = "student" | "teacher" | "admin" | null;
 
@@ -28,7 +27,7 @@ function LoginForm() {
     ? MODES.filter((m) => m.value !== "student")
     : MODES;
 
-  async function handleSendCode(e: React.FormEvent) {
+  function handleSendCode(e: React.FormEvent) {
     e.preventDefault();
     if (mode === null) {
       setMessage("נא לבחור סוג התחברות");
@@ -39,20 +38,14 @@ function LoginForm() {
     if (!trimmed) return;
     setStatus("loading");
     setMessage("");
-    const result = await apiJson<{ emailSent?: boolean }>("/api/auth/request-code", {
+    const baseVerify = `/verify?email=${encodeURIComponent(trimmed)}&role=${mode}`;
+    const verifyUrl = nextAdmin ? `${baseVerify}&next=/admin` : baseVerify;
+    router.push(verifyUrl);
+    fetch("/api/auth/request-code", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: trimmed }),
-    });
-    if (!result.ok) {
-      setStatus("error");
-      setMessage(result.error);
-      return;
-    }
-    const hint = result.data.emailSent === false ? "&hint=noEmail" : "";
-    const baseVerify = `/verify?email=${encodeURIComponent(trimmed)}&role=${mode}`;
-    const verifyUrl = nextAdmin ? `${baseVerify}&next=/admin${hint}` : `${baseVerify}${hint}`;
-    router.push(verifyUrl);
+    }).catch(() => {});
   }
 
   return (
