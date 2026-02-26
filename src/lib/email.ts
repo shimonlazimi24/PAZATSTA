@@ -23,7 +23,7 @@ function isDomainNotVerifiedError(error: { name?: string; message?: string } | n
 /** Build login OTP email content (for preview or send). */
 export function getLoginCodeContent(code: string) {
   return {
-    subject: "קוד התחברות – פאזה",
+    subject: "קוד התחברות – פזצט״א",
     text: `קוד ההתחברות שלך: ${code}\nתוקף: 10 דקות.`,
   };
 }
@@ -84,7 +84,7 @@ export function getApprovalRequestContent(params: {
     "היכנסו לאפליקציה ולחצו על 'לאשר' בסעיף 'שיעורים בהמתנה לאישור'.",
   ].join("\n");
   return {
-    subject: "בקשה לאישור שיעור – פאזה",
+    subject: "בקשה לאישור שיעור – פזצט״א",
     text,
   };
 }
@@ -147,7 +147,7 @@ export function getBookingConfirmationContent(params: {
   if (params.screeningDate) text += `\nתאריך המיון: ${params.screeningDate}`;
   text += "\nקישור ל-Google Meet יישלח בנפרד (או יופיע בהזמנת היומן).";
   return {
-    subject: "סיכום הזמנה – פאזה",
+    subject: "סיכום הזמנה – פזצט״א",
     text,
   };
 }
@@ -227,7 +227,7 @@ export function getLessonCompletedContent(params: {
     ...(fullUrl ? ["להורדת דוח שיעור לחץ כאן: " + fullUrl] : []),
   ];
   return {
-    subject: "דוח סיום שיעור – פאזה",
+    subject: "דוח סיום שיעור – פזצט״א",
     text: lines.join("\n"),
   };
 }

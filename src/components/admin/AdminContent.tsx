@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { PendingLessonsBlock } from "./PendingLessonsBlock";
 import { AdminWeeklyCalendar } from "./AdminWeeklyCalendar";
 import { DefineTeacherForm } from "./DefineTeacherForm";
-import { SendSummaryButton } from "./SendSummaryButton";
+import { SendHoursSummaryButton } from "./SendHoursSummaryButton";
 
 function AdminContentInner() {
   const searchParams = useSearchParams();
@@ -40,12 +40,12 @@ function AdminContentInner() {
     return (
       <div className="max-w-xl">
         <h2 className="text-xl font-bold text-[var(--color-text)] mb-3 text-right">
-          סיכום שיעורים
+          סיכום שעות לתשלום
         </h2>
         <p className="text-sm text-[var(--color-text-muted)] mb-4 text-right">
-          שליחת סיכום כל השיעורים שהושלמו (7 ימים אחרונים) לאימייל שלך.
+          שליחת סיכום שעות לכל מורה (שיעורים שהושלמו, 7 ימים אחרונים) לאימייל שלך — לצורך תשלום.
         </p>
-        <SendSummaryButton />
+        <SendHoursSummaryButton />
       </div>
     );
   }

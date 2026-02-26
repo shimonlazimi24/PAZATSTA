@@ -1,44 +1,96 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { BackLink } from "@/components/design/BackLink";
+import { apiJson } from "@/lib/api";
+
+type Step = "email" | "code";
 
 export default function StudentLoginPage() {
+  const router = useRouter();
+  const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading" | "sent" | "error">("idle");
-  const [message, setMessage] = useState("");
+  const [code, setCode] = useState("");
+  const [sendStatus, setSendStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [sendMessage, setSendMessage] = useState("");
+  const [verifyStatus, setVerifyStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [verifyMessage, setVerifyMessage] = useState("");
   const [testLoading, setTestLoading] = useState<"teacher" | "student" | null>(null);
-  const router = useRouter();
+  const codeInputRef = useRef<HTMLInputElement>(null);
 
-  async function handleSubmit(e: React.FormEvent) {
+  const emailTrimmed = email.trim().toLowerCase();
+  const codeDigitsOnly = code.replace(/\D/g, "").slice(0, 6);
+
+  useEffect(() => {
+    if (step === "code") {
+      codeInputRef.current?.focus();
+    }
+  }, [step]);
+
+  async function handleSendCode(e: React.FormEvent) {
     e.preventDefault();
-    setStatus("loading");
-    setMessage("");
+    if (!emailTrimmed) return;
+    setSendMessage("");
+    setSendStatus("sending");
+    setStep("code");
     try {
       const res = await fetch("/api/auth/request-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: email.trim().toLowerCase(),
+          email: emailTrimmed,
           phone: phone.trim() || undefined,
         }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setStatus("error");
-        setMessage(data.error || "שליחת הקוד נכשלה");
+        setSendStatus("error");
+        setSendMessage(data.error || "שליחת הקוד נכשלה");
         return;
       }
-      setStatus("sent");
+      setSendStatus("sent");
     } catch {
-      setStatus("error");
-      setMessage("שגיאת רשת");
+      setSendStatus("error");
+      setSendMessage("שגיאת רשת");
+    }
+  }
+
+  async function handleVerify(e: React.FormEvent) {
+    e.preventDefault();
+    if (verifyStatus === "loading" || codeDigitsOnly.length !== 6) return;
+    setVerifyStatus("loading");
+    setVerifyMessage("");
+    try {
+      const result = await apiJson<{ redirect?: string }>("/api/auth/verify-code", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: emailTrimmed,
+          code: codeDigitsOnly,
+          role: "student",
+          phone: phone.trim() || undefined,
+        }),
+      });
+      if (!result.ok) {
+        setVerifyStatus("error");
+        setVerifyMessage(result.error || "אימות נכשל");
+        return;
+      }
+      const redirectPath = result.data?.redirect;
+      const safePath = typeof redirectPath === "string" && redirectPath.startsWith("/") && !redirectPath.startsWith("//")
+        ? redirectPath
+        : "/student";
+      router.push(safePath);
+    } catch {
+      setVerifyStatus("error");
+      setVerifyMessage("שגיאה באימות. נסו שוב.");
     }
   }
 
@@ -52,13 +104,13 @@ export default function StudentLoginPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setMessage(data.error || "כניסה לבדיקה נכשלה");
+        setVerifyMessage(data.error || "כניסה לבדיקה נכשלה");
         return;
       }
       router.push(role === "teacher" ? "/teacher" : "/student");
       router.refresh();
     } catch {
-      setMessage("שגיאת רשת");
+      setVerifyMessage("שגיאת רשת");
     } finally {
       setTestLoading(null);
     }
@@ -72,26 +124,20 @@ export default function StudentLoginPage() {
           <CardContent className="p-6 space-y-6">
             <div className="text-center">
               <h1 className="text-xl font-semibold text-foreground">התחברות כתלמיד/ה</h1>
-              <p className="text-sm text-muted-foreground mt-1">הזן אימייל וטלפון — יישלח אליכם קוד לאימייל לאימות</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {step === "email"
+                  ? "הזן אימייל וטלפון — יישלח אליכם קוד לאימייל לאימות"
+                  : "נשלח קוד בן 6 ספרות לאימייל שלך"}
+              </p>
               <p className="text-sm mt-2">
                 <Link href="/login/teacher" className="text-primary underline hover:no-underline">
                   מורה? היכנס כאן
                 </Link>
               </p>
             </div>
-            {status === "sent" ? (
-              <div className="space-y-4">
-                <p className="text-center text-emerald-600 text-sm">
-                  נשלח קוד לאימייל. בדוק את תיבת הדואר.
-                </p>
-                <Link
-                  href={`/verify?email=${encodeURIComponent(email.trim().toLowerCase())}${phone.trim() ? "&phone=" + encodeURIComponent(phone.trim()) : ""}`}
-                >
-                  <Button className="w-full">המשך להזנת קוד</Button>
-                </Link>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
+
+            {step === "email" ? (
+              <form onSubmit={handleSendCode} className="space-y-4">
                 <div>
                   <label htmlFor="login-email" className="block text-sm font-medium text-foreground mb-1">
                     אימייל
@@ -103,7 +149,6 @@ export default function StudentLoginPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    disabled={status === "loading"}
                   />
                 </div>
                 <div>
@@ -116,16 +161,61 @@ export default function StudentLoginPage() {
                     placeholder="050-1234567"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    disabled={status === "loading"}
                   />
                 </div>
-                {message && <p className="text-sm text-destructive">{message}</p>}
+                <Button type="submit" className="w-full">
+                  שלחו לי קוד
+                </Button>
+              </form>
+            ) : (
+              <form onSubmit={handleVerify} className="space-y-4">
+                <div>
+                  <label htmlFor="login-code" className="block text-sm font-medium text-foreground mb-1">
+                    קוד
+                  </label>
+                  <Input
+                    ref={codeInputRef}
+                    id="login-code"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    placeholder="000000"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    maxLength={6}
+                    className="text-center text-lg tracking-widest"
+                    disabled={verifyStatus === "loading"}
+                  />
+                </div>
+                {sendStatus === "sending" && (
+                  <p className="text-sm text-muted-foreground text-center">שולחים קוד...</p>
+                )}
+                {sendStatus === "error" && (
+                  <p className="text-sm text-destructive text-center">{sendMessage}</p>
+                )}
+                {verifyMessage && (
+                  <p className="text-sm text-destructive text-center">{verifyMessage}</p>
+                )}
                 <Button
                   type="submit"
-                  disabled={status === "loading"}
+                  disabled={verifyStatus === "loading" || codeDigitsOnly.length !== 6}
                   className="w-full"
                 >
-                  {status === "loading" ? "שולח…" : "שלחו לי קוד"}
+                  {verifyStatus === "loading" ? "מאמת…" : "אימות"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  disabled={sendStatus === "sending"}
+                  onClick={() => {
+                    setStep("email");
+                    setCode("");
+                    setSendStatus("idle");
+                    setSendMessage("");
+                  }}
+                >
+                  חזרה לאימייל
                 </Button>
               </form>
             )}

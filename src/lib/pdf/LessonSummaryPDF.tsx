@@ -166,7 +166,7 @@ export function createLessonSummaryDocument(props: LessonSummaryPDFProps) {
   return (
     <Document
       title="דוח סיום שיעור"
-      author="פאזה"
+      author="פזצט״א"
       subject={`דוח שיעור – ${sn}`}
     >
       <Page size="A4" style={styles.page}>

@@ -13,7 +13,7 @@ const MENU_ITEMS = [
   { id: "weekly", label: "לוח שבועי", href: "/admin" },
   { id: "pending", label: "שיעורים בהמתנה לאישור", href: "/admin?section=pending" },
   { id: "teacher", label: "הגדרת מורה", href: "/admin?section=teacher" },
-  { id: "summary", label: "סיכום שיעורים", href: "/admin?section=summary" },
+  { id: "summary", label: "סיכום שעות לתשלום", href: "/admin?section=summary" },
 ] as const;
 
 interface AdminShellProps {

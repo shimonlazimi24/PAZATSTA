@@ -18,6 +18,7 @@ function getClientIp(req: Request): string | null {
 }
 
 export async function POST(req: Request) {
+  const handlerStart = Date.now();
   let body: { email?: string };
   try {
     body = await req.json();
@@ -67,6 +68,7 @@ export async function POST(req: Request) {
   const codeHash = hashOTP(code);
   const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
 
+  const dbStart = Date.now();
   try {
     if (useOtpRateLimit) {
       await prisma.$transaction([
@@ -92,15 +94,24 @@ export async function POST(req: Request) {
       { status: 503 }
     );
   }
+  const dbTime = Date.now() - dbStart;
+  console.log(`[request-code] DB write: ${dbTime}ms`);
 
-  try {
-    const emailSent = await sendLoginCode(email, code);
-    return NextResponse.json({ ok: true, message: "Code sent", emailSent });
-  } catch (e) {
-    console.error("[request-code] Email error:", (e as Error)?.message ?? e);
-    return NextResponse.json(
-      { error: "Failed to send code" },
-      { status: 503 }
-    );
-  }
+  // Fire-and-forget: send email async. Do NOT block response.
+  // The 7.5s delay was caused by awaiting Resend API here.
+  const emailStart = Date.now();
+  void sendLoginCode(email, code)
+    .then((sent) => {
+      const emailTime = Date.now() - emailStart;
+      console.log(`[request-code] Email send: ${emailTime}ms, sent=${sent}`);
+    })
+    .catch((e) => {
+      const emailTime = Date.now() - emailStart;
+      console.error(`[request-code] Email failed after ${emailTime}ms:`, (e as Error)?.message ?? e);
+    });
+
+  const totalTime = Date.now() - handlerStart;
+  console.log(`[request-code] Total handler: ${totalTime}ms`);
+
+  return NextResponse.json({ ok: true, message: "Code sent" });
 }
