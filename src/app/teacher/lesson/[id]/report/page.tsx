@@ -301,7 +301,7 @@ export default function TeacherLessonReportPage() {
           <div className="rounded-[var(--radius-card)] border border-red-200 bg-red-50 p-4" dir="rtl">
             <p className="text-red-700 font-medium">
               {lesson?.status !== "scheduled"
-                ? "לא ניתן למלא דוח – השיעור לא אושר (בוטל / ממתין לאישור)"
+                ? "השיעור לא אושר"
                 : "אפשר למלא דוח רק אחרי השיעור"}
             </p>
             <Link href="/teacher/dashboard" className="text-[var(--color-primary)] hover:underline mt-2 inline-block">

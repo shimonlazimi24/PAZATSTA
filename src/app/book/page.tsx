@@ -40,27 +40,19 @@ const CATEGORIES: {
   subs: { id: string; label: string }[];
 }[] = [
   {
-    id: "yom100",
-    title: "הכנה ליום המאה",
-    subs: [
-      { id: "yom100-stations", label: "יום המא״ה - תחנות קבוצתיות" },
-      { id: "yom100-psycho", label: "יום המא״ה - מבחנים פסיכוטכניים" },
-    ],
-  },
-  {
-    id: "flight",
-    title: "הכנה לקורס טיס",
-    subs: [
-      { id: "flight-yerapa1", label: "קורס טיס - ירפ״א א׳ (מבחנים פסיכוטכניים)" },
-      { id: "flight-yerapa2", label: "קורס טיס - ירפא ב׳ (ראיון פסיכולוג)" },
-    ],
-  },
-  {
     id: "tzav",
     title: "הכנה לצו ראשון",
     subs: [
       { id: "tzav-dapar", label: "צו ראשון - מבחן דפר" },
       { id: "tzav-interview", label: "צו ראשון - ראיון אישי" },
+    ],
+  },
+  {
+    id: "yom100",
+    title: "הכנה ליום המאה",
+    subs: [
+      { id: "yom100-stations", label: "יום המא״ה - תחנות קבוצתיות" },
+      { id: "yom100-psycho", label: "יום המא״ה - מבחנים פסיכוטכניים" },
     ],
   },
   {
@@ -73,6 +65,14 @@ const CATEGORIES: {
       { id: "modiin-shakuf-psycho", label: "שחקים/חבצלות - מבחנים פסיכוטכניים (מיון ראשון)" },
       { id: "modiin-shakuf-interview", label: "שחקים/חבצלות - ראיון אישי/מקצועי" },
       { id: "modiin-shakuf-dynamics", label: "שחקים/חבצלות - מבחני מצב (דינמיקה קבוצתית)" },
+    ],
+  },
+  {
+    id: "flight",
+    title: "הכנה לקורס טיס",
+    subs: [
+      { id: "flight-yerapa1", label: "קורס טיס - ירפ״א א׳ (מבחנים פסיכוטכניים)" },
+      { id: "flight-yerapa2", label: "קורס טיס - ירפא ב׳ (ראיון פסיכולוג)" },
     ],
   },
   {
@@ -89,7 +89,7 @@ const CATEGORIES: {
   },
 ];
 
-/** P2: topic group colors — צו ראשון green, יום המאה yellow, טייס blue, כלל חמ"ן purple, אחר gray */
+/** P2: topic group colors — צו ראשון green, יום המאה yellow, מודיעין purple, טייס blue, אחר gray */
 const CATEGORY_COLORS: Record<string, { card: string; chip: string; ring: string }> = {
   yom100: { card: "border-yellow-300 bg-yellow-50", chip: "bg-yellow-600 text-white border-yellow-600", ring: "ring-yellow-500" },
   flight: { card: "border-blue-300 bg-blue-50", chip: "bg-blue-600 text-white border-blue-600", ring: "ring-blue-500" },
@@ -545,7 +545,7 @@ export default function BookPage() {
                 required
                 error={errors.parentPhone}
               />
-              <FormField label="הערות (אופציונלי)" name="notes" value={notes} onChange={setNotes} />
+              <FormField label="במה תרצו להתמקד בשיעור" name="notes" value={notes} onChange={setNotes} />
             </div>
           </Card>
         )}

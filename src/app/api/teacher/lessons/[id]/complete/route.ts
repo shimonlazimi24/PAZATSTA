@@ -64,7 +64,7 @@ export async function POST(
         return NextResponse.json({ error: "הדוח כבר נשלח. השיעור הושלם." }, { status: 409 });
       }
       return NextResponse.json(
-        { error: "לא ניתן למלא דוח — השיעור לא במצב מאושר (בוטל או ממתין לאישור)" },
+        { error: "השיעור לא אושר" },
         { status: 403 }
       );
     }

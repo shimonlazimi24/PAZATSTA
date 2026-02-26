@@ -223,7 +223,7 @@ export function TeacherHomeLessons() {
                         const canFillReport = isApproved && lessonEnded;
                         if (!canFillReport) {
                           const msg = !isApproved
-                            ? "לא ניתן למלא דוח – השיעור לא אושר (בוטל / ממתין לאישור)"
+                            ? "השיעור לא אושר"
                             : "אפשר למלא דוח רק אחרי השיעור";
                           return (
                             <span className="text-sm text-red-600">

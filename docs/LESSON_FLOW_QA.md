@@ -34,7 +34,7 @@
 | **Approved but before end time** | No report button (or disabled); report page shows "אפשר למלא דוח רק אחרי השיעור"; API blocked | ☐ |
 | **Approved and after end time** | Report button visible; report page allows submit; API accepts | ☐ |
 | **After submit** | Follow Up visible; report read-only | ☐ |
-| **Canceled/declined** | No report button; message "לא ניתן למלא דוח – השיעור לא אושר (בוטל / ממתין לאישור)"; direct route redirects to dashboard with error; API returns 403 | ☐ |
+| **Canceled/declined** | No report button; message "השיעור לא אושר"; direct route redirects to dashboard with error; API returns 403 | ☐ |
 | **Add to Calendar** | Shown only for scheduled lessons before start time | ☐ |
 | **Direct API POST** | Bypass attempt: 403 with clear Hebrew error | ☐ |
 

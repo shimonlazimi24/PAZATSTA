@@ -59,7 +59,7 @@ export type TopicGroup = {
   topics: readonly string[];
 };
 
-/** Groups for UI: color by category; "אחר" section contains miscellaneous topics. */
+/** Groups for UI: color by category; "אחר" section contains miscellaneous topics. Order: צו ראשון, יום המאה, מודיעין, טייס, אחר */
 export const TOPIC_GROUPS: TopicGroup[] = [
   {
     label: "צו ראשון",
@@ -72,15 +72,7 @@ export const TOPIC_GROUPS: TopicGroup[] = [
     topics: ["יום המא\"ה - תחנות קבוצתיות", "יום המא\"ה - מבחנים פסיכוטכניים"],
   },
   {
-    label: "טייס",
-    color: "bg-blue-100 border-blue-300 text-blue-900",
-    topics: [
-      "קורס טיס - ירפ\"א א' (מבחנים פסיכוטכניים)",
-      "קורס טיס - ירפ\"א ב' (ראיון פסיכולוג)",
-    ],
-  },
-  {
-    label: "כלל חמ\"ן",
+    label: "מודיעין",
     color: "bg-purple-100 border-purple-300 text-purple-900",
     topics: [
       "כלל חמ\"ן - מבחנים פסיכוטכניים (מיון ראשון)",
@@ -89,6 +81,14 @@ export const TOPIC_GROUPS: TopicGroup[] = [
       "שחקים/חבצלות - מבחנים פסיכוטכניים (מיון ראשון)",
       "שחקים/חבצלות - ראיון אישי/מקצועי",
       "שחקים/חבצלות - מבחני מצב (דינמיקה קבוצתית)",
+    ],
+  },
+  {
+    label: "טייס",
+    color: "bg-blue-100 border-blue-300 text-blue-900",
+    topics: [
+      "קורס טיס - ירפ\"א א' (מבחנים פסיכוטכניים)",
+      "קורס טיס - ירפ\"א ב' (ראיון פסיכולוג)",
     ],
   },
   {

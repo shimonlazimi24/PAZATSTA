@@ -35,6 +35,8 @@ model User {
   lessonsAsTeacher   Lesson[] @relation("LessonTeacher")
   lessonsAsStudent   Lesson[] @relation("LessonStudent")
   availabilitySlots  Availability[]
+
+  @@index([role])
 }
 
 model TeacherProfile {
@@ -102,8 +104,10 @@ model Lesson {
 
   @@unique([teacherId, date, startTime])
   @@index([teacherId, date])
+  @@index([teacherId, status, date])
   @@index([studentId, date])
   @@index([status])
+  @@index([status, approvalExpiresAt])
   @@index([approvalExpiresAt])
 }
 
@@ -175,4 +179,7 @@ model Session {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
