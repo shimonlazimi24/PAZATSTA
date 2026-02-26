@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { CalendarDays, CalendarPlus } from "lucide-react";
 import { addToCalendar } from "@/lib/calendar";
+import { isLessonEnded, isLessonStarted } from "@/lib/dates";
 
 type Lesson = {
   id: string;
@@ -126,22 +127,24 @@ export function TeacherHomeLessons() {
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          addToCalendar({
-                            date: l.date,
-                            startTime: l.startTime,
-                            endTime: l.endTime,
-                            title: calendarTitle,
-                            attendees: [l.student.email],
-                          })
-                        }
-                        className="inline-flex items-center gap-1.5 rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs font-medium text-[var(--color-text)] hover:bg-[var(--color-bg-muted)]"
-                      >
-                        <CalendarPlus className="h-3.5 w-3.5" aria-hidden />
-                        הוסף ללוח השנה
-                      </button>
+                      {l.status === "scheduled" && !isLessonStarted(l.date, l.startTime) && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            addToCalendar({
+                              date: l.date,
+                              startTime: l.startTime,
+                              endTime: l.endTime,
+                              title: calendarTitle,
+                              attendees: [l.student.email],
+                            })
+                          }
+                          className="inline-flex items-center gap-1.5 rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs font-medium text-[var(--color-text)] hover:bg-[var(--color-bg-muted)]"
+                        >
+                          <CalendarPlus className="h-3.5 w-3.5" aria-hidden />
+                          הוסף ללוח השנה
+                        </button>
+                      )}
                       <span className="rounded-full bg-[var(--color-primary)]/15 px-2.5 py-0.5 text-xs font-medium text-[var(--color-primary)]">
                         מתוזמן
                       </span>
@@ -214,19 +217,34 @@ export function TeacherHomeLessons() {
                             </a>
                           )}
                         </>
-                      ) : (
-                        <>
-                          <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
-                            חסר דוח
-                          </span>
-                          <Link
-                            href={`/teacher/lesson/${l.id}/report`}
-                            className="px-3 py-1.5 rounded-[var(--radius-input)] bg-[var(--color-primary)] text-white text-sm font-medium hover:opacity-90"
-                          >
-                            מלא דוח שיעור
-                          </Link>
-                        </>
-                      )}
+                      ) : (() => {
+                        const isApproved = l.status === "scheduled";
+                        const lessonEnded = isLessonEnded(l.date, l.endTime);
+                        const canFillReport = isApproved && lessonEnded;
+                        if (!canFillReport) {
+                          const msg = !isApproved
+                            ? "לא ניתן למלא דוח – השיעור לא אושר (בוטל / ממתין לאישור)"
+                            : "אפשר למלא דוח רק אחרי השיעור";
+                          return (
+                            <span className="text-sm text-red-600">
+                              {msg}
+                            </span>
+                          );
+                        }
+                        return (
+                          <>
+                            <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+                              חסר דוח
+                            </span>
+                            <Link
+                              href={`/teacher/lesson/${l.id}/report`}
+                              className="px-3 py-1.5 rounded-[var(--radius-input)] bg-[var(--color-primary)] text-white text-sm font-medium hover:opacity-90"
+                            >
+                              מלא דוח שיעור
+                            </Link>
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                 </li>

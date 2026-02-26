@@ -74,3 +74,29 @@ export function normalizeTimeForCompare(t: string): string {
   const parts = (t || "00:00").trim().split(/[:\s]/).map((p) => p.replace(/\D/g, "").padStart(2, "0"));
   return `${(parts[0] || "00").slice(-2)}:${(parts[1] || "00").slice(-2)}`;
 }
+
+/**
+ * Returns true if the lesson has ended (by Israel time).
+ * Used for gating report submission: report allowed only after lesson end.
+ */
+export function isLessonEnded(dateStr: string, endTime: string): boolean {
+  const today = todayIsraelYYYYMMDD();
+  const nowTime = normalizeTimeForCompare(nowIsraelHHMM());
+  const end = normalizeTimeForCompare(endTime);
+  if (dateStr < today) return true;
+  if (dateStr > today) return false;
+  return nowTime >= end;
+}
+
+/**
+ * Returns true if the lesson has started (by Israel time).
+ * Used for gating "Add to Calendar": allowed only before lesson start.
+ */
+export function isLessonStarted(dateStr: string, startTime: string): boolean {
+  const today = todayIsraelYYYYMMDD();
+  const nowTime = normalizeTimeForCompare(nowIsraelHHMM());
+  const start = normalizeTimeForCompare(startTime);
+  if (dateStr < today) return true;
+  if (dateStr > today) return false;
+  return nowTime >= start;
+}

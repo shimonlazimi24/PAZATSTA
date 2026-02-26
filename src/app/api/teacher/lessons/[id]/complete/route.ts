@@ -4,6 +4,8 @@ import { getUserFromSession } from "@/lib/auth";
 import { generateAndStoreLessonPdf } from "@/lib/pdf/generateLessonSummaryPdf";
 import { sendLessonCompleted } from "@/lib/email";
 import { createLessonSummaryLink } from "@/lib/publicPdfLink";
+import { isLessonEnded } from "@/lib/dates";
+import { formatDateInIsrael } from "@/lib/date-utils";
 
 export const runtime = "nodejs";
 
@@ -63,11 +65,18 @@ export async function POST(
       }
       return NextResponse.json(
         { error: "לא ניתן למלא דוח — השיעור לא במצב מאושר (בוטל או ממתין לאישור)" },
-        { status: 409 }
+        { status: 403 }
       );
     }
 
-    const dateStr = lesson.date.toISOString().slice(0, 10);
+    const dateStr = formatDateInIsrael(lesson.date);
+    if (!isLessonEnded(dateStr, lesson.endTime)) {
+      return NextResponse.json(
+        { error: "אפשר למלא דוח רק אחרי השיעור" },
+        { status: 403 }
+      );
+    }
+
     const teacherName = lesson.teacher.name || lesson.teacher.email;
     const studentName = lesson.student.name || lesson.student.email;
 

@@ -14,6 +14,7 @@ import {
   buildTipsFromIds,
   getTipsDisplayText,
 } from "@/data/tips";
+import { isLessonEnded } from "@/lib/dates";
 
 type Lesson = {
   id: string;
@@ -64,7 +65,13 @@ export default function TeacherLessonReportPage() {
     apiJson<Lesson>(`/api/teacher/lessons/${id}`, { credentials: "include" })
       .then((r) => {
         if (r.ok) {
-          setLesson(r.data);
+          const data = r.data;
+          // Route protection: redirect if lesson not approved
+          if (data.status !== "scheduled" && data.status !== "completed") {
+            router.replace("/teacher/dashboard?error=report_blocked");
+            return;
+          }
+          setLesson(data);
         } else if (r.status === 401 || r.status === 403) {
           router.replace("/login/teacher");
           return;
@@ -142,6 +149,8 @@ export default function TeacherLessonReportPage() {
 
   const alreadyCompleted = !!lesson?.reportCompleted || !!lesson?.summary;
   const lessonDateDisplay = lesson?.date ? formatHebrewShortDate(lesson.date) : lesson?.date ?? "—";
+  const lessonEnded = lesson ? isLessonEnded(lesson.date, lesson.endTime) : false;
+  const canSubmitReport = lesson?.status === "scheduled" && lessonEnded && !alreadyCompleted;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -265,7 +274,18 @@ export default function TeacherLessonReportPage() {
           </div>
         </section>
 
-        {alreadyCompleted ? (
+        {!canSubmitReport && !alreadyCompleted ? (
+          <div className="rounded-[var(--radius-card)] border border-red-200 bg-red-50 p-4" dir="rtl">
+            <p className="text-red-700 font-medium">
+              {lesson?.status !== "scheduled"
+                ? "לא ניתן למלא דוח – השיעור לא אושר (בוטל / ממתין לאישור)"
+                : "אפשר למלא דוח רק אחרי השיעור"}
+            </p>
+            <Link href="/teacher/dashboard" className="text-[var(--color-primary)] hover:underline mt-2 inline-block">
+              חזרה ללוח המורה
+            </Link>
+          </div>
+        ) : alreadyCompleted ? (
           <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-bg-muted)] p-4 space-y-4">
             <h3 className="font-semibold text-[var(--color-text)]">סיכום כללי</h3>
             <p className="text-sm text-[var(--color-text)] whitespace-pre-wrap">
