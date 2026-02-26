@@ -62,8 +62,9 @@ export function AdminShell({ email, children }: AdminShellProps) {
         <header className="border-b border-[var(--color-border)] bg-white shrink-0">
           <div className="px-4 py-4 sm:px-6 space-y-2">
             <BackLink href="/book" label="חזרה" />
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+            {/* Logo on RIGHT, hamburger on LEFT (RTL) */}
+            <div className="flex flex-row-reverse items-center justify-between gap-2">
+              <div className="flex flex-row-reverse items-center gap-2 sm:gap-4 min-w-0">
                 <div className="flex shrink-0">
                   <Logo alt="Paza" className="h-8 w-auto object-contain" width={100} height={28} />
                 </div>
@@ -72,7 +73,11 @@ export function AdminShell({ email, children }: AdminShellProps) {
                   ניהול
                 </h1>
               </div>
-              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              <div className="flex flex-row-reverse items-center gap-2 sm:gap-3 shrink-0">
+                <LogoutButton />
+                <span className="text-sm text-[var(--color-text-muted)] hidden sm:inline truncate max-w-[140px]">
+                  {email}
+                </span>
                 {isAdminPage && (
                   <button
                     type="button"
@@ -83,10 +88,6 @@ export function AdminShell({ email, children }: AdminShellProps) {
                     <Menu className="h-5 w-5" />
                   </button>
                 )}
-                <span className="text-sm text-[var(--color-text-muted)] hidden sm:inline truncate max-w-[140px]">
-                  {email}
-                </span>
-                <LogoutButton />
               </div>
             </div>
           </div>

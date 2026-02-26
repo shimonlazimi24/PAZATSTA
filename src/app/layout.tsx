@@ -24,8 +24,11 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
       </head>
-      <body className="min-h-screen antialiased">
-        {children}
+      <body className="min-h-screen antialiased flex flex-col" dir="rtl">
+        <div className="flex-1 flex flex-col min-h-0">{children}</div>
+        <footer className="shrink-0 py-6 text-center text-sm text-[var(--color-text-muted)] opacity-70">
+          זכויות יוצרים © פזצט״א
+        </footer>
       </body>
     </html>
   );
