@@ -59,25 +59,31 @@ function VerifyForm() {
     if (status === "loading") return;
     setStatus("loading");
     setMessage("");
-    const result = await apiJson<{ redirect?: string }>("/api/auth/verify-code", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: emailTrimmed,
-        code: codeDigitsOnly,
-        role,
-        next: nextParam || undefined,
-        phone: phoneParam.trim() || undefined,
-      }),
-    });
-    if (!result.ok) {
+    try {
+      const result = await apiJson<{ redirect?: string }>("/api/auth/verify-code", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: emailTrimmed,
+          code: codeDigitsOnly,
+          role,
+          next: nextParam || undefined,
+          phone: phoneParam.trim() || undefined,
+        }),
+      });
+      if (!result.ok) {
+        setStatus("error");
+        setMessage(result.error || "אימות נכשל");
+        return;
+      }
+      const redirectPath = result.data?.redirect;
+      const safePath = safeRedirectPath(redirectPath, role);
+      router.push(safePath);
+    } catch (err) {
       setStatus("error");
-      setMessage(result.error || "אימות נכשל");
-      return;
+      setMessage("שגיאה באימות. נסו שוב.");
     }
-    const safePath = safeRedirectPath(result.data.redirect, role);
-    router.push(safePath);
   }
 
   async function handleResend() {

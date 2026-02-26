@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 import { X } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 interface NavDrawerProps {
   open: boolean;
@@ -14,16 +13,20 @@ interface NavDrawerProps {
 
 /**
  * RTL drawer that slides in from the right.
- * Overlays content; does not affect layout.
+ * Only renders when open; no overlay/panel in DOM when closed.
  */
 export function NavDrawer({ open, onClose, children, title }: NavDrawerProps) {
   useEffect(() => {
-    if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
+    if (open) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    } else {
+      document.body.style.overflow = "";
+      return undefined;
+    }
   }, [open]);
 
   useEffect(() => {
@@ -34,28 +37,23 @@ export function NavDrawer({ open, onClose, children, title }: NavDrawerProps) {
     return () => document.removeEventListener("keydown", handleEscape);
   }, [onClose]);
 
+  if (!open) return null;
+
   return (
     <>
-      {/* Overlay */}
+      {/* Overlay - only when open; backdrop click closes */}
       <div
         role="presentation"
-        aria-hidden={!open}
-        className={cn(
-          "fixed inset-0 z-50 bg-black/30 transition-opacity duration-200 md:hidden",
-          open ? "opacity-100" : "pointer-events-none opacity-0"
-        )}
+        aria-hidden
+        className="fixed inset-0 z-50 bg-black/30 md:hidden"
         onClick={onClose}
       />
-      {/* Panel - RTL: slides from right (inset-inline-end) */}
+      {/* Panel - RTL: slides from right */}
       <aside
         role="dialog"
         aria-modal="true"
         aria-label={title ?? "תפריט ניווט"}
-        className={cn(
-          "fixed inset-y-0 z-50 w-[min(85vw,20rem)] flex flex-col bg-[var(--color-bg)] border-s border-[var(--color-border)] shadow-[var(--shadow-card)] transition-transform duration-200 ease-out md:hidden",
-          "end-0", // RTL: right side
-          open ? "translate-x-0" : "translate-x-full" // RTL: +x = left, so closed = off to the right
-        )}
+        className="fixed inset-y-0 end-0 z-50 w-[min(85vw,20rem)] flex flex-col bg-[var(--color-bg)] border-s border-[var(--color-border)] shadow-[var(--shadow-card)] md:hidden"
         dir="rtl"
       >
         <div className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--color-border)] px-4">
