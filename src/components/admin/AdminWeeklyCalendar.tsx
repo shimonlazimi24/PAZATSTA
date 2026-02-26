@@ -84,15 +84,6 @@ export function AdminWeeklyCalendar() {
     return slots;
   }, []);
 
-
-  if (loading) {
-    return (
-      <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-8 text-center">
-        <p className="text-sm text-[var(--color-text-muted)]">טוען…</p>
-      </div>
-    );
-  }
-
   const lessonsByDate = useMemo(() => {
     const map = new Map<string, WeeklyLesson[]>();
     for (const l of lessons) {
@@ -105,6 +96,14 @@ export function AdminWeeklyCalendar() {
     });
     return map;
   }, [lessons]);
+
+  if (loading) {
+    return (
+      <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-8 text-center">
+        <p className="text-sm text-[var(--color-text-muted)]">טוען…</p>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white overflow-hidden shadow-sm" dir="rtl">

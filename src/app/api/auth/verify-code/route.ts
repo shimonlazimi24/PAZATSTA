@@ -130,7 +130,7 @@ export async function POST(req: Request) {
         : user.role === "teacher"
           ? "/teacher/dashboard"
           : user.role === "admin"
-            ? "/login/admin"
+            ? "/admin"
             : "/";
     const res = NextResponse.json({ ok: true, role: user.role, redirect });
     res.cookies.set(SESSION_COOKIE, sign(sessionId), {
