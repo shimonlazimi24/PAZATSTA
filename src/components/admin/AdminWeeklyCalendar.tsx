@@ -93,29 +93,91 @@ export function AdminWeeklyCalendar() {
     );
   }
 
+  const lessonsByDate = useMemo(() => {
+    const map = new Map<string, WeeklyLesson[]>();
+    for (const l of lessons) {
+      const arr = map.get(l.date) ?? [];
+      arr.push(l);
+      map.set(l.date, arr);
+    }
+    Array.from(map.values()).forEach((arr) => {
+      arr.sort((a, b) => parseTime(a.startTime) - parseTime(b.startTime));
+    });
+    return map;
+  }, [lessons]);
+
   return (
     <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white overflow-hidden shadow-sm" dir="rtl">
-      <div className="flex items-center justify-between gap-4 p-4 border-b border-[var(--color-border)]">
+      <div className="flex items-center justify-between gap-2 sm:gap-4 p-4 border-b border-[var(--color-border)]">
         <button
           type="button"
           onClick={goPrev}
-          className="rounded-[var(--radius-input)] border border-[var(--color-border)] px-3 py-1.5 text-sm hover:bg-[var(--color-bg-muted)]"
+          className="rounded-[var(--radius-input)] border border-[var(--color-border)] px-3 py-2 min-h-[44px] text-sm hover:bg-[var(--color-bg-muted)] shrink-0"
         >
           ← שבוע קודם
         </button>
-        <span className="text-sm font-medium text-[var(--color-text)]">
+        <span className="text-sm font-medium text-[var(--color-text)] truncate text-center">
           {weekStart.start} – {weekStart.end}
         </span>
         <button
           type="button"
           onClick={goNext}
-          className="rounded-[var(--radius-input)] border border-[var(--color-border)] px-3 py-1.5 text-sm hover:bg-[var(--color-bg-muted)]"
+          className="rounded-[var(--radius-input)] border border-[var(--color-border)] px-3 py-2 min-h-[44px] text-sm hover:bg-[var(--color-bg-muted)] shrink-0"
         >
           שבוע הבא →
         </button>
       </div>
 
-      <div className="overflow-x-auto">
+      {/* Mobile: stacked cards by day */}
+      <div className="md:hidden divide-y divide-[var(--color-border)]">
+        {weekStart.dates.map((date) => {
+          const dayLessons = lessonsByDate.get(date) ?? [];
+          return (
+            <div key={date} className="p-4">
+              <h3 className="text-sm font-semibold text-[var(--color-text)] mb-2">
+                {formatDateShort(date)}
+              </h3>
+              {dayLessons.length === 0 ? (
+                <p className="text-xs text-[var(--color-text-muted)]">אין שיעורים</p>
+              ) : (
+                <div className="space-y-2">
+                  {dayLessons.map((l) => (
+                    <div
+                      key={l.id}
+                      className="rounded-[var(--radius-input)] p-3 border border-[var(--color-border)] bg-[var(--color-bg-muted)]/30"
+                    >
+                      <div className="font-medium text-[var(--color-text)] text-sm">
+                        {l.startTime}–{l.endTime}
+                      </div>
+                      <div className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                        {l.teacher.name || l.teacher.email} ↔ {l.student.name || l.student.email}
+                      </div>
+                      <span
+                        className={`inline-block mt-1 px-1.5 py-0.5 rounded text-[10px] ${
+                          l.status === "pending_approval"
+                            ? "bg-amber-100 text-amber-800"
+                            : l.status === "completed"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-[var(--color-primary)]/15 text-[var(--color-primary)]"
+                        }`}
+                      >
+                        {l.status === "pending_approval"
+                          ? "ממתין"
+                          : l.status === "completed"
+                            ? "הושלם"
+                            : "מתוזמן"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop: full table */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full border-collapse min-w-[700px]">
           <thead>
             <tr>

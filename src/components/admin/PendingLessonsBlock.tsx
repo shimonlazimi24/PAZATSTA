@@ -57,16 +57,16 @@ export function PendingLessonsBlock() {
         {lessons.map((l) => (
           <li
             key={l.id}
-            className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-input)] border border-[var(--color-border)] p-3"
+            className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-2 rounded-[var(--radius-input)] border border-[var(--color-border)] p-3"
           >
-            <span className="text-[var(--color-text)]">
+            <span className="text-[var(--color-text)] text-sm sm:text-base min-w-0">
               {l.teacher.name || l.teacher.email} ↔ {l.student.name || l.student.email} — {l.date} {l.startTime}–{l.endTime}
             </span>
             <button
               type="button"
               disabled={!!approvingId}
               onClick={() => handleApprove(l.id)}
-              className="rounded-[var(--radius-input)] bg-[var(--color-primary)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+              className="w-full sm:w-auto rounded-[var(--radius-input)] bg-[var(--color-primary)] px-3 py-2 min-h-[44px] text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
             >
               {approvingId === l.id ? "מאשר…" : "אשר"}
             </button>

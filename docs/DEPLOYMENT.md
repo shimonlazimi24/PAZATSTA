@@ -82,6 +82,31 @@ Same idea:
 
 ---
 
+## Mobile responsive QA (iPhone ~390px)
+
+**Files changed for responsive nav + layout:**
+- `src/components/layout/AppShell.tsx` – main wrapper, drawer state, hamburger
+- `src/components/layout/TopBar.tsx` – hamburger button on mobile
+- `src/components/layout/Sidebar.tsx` – desktop-only, uses shared nav content
+- `src/components/layout/NavDrawer.tsx` – new drawer (slides from right, RTL)
+- `src/components/layout/SidebarNavContent.tsx` – shared nav items for sidebar + drawer
+- `src/hooks/useNavItems.ts` – fetches nav by role
+- `src/components/admin/AdminShell.tsx` – mobile drawer, sidebar hidden on mobile
+- `src/components/admin/AdminWeeklyCalendar.tsx` – stacked cards on mobile, table on desktop
+- `src/components/admin/PendingLessonsBlock.tsx` – stacked layout, full-width buttons
+- `src/app/globals.css` – iOS safe area padding
+- `src/app/layout.tsx` – viewport-fit=cover
+
+**How to test on mobile:**
+1. Resize browser to ~390px or use DevTools device emulation (iPhone SE/14).
+2. **Student/Teacher:** Hamburger (☰) in top bar opens nav drawer from the right. Content is full width; no sidebar squeezing.
+3. **Admin:** Same hamburger on admin page; drawer shows "לוח שבועי", "שיעורים בהמתנה", etc.
+4. **Admin weekly calendar:** On mobile, days show as stacked cards; on desktop, full table.
+5. **Buttons:** Primary actions have min-height 44px for touch.
+6. **No horizontal scroll:** Content stays within viewport.
+
+---
+
 ## Summary
 
 | What | Where it runs |
