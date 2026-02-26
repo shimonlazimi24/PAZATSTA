@@ -134,17 +134,17 @@ export async function POST(
 
     const baseUrl = (process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
     let publicPdfUrl: string | undefined;
-    if (baseUrl) {
-      try {
+    try {
+      if (baseUrl) {
         const linkResult = await createLessonSummaryLink({
           lessonId,
           recipientEmail: lesson.student.email,
           baseUrl,
         });
         publicPdfUrl = linkResult.publicUrl;
-      } catch (linkErr) {
-        console.error("[complete] Public PDF link creation failed:", linkErr instanceof Error ? linkErr.message : linkErr);
       }
+    } catch (linkErr) {
+      console.error("[complete] Public PDF link creation failed (email will use fallback):", linkErr instanceof Error ? linkErr.message : linkErr);
     }
 
     try {
@@ -155,6 +155,7 @@ export async function POST(
         teacherName,
         date: dateStr,
         publicPdfUrl: publicPdfUrl ?? undefined,
+        pdfUrl: pdfUrl ?? undefined,
       });
     } catch (emailErr) {
       console.error("[complete] Email send failed (lesson still completed):", emailErr instanceof Error ? emailErr.message : emailErr);

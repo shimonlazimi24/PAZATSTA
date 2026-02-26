@@ -97,18 +97,18 @@ export async function POST(req: Request) {
   const dbTime = Date.now() - dbStart;
   console.log(`[request-code] DB write: ${dbTime}ms`);
 
-  // Fire-and-forget: send email async. Do NOT block response.
-  // The 7.5s delay was caused by awaiting Resend API here.
+  // Must await in serverless (Netlify) - function exits when response returns,
+  // so fire-and-forget would kill the email send before it completes.
   const emailStart = Date.now();
-  void sendLoginCode(email, code)
-    .then((sent) => {
-      const emailTime = Date.now() - emailStart;
-      console.log(`[request-code] Email send: ${emailTime}ms, sent=${sent}`);
-    })
-    .catch((e) => {
-      const emailTime = Date.now() - emailStart;
-      console.error(`[request-code] Email failed after ${emailTime}ms:`, (e as Error)?.message ?? e);
-    });
+  let sent = false;
+  try {
+    sent = await sendLoginCode(email, code);
+    const emailTime = Date.now() - emailStart;
+    console.log(`[request-code] Email send: ${emailTime}ms, sent=${sent}`);
+  } catch (e) {
+    const emailTime = Date.now() - emailStart;
+    console.error(`[request-code] Email failed after ${emailTime}ms:`, (e as Error)?.message ?? e);
+  }
 
   const totalTime = Date.now() - handlerStart;
   console.log(`[request-code] Total handler: ${totalTime}ms`);
