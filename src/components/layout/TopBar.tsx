@@ -22,7 +22,9 @@ export function TopBar({ title, onMenuClick }: TopBarProps) {
           <Logo alt="Paza" className="h-7 w-auto object-contain" width={100} height={28} />
         </div>
         {title && (
-          <h1 className="text-lg font-semibold text-foreground truncate">{title}</h1>
+          <h1 className="text-lg font-semibold text-foreground truncate bidi-isolate" dir="rtl">
+            {title}
+          </h1>
         )}
       </div>
       {/* Hamburger - mobile only, on LEFT (last in reversed order) */}

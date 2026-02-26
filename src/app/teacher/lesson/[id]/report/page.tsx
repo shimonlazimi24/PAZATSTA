@@ -222,6 +222,7 @@ export default function TeacherLessonReportPage() {
   }
 
   const studentName = lesson.student.name || lesson.student.email;
+  const teacherDisplay = lesson.teacher?.name ?? lesson.teacher?.email ?? "—";
 
   const fieldClass =
     "w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-input)] text-sm";
@@ -232,16 +233,37 @@ export default function TeacherLessonReportPage() {
       <div className="max-w-xl space-y-6" dir="rtl">
         <BackLink href="/teacher/dashboard" label="חזרה ללוח המורה" />
 
+        {/* Standalone title - not concatenated with LTR content */}
+        <header>
+          <h1 className="text-xl font-semibold text-[var(--color-text)]">דוח סיום שיעור</h1>
+        </header>
+
+        {/* Meta info in separate section - LTR values isolated to prevent bidi corruption */}
         <section>
           <h2 className="text-sm font-semibold text-[var(--color-text-muted)] mb-2">פרטי השיעור</h2>
           <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-4 space-y-2 text-sm">
-            <p><span className="text-[var(--color-text-muted)]">שם המורה:</span> {lesson.teacher?.name ?? lesson.teacher?.email ?? "—"}</p>
-            <p><span className="text-[var(--color-text-muted)]">שם תלמיד:</span> {studentName}</p>
-            <p><span className="text-[var(--color-text-muted)]">תאריך השיעור:</span> {lessonDateDisplay} {lesson.startTime}–{lesson.endTime}</p>
+            <p>
+              <span className="text-[var(--color-text-muted)]">שם המורה:</span>{" "}
+              <bdi>{teacherDisplay}</bdi>
+            </p>
+            <p>
+              <span className="text-[var(--color-text-muted)]">שם תלמיד:</span>{" "}
+              <bdi>{studentName}</bdi>
+            </p>
+            <p>
+              <span className="text-[var(--color-text-muted)]">תאריך השיעור:</span>{" "}
+              <span className="ltr-isolate">{lessonDateDisplay} {lesson.startTime}–{lesson.endTime}</span>
+            </p>
             {alreadyCompleted ? (
               <>
-                <p><span className="text-[var(--color-text-muted)]">תאריך המיון:</span> {lesson.student.screeningDate ?? "—"}</p>
-                <p><span className="text-[var(--color-text-muted)]">סוג המיון:</span> {lesson.student.screeningType ?? "—"}</p>
+                <p>
+                  <span className="text-[var(--color-text-muted)]">תאריך המיון:</span>{" "}
+                  <span className="ltr-isolate">{lesson.student.screeningDate ?? "—"}</span>
+                </p>
+                <p>
+                  <span className="text-[var(--color-text-muted)]">סוג המיון:</span>{" "}
+                  <bdi>{lesson.student.screeningType ?? "—"}</bdi>
+                </p>
               </>
             ) : (
               <>
@@ -252,6 +274,7 @@ export default function TeacherLessonReportPage() {
                     value={screeningDate}
                     onChange={(e) => setScreeningDate(e.target.value)}
                     className={fieldClass}
+                    dir="ltr"
                     disabled={status === "loading"}
                   />
                 </div>
