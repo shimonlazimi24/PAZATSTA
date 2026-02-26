@@ -51,11 +51,20 @@ export async function POST(
     }
 
     const lesson = await prisma.lesson.findFirst({
-      where: { id: lessonId, teacherId: user.id, status: "scheduled" },
+      where: { id: lessonId, teacherId: user.id },
       include: { teacher: true, student: true },
     });
     if (!lesson) {
-      return NextResponse.json({ error: "Lesson not found" }, { status: 404 });
+      return NextResponse.json({ error: "השיעור לא נמצא או שאין לך הרשאה" }, { status: 404 });
+    }
+    if (lesson.status !== "scheduled") {
+      if (lesson.status === "completed") {
+        return NextResponse.json({ error: "הדוח כבר נשלח. השיעור הושלם." }, { status: 409 });
+      }
+      return NextResponse.json(
+        { error: "לא ניתן למלא דוח — השיעור לא במצב מאושר (בוטל או ממתין לאישור)" },
+        { status: 409 }
+      );
     }
 
     const dateStr = lesson.date.toISOString().slice(0, 10);
