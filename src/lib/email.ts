@@ -211,20 +211,23 @@ function buildFullPdfUrl(pdfUrl: string | undefined, lessonId?: string): string 
   return null;
 }
 
-/** Build lesson-completed email content (short + CTA link). */
+/** Build lesson-completed email content (short + CTA link). Prefers publicPdfUrl (no auth). */
 export function getLessonCompletedContent(params: {
   studentName: string;
   teacherName: string;
   date: string;
+  publicPdfUrl?: string;
   pdfUrl?: string;
   lessonId?: string;
 }) {
-  const fullUrl = buildFullPdfUrl(params.pdfUrl, params.lessonId);
+  const fullUrl =
+    params.publicPdfUrl ??
+    buildFullPdfUrl(params.pdfUrl, params.lessonId);
   const lines = [
     `דוח סיום שיעור: ${params.studentName} עם ${params.teacherName} — ${params.date}`,
     "",
     "הדוח זמין לצפייה ולהורדה בקישור.",
-    ...(fullUrl ? ["להורדת דוח שיעור לחץ כאן: " + fullUrl] : []),
+    ...(fullUrl ? ["לצפייה ולהורדת דוח שיעור לחץ כאן: " + fullUrl] : []),
   ];
   return {
     subject: "דוח סיום שיעור – פזצט״א",
@@ -232,18 +235,21 @@ export function getLessonCompletedContent(params: {
   };
 }
 
-/** Build HTML body for lesson-completed email (short + CTA button). */
+/** Build HTML body for lesson-completed email (short + CTA button). Prefers publicPdfUrl (no auth). */
 function getLessonCompletedHtml(params: {
   studentName: string;
   teacherName: string;
   date: string;
+  publicPdfUrl?: string;
   pdfUrl?: string;
   lessonId?: string;
 }): string {
   const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const fullUrl = buildFullPdfUrl(params.pdfUrl, params.lessonId);
+  const fullUrl =
+    params.publicPdfUrl ??
+    buildFullPdfUrl(params.pdfUrl, params.lessonId);
   const downloadCta = fullUrl
-    ? `<p style="margin-top:24px"><a href="${esc(fullUrl)}" style="background:#4a7c59;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:600;display:inline-block">להורדת דוח שיעור לחץ כאן</a></p>`
+    ? `<p style="margin-top:24px"><a href="${esc(fullUrl)}" style="background:#4a7c59;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:600;display:inline-block">לצפייה ולהורדת דוח שיעור לחץ כאן</a></p>`
     : "";
   return `<div dir="rtl" style="font-family:Heebo,sans-serif;max-width:600px">
   <h2>דוח שיעור: ${esc(params.studentName)} עם ${esc(params.teacherName)} — ${esc(params.date)}</h2>
@@ -258,9 +264,10 @@ export async function sendLessonCompleted(params: {
   studentName: string;
   teacherName: string;
   date: string;
+  publicPdfUrl?: string;
   pdfUrl?: string;
 }): Promise<void> {
-  const fullUrl = buildFullPdfUrl(params.pdfUrl, params.lessonId);
+  const fullUrl = params.publicPdfUrl ?? buildFullPdfUrl(params.pdfUrl, params.lessonId);
   if (process.env.NODE_ENV === "development") {
     console.log("[email] Lesson completed fullUrl:", fullUrl ?? "(none)");
   }
@@ -268,6 +275,7 @@ export async function sendLessonCompleted(params: {
     studentName: params.studentName,
     teacherName: params.teacherName,
     date: params.date,
+    publicPdfUrl: params.publicPdfUrl,
     pdfUrl: params.pdfUrl,
     lessonId: params.lessonId,
   });
@@ -275,11 +283,12 @@ export async function sendLessonCompleted(params: {
     studentName: params.studentName,
     teacherName: params.teacherName,
     date: params.date,
+    publicPdfUrl: params.publicPdfUrl,
     pdfUrl: params.pdfUrl,
     lessonId: params.lessonId,
   });
   if (isDev && noRealKey()) {
-    console.log("[DEV] Lesson completed email to", params.to, fullUrl ? `+ CTA link: ${fullUrl}` : "no CTA");
+    console.log("[DEV] Lesson completed email to", params.to, fullUrl ? `+ CTA link (public): ${fullUrl}` : "no CTA");
     return;
   }
   const resend = getResend();

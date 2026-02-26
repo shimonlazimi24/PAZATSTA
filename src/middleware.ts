@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 
 const SESSION_COOKIE = "session";
 const PUBLIC_PATHS = ["/", "/login", "/verify", "/welcome"];
-const PUBLIC_PREFIXES = ["/api/auth", "/api/cron", "/login/"];
+const PUBLIC_PREFIXES = ["/api/auth", "/api/cron", "/login/", "/p/lesson-summary/"];
 
 const STUDENT_PREFIX = "/student";
 const TEACHER_PREFIX = "/teacher";

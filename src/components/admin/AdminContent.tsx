@@ -6,6 +6,7 @@ import { PendingLessonsBlock } from "./PendingLessonsBlock";
 import { AdminWeeklyCalendar } from "./AdminWeeklyCalendar";
 import { DefineTeacherForm } from "./DefineTeacherForm";
 import { SendHoursSummaryButton } from "./SendHoursSummaryButton";
+import { PdfLinksBlock } from "./PdfLinksBlock";
 
 function AdminContentInner() {
   const searchParams = useSearchParams();
@@ -46,6 +47,14 @@ function AdminContentInner() {
           שליחת סיכום שעות לכל מורה (שיעורים שהושלמו, 7 ימים אחרונים) לאימייל שלך — לצורך תשלום.
         </p>
         <SendHoursSummaryButton />
+      </div>
+    );
+  }
+
+  if (section === "pdf-links") {
+    return (
+      <div className="max-w-xl">
+        <PdfLinksBlock />
       </div>
     );
   }

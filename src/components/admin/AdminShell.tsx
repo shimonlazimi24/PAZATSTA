@@ -14,6 +14,7 @@ const MENU_ITEMS = [
   { id: "pending", label: "שיעורים בהמתנה לאישור", href: "/admin?section=pending" },
   { id: "teacher", label: "הגדרת מורה", href: "/admin?section=teacher" },
   { id: "summary", label: "סיכום שעות לתשלום", href: "/admin?section=summary" },
+  { id: "pdf-links", label: "קישורי דוחות PDF", href: "/admin?section=pdf-links" },
 ] as const;
 
 interface AdminShellProps {

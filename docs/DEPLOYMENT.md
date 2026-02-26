@@ -18,6 +18,7 @@ The **whole UI and API** run on the deployment host. Visitors get a single publi
    | `COOKIE_SECRET` | Random string ≥ 32 chars | e.g. `openssl rand -hex 32` |
    | `RESEND_API_KEY` | Your Resend API key | So login OTP and booking emails work |
    | `RESEND_FROM` | (optional) e.g. `noreply@yourdomain.com` | Must be a verified domain in Resend or use `onboarding@resend.dev` for testing |
+   | `APP_URL` | e.g. `https://your-app.vercel.app` | Required for public PDF links in emails (no login) |
 
 4. **Deploy** (Vercel will run `npm run build` and start the app).
 5. Your **public link** is: `https://<your-project-name>.vercel.app` (or your custom domain if you add one).
@@ -54,6 +55,7 @@ Yes, **Netlify is fine** for this Next.js app. Use the built-in Next.js support.
    | `COOKIE_SECRET` | Random string ≥ 32 chars | All |
    | `RESEND_API_KEY` | Your Resend API key | All |
    | `RESEND_FROM` | (optional) e.g. `onboarding@resend.dev` | All |
+   | `APP_URL` | e.g. `https://your-site.netlify.app` | Required for public PDF links in emails (no login) |
 
 5. **Deploy.** Netlify will run `npm install`, `prisma generate` (via postinstall), and `next build`. Your **public link** is: `https://<your-site-name>.netlify.app` (or your custom domain).
 

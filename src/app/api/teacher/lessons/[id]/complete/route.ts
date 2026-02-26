@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getUserFromSession } from "@/lib/auth";
 import { generateAndStoreLessonPdf } from "@/lib/pdf/generateLessonSummaryPdf";
 import { sendLessonCompleted } from "@/lib/email";
+import { createLessonSummaryLink } from "@/lib/publicPdfLink";
 
 export const runtime = "nodejs";
 
@@ -130,6 +131,22 @@ export async function POST(
       lesson.student.email,
       ...adminUsers.map((a) => a.email),
     ];
+
+    const baseUrl = (process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
+    let publicPdfUrl: string | undefined;
+    if (baseUrl) {
+      try {
+        const linkResult = await createLessonSummaryLink({
+          lessonId,
+          recipientEmail: lesson.student.email,
+          baseUrl,
+        });
+        publicPdfUrl = linkResult.publicUrl;
+      } catch (linkErr) {
+        console.error("[complete] Public PDF link creation failed:", linkErr instanceof Error ? linkErr.message : linkErr);
+      }
+    }
+
     try {
       await sendLessonCompleted({
         to: Array.from(new Set(toEmails)),
@@ -137,7 +154,7 @@ export async function POST(
         studentName,
         teacherName,
         date: dateStr,
-        pdfUrl: pdfUrl ?? undefined,
+        publicPdfUrl: publicPdfUrl ?? undefined,
       });
     } catch (emailErr) {
       console.error("[complete] Email send failed (lesson still completed):", emailErr instanceof Error ? emailErr.message : emailErr);

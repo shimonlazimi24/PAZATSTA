@@ -8,6 +8,12 @@ import { BackLink } from "@/components/design/BackLink";
 import { apiJson } from "@/lib/api";
 import { formatHebrewShortDate } from "@/lib/dates";
 import { SCREENING_TOPICS } from "@/data/topics";
+import {
+  getTipsForScreening,
+  parseTipsToIds,
+  buildTipsFromIds,
+  getTipsDisplayText,
+} from "@/data/tips";
 
 type Lesson = {
   id: string;
@@ -34,19 +40,6 @@ type Lesson = {
     pdfUrl?: string | null;
   } | null;
 };
-
-const TIP_TAGS = [
-  "ניצול זמן",
-  "הרגעה לפני מבחן",
-  "קריאה מדויקת של השאלה",
-  "סדר פתרון",
-  "תרגול סימולציות",
-  "שינה לפני מיון",
-  "הגעה בזמן",
-  "בגדים נוחים",
-  "מזון/מים",
-  "אחר",
-];
 
 export default function TeacherLessonReportPage() {
   const router = useRouter();
@@ -82,17 +75,13 @@ export default function TeacherLessonReportPage() {
       .finally(() => setLoading(false));
   }, [id, router]);
 
-  const tipsSet = new Set(
-    tips
-      .split(/[,،]/)
-      .map((s) => s.trim())
-      .filter(Boolean)
-  );
-  function toggleTip(tag: string) {
-    const next = new Set(tipsSet);
-    if (next.has(tag)) next.delete(tag);
-    else next.add(tag);
-    setTips(Array.from(next).join(", "));
+  const tipsIds = parseTipsToIds(tips);
+  const tipGroups = getTipsForScreening(screeningType);
+  function toggleTip(id: string) {
+    const next = new Set(tipsIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setTips(buildTipsFromIds(next));
   }
 
   const DRAFT_KEY = id ? `paza_report_draft_${id}` : "";
@@ -292,7 +281,7 @@ export default function TeacherLessonReportPage() {
             </p>
             <h3 className="font-semibold text-[var(--color-text)]">טיפים</h3>
             <p className="text-sm text-[var(--color-text)] whitespace-pre-wrap">
-              {lesson.summary?.tips || "—"}
+              {getTipsDisplayText(lesson.summary?.tips ?? "") || "—"}
             </p>
             <h3 className="font-semibold text-[var(--color-text)]">המלצות להמשך</h3>
             <p className="text-sm text-[var(--color-text)] whitespace-pre-wrap">
@@ -346,27 +335,40 @@ export default function TeacherLessonReportPage() {
               />
             </div>
             <div>
-              <label className={labelClass}>טיפים (בחירה)</label>
-              <div className="flex flex-wrap gap-2 mt-1">
-                {TIP_TAGS.map((tag) => {
-                  const selected = tipsSet.has(tag);
-                  return (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => toggleTip(tag)}
-                      disabled={status === "loading"}
-                      className={`px-3 py-1.5 rounded-[var(--radius-input)] border text-sm font-medium transition-colors ${
-                        selected
-                          ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
-                          : "bg-white border-[var(--color-border)] text-[var(--color-text)] hover:bg-[var(--color-bg-muted)]"
-                      }`}
-                    >
-                      {tag}
-                    </button>
-                  );
-                })}
-              </div>
+              <label className={labelClass}>טיפים (בחירה לפי סוג המיון)</label>
+              {tipGroups.length === 0 ? (
+                <p className="text-sm text-[var(--color-text-muted)] mt-1">
+                  בחרו סוג מיון למעלה כדי לראות טיפים רלוונטיים
+                </p>
+              ) : (
+                <div className="mt-2 space-y-4">
+                  {tipGroups.map((group) => (
+                    <div key={group.label} className="space-y-2">
+                      <p className="text-sm font-medium text-[var(--color-text-muted)]">{group.label}</p>
+                      <div className="space-y-1.5">
+                        {group.tips.map((tip) => {
+                          const selected = tipsIds.has(tip.id);
+                          return (
+                            <label
+                              key={tip.id}
+                              className="flex items-start gap-2 cursor-pointer text-sm text-[var(--color-text)]"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selected}
+                                onChange={() => toggleTip(tip.id)}
+                                disabled={status === "loading"}
+                                className="mt-0.5 rounded border-[var(--color-border)]"
+                              />
+                              <span>{tip.label}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div>
               <label className={labelClass}>המלצות להמשך</label>

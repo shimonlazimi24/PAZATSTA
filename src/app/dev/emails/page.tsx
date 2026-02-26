@@ -27,7 +27,7 @@ const PREVIEWS = [
       studentName: "רוני ישראלי",
       teacherName: "מיכל לוי",
       date: "2025-02-18",
-      pdfUrl: "/api/pdf/lesson-summaries/lesson-abc123.pdf",
+      publicPdfUrl: "https://example.com/p/lesson-summary/abc123token",
     }),
   },
   {

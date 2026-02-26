@@ -122,6 +122,21 @@ model LessonSummary {
   lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 }
 
+model PublicPdfLink {
+  id             String    @id @default(uuid())
+  tokenHash      String    @unique
+  lessonId       String?
+  pdfId          String?
+  recipientEmail String?
+  isRevoked      Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  lastAccessedAt DateTime?
+  accessCount    Int       @default(0)
+
+  @@index([tokenHash])
+  @@index([lessonId, recipientEmail])
+}
+
 model Invite {
   id        String    @id @default(cuid())
   email     String
