@@ -1,26 +1,14 @@
 # Next.js App Router on Netlify - requires @netlify/plugin-nextjs for API routes.
-# The plugin transforms the Next.js build and manages output. Do NOT set publish here.
-# In Netlify UI: Publish directory = Not set, Base directory = empty.
+# Without the plugin, publish = ".next" serves only static build output; API routes
+# are not deployed as Netlify Functions and return 503.
+# The plugin transforms the Next.js build into Netlify Functions + Edge Functions.
 
 [build]
   command = "npx prisma migrate deploy && npm run build"
+  # Do NOT set publish - @netlify/plugin-nextjs manages output/functions
 
 [build.environment]
   NODE_VERSION = "20"
-
-# Static assets: cache long (immutable)
-[[headers]]
-  for = "/_next/static/*"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
-
-# All page HTML: no-store (stale HTML = old asset hashes → 404 → ChunkLoadError on all pages)
-[[headers]]
-  for = "/*"
-  [headers.values]
-    Cache-Control = "private, no-store, no-cache, must-revalidate, max-age=0"
-    Netlify-CDN-Cache-Control = "no-store"
-    Pragma = "no-cache"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
