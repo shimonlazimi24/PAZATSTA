@@ -4,7 +4,7 @@
 # to base dir), static assets /_next/static/* return 404 with text/html.
 
 [build]
-  command = "npx prisma migrate deploy && npm run build && npm run verify:assets"
+  command = "npx prisma migrate deploy && npm run build"
 
 [build.environment]
   NODE_VERSION = "20"

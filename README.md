@@ -13,10 +13,14 @@ Two-sided platform: **Teacher portal** (availability, complete lessons, PDF summ
 
 ### Netlify deploy checklist
 
-- [ ] **Publish directory** in Netlify UI = **Not set** (required when using `@netlify/plugin-nextjs`; the plugin manages output)
-- [ ] **Functions directory** in Netlify UI = **Not set**
-- [ ] `@netlify/plugin-nextjs` in `netlify.toml` and `package.json` devDependencies
-- [ ] No custom redirects that catch `/_next/*` and rewrite to HTML (would cause 404 with `text/html` MIME)
+The plugin must be loaded **only once** (in `netlify.toml`). Do **not** add it to `package.json`—double-loading breaks `/_next/static/*` (404 + wrong MIME).
+
+**Netlify UI** (Site → Site configuration → Build & deploy → Build settings → Edit settings):
+
+- [ ] **Publish directory** = **Not set** (click the field, clear any value, or leave blank)
+- [ ] **Base directory** = `/` or empty
+- [ ] **Functions directory** = **Not set**
+- [ ] No custom redirects that catch `/_next/*` and rewrite to HTML
 
 ### Post-deploy verification
 
