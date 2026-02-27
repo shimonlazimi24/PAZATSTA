@@ -18,18 +18,27 @@ export function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
 
   if (path === "/welcome") {
-    return NextResponse.redirect(new URL("/book", req.url));
-  }
-  if (isPublic(path)) {
-    return NextResponse.next();
-  }
-
-  const session = req.cookies.get(SESSION_COOKIE)?.value;
-  if (!session) {
-    return NextResponse.redirect(new URL("/login", req.url));
+    const res = NextResponse.redirect(new URL("/book", req.url));
+    setNoStore(res);
+    return res;
   }
 
-  return NextResponse.next();
+  const res = isPublic(path)
+    ? NextResponse.next()
+    : req.cookies.get(SESSION_COOKIE)?.value
+      ? NextResponse.next()
+      : NextResponse.redirect(new URL("/login", req.url));
+
+  // Prevent Netlify/CDN from caching HTML. Cached HTML has old /_next/static/* hashes
+  // → 404 after redeploy → ChunkLoadError + wrong MIME type on all pages.
+  setNoStore(res);
+  return res;
+}
+
+function setNoStore(res: NextResponse): void {
+  res.headers.set("Cache-Control", "private, no-store, no-cache, must-revalidate, max-age=0");
+  res.headers.set("Netlify-CDN-Cache-Control", "no-store");
+  res.headers.set("Pragma", "no-cache");
 }
 
 export const config = {

@@ -4,6 +4,8 @@ import { getUserFromSession } from "@/lib/auth";
 import { canAccessAdmin } from "@/lib/admin";
 import { AdminShell } from "@/components/admin/AdminShell";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminLayout({
   children,
 }: {

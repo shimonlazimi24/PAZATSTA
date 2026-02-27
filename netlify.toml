@@ -11,5 +11,19 @@
 [build.environment]
   NODE_VERSION = "20"
 
+# Static assets: cache long (immutable)
+[[headers]]
+  for = "/_next/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# All page HTML: no-store (stale HTML = old asset hashes → 404 → ChunkLoadError + wrong MIME)
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cache-Control = "private, no-store, no-cache, must-revalidate, max-age=0"
+    Netlify-CDN-Cache-Control = "no-store"
+    Pragma = "no-cache"
+
 [[plugins]]
   package = "@netlify/plugin-nextjs"

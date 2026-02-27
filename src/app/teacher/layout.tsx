@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { getUserFromSession } from "@/lib/auth";
+
+export const dynamic = "force-dynamic";
 import { redirectByRole } from "@/lib/authRedirect";
 
 export default async function TeacherLayout({
