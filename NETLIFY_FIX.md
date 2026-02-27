@@ -1,28 +1,33 @@
 # תיקון האתר ב-Netlify – צעדים חובה
 
-## 1. Netlify UI – הגדרות Build
+## אם ה-build נכשל עם "publish directory cannot be same as base"
 
-עבור ל: **Site configuration** → **Build & deploy** → **Build settings** → **Edit settings**
+ב-Netlify UI: **Site configuration** → **Build & deploy** → **Build settings** → **Edit settings**
 
-- **Publish directory:** השאר **ריק** (לא להגדיר) – ה-plugin מנהל את זה
-- **Base directory:** השאר **ריק**
-- **Functions directory:** השאר **ריק**
-- **Build command:** `npx prisma migrate deploy && npm run build` (או השאר ל-netlify.toml)
+- **Publish directory:** השאר **ריק לגמרי** (מחק כל ערך אם יש)
+- **Base directory:** נסה להגדיר `./` או השאר ריק
+- **Functions directory:** השאר ריק
 
-## 2. נקה cache ופרוס מחדש
+אם עדיין נכשל – נסה להגדיר **Base directory** ל-`src` או לתיקייה אחרת (רק אם הפרויקט במבנה monorepo).
+
+## אחרי שהגדרות נכונות
+
+### 1. נקה cache ופרוס מחדש
 
 **זה הצעד הכי חשוב.**
 
-1. **Deploys** → **Trigger deploy** → **Clear cache and deploy site**
-2. לחץ על "Clear cache and deploy site" (לא רק "Deploy site")
+**Deploys** → **Trigger deploy** → **Clear cache and deploy site**
 
-## 3. אחרי ה-deploy – בדיקה
+(לא רק "Deploy site" – חייב "Clear cache and deploy site")
 
-1. פתח את האתר ב-incognito (או Cmd+Shift+R לרענון קשיח)
-2. בדוק ש-`/verify` ו-`/login` עובדים עם עיצוב
-3. אם יש בעיה – בדוק ב-console: אם יש שגיאת MIME על `/_next/static/css/...` – חזור ל-step 2
+### 2. בדיקה בדפדפן
 
-## 4. מה היה מתוקן בקוד
+1. פתח את האתר ב-**חלון פרטי (Incognito)** או Cmd+Shift+R לרענון קשיח
+2. בדוק ש-`/verify` ו-`/login` נטענים עם עיצוב
+3. אם יש שגיאת MIME ב-console – חזור ל-step 1
 
-- הוסר `@netlify/plugin-nextjs` מ-package.json – הוספתו ל־package.json גרמה ל-double-loading ו־404 על assets
-- ה-plugin נטען רק דרך netlify.toml: `[[plugins]] package = "@netlify/plugin-nextjs"`
+## מה תוקן בקוד
+
+- **אין `publish` ב-netlify.toml** – ה-plugin מנהל את הפלט. `publish = ".next"` גרם ל-404 על assets
+- **אין `@netlify/plugin-nextjs` ב-package.json** – טעינה כפולה שברה את `/_next/static/*`
+- **Redirect** `/next/*` → `/_next/*` – תיקון לכתובות שגויות (בלי קו תחתון) שמגיעות מ-cache

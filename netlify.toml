@@ -5,8 +5,7 @@
 
 [build]
   command = "npx prisma migrate deploy && npm run build"
-  # Required: without this, Netlify defaults publish to "." (= base) → "publish cannot be same as base" error
-  publish = ".next"
+  # Do NOT set publish - @netlify/plugin-nextjs manages output. Setting it breaks /_next/static/* (404 + wrong MIME).
 
 [build.environment]
   NODE_VERSION = "20"
@@ -24,6 +23,13 @@
     Cache-Control = "private, no-store, no-cache, must-revalidate, max-age=0"
     Netlify-CDN-Cache-Control = "no-store"
     Pragma = "no-cache"
+
+# Fix: some clients/cache request /next/static/* (missing underscore). Rewrite to /_next/static/*
+[[redirects]]
+  from = "/next/*"
+  to = "/_next/:splat"
+  status = 200
+  force = true
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
