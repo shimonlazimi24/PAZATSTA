@@ -4,8 +4,9 @@
 # The plugin transforms the Next.js build into Netlify Functions + Edge Functions.
 
 [build]
-  # Clean .next before build to avoid stale assets; plugin manages output (do NOT set publish)
-  command = "rm -rf .next && npx prisma migrate deploy && npm run build"
+  command = "npx prisma migrate deploy && npm run build"
+  # Required: without this, Netlify defaults publish to "." (= base) → "publish cannot be same as base" error
+  publish = ".next"
 
 [build.environment]
   NODE_VERSION = "20"

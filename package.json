@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "build:clean": "rm -rf .next node_modules/.cache && npm run build",
+    "build": "rimraf .next && next build",
+    "build:clean": "rimraf .next node_modules/.cache && npm run build",
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
@@ -30,6 +30,7 @@
     "seed": "npx tsx prisma/seed.ts"
   },
   "devDependencies": {
+    "rimraf": "^6.0.1",
     "@types/node": "^22.9.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
