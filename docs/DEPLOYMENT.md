@@ -38,7 +38,7 @@ npx prisma db seed
 
 Yes, **Netlify is fine** for this Next.js app. Use `@netlify/plugin-nextjs`.
 
-**Critical:** With `@netlify/plugin-nextjs`, you must **NOT** set a publish directory in the Netlify UI or in `netlify.toml`. The plugin manages the output and Netlify Functions. If you set a publish directory (e.g. `.next` or `out`), Next.js static assets (`/_next/static/*`) will not be deployed correctly and will return 404.
+**Critical:** In Netlify UI, set **Publish directory** = Not set and **Functions directory** = Not set. The `netlify.toml` sets `publish = ".next"` explicitly (required to avoid "publish directory cannot be the same as base directory" plugin error).
 
 1. **Push your code to GitHub** (if not already).
 
@@ -46,7 +46,7 @@ Yes, **Netlify is fine** for this Next.js app. Use `@netlify/plugin-nextjs`.
 
 3. **Build settings:**
    - **Build command:** `npx prisma migrate deploy && npm run build` (or use `netlify.toml`)
-   - **Publish directory:** **must be empty** (do not set `.next`, `out`, or anything else)
+   - **Publish directory:** Not set (netlify.toml provides `publish = ".next"`)
    - **Base directory:** leave empty unless the app is in a subfolder
 
 4. **Environment variables** (Site → Site configuration → Environment variables). Add:
@@ -65,9 +65,9 @@ Yes, **Netlify is fine** for this Next.js app. Use `@netlify/plugin-nextjs`.
 
 ### Netlify static assets checklist (if `/_next/static/*` returns 404)
 
-- [ ] **Publish directory** in Netlify UI is **empty** (not `.next`, not `out`, not any value)
+- [ ] **Publish directory** in Netlify UI is **Not set** (netlify.toml sets `publish = ".next"`)
+- [ ] **Functions directory** in Netlify UI is **Not set**
 - [ ] **`@netlify/plugin-nextjs`** is enabled (in `netlify.toml` via `[[plugins]]` and/or Netlify UI)
-- [ ] **`netlify.toml`** does not set `publish` under `[build]`
 - [ ] Redeploy with **"Clear cache and deploy site"** (Site → Deploys → Trigger deploy → Clear cache and deploy site)
 
 ### Post-deploy verification
