@@ -10,9 +10,15 @@
 [build.environment]
   NODE_VERSION = "20"
 
-# Prevent caching /verify HTML (stale HTML references old asset hashes → 404)
+# Static assets: cache long (immutable)
 [[headers]]
-  for = "/verify"
+  for = "/_next/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# All page HTML: no-store (stale HTML = old asset hashes → 404 → ChunkLoadError on all pages)
+[[headers]]
+  for = "/*"
   [headers.values]
     Cache-Control = "private, no-store, no-cache, must-revalidate, max-age=0"
     Netlify-CDN-Cache-Control = "no-store"

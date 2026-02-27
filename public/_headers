@@ -1,4 +1,9 @@
-/verify
+# Static assets: cache long
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# All page HTML: no-store (stale HTML = old asset hashes → 404 → ChunkLoadError)
+/*
   Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0
   Netlify-CDN-Cache-Control: no-store
   Pragma: no-cache

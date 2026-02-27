@@ -18,25 +18,25 @@ export function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
 
   if (path === "/welcome") {
-    return NextResponse.redirect(new URL("/book", req.url));
-  }
-  if (isPublic(path)) {
-    const res = NextResponse.next();
-    // Prevent Netlify Edge/CDN from caching /verify HTML (stale HTML = wrong asset hashes = 404)
-    if (path === "/verify") {
-      res.headers.set("Cache-Control", "private, no-store, no-cache, must-revalidate, max-age=0");
-      res.headers.set("Netlify-CDN-Cache-Control", "no-store");
-      res.headers.set("Pragma", "no-cache");
-    }
-    return res;
+    const redirect = NextResponse.redirect(new URL("/book", req.url));
+    redirect.headers.set("Cache-Control", "private, no-store, no-cache, must-revalidate, max-age=0");
+    redirect.headers.set("Netlify-CDN-Cache-Control", "no-store");
+    return redirect;
   }
 
-  const session = req.cookies.get(SESSION_COOKIE)?.value;
-  if (!session) {
-    return NextResponse.redirect(new URL("/login", req.url));
-  }
+  const res = isPublic(path)
+    ? NextResponse.next()
+    : req.cookies.get(SESSION_COOKIE)?.value
+      ? NextResponse.next()
+      : NextResponse.redirect(new URL("/login", req.url));
 
-  return NextResponse.next();
+  // Prevent Netlify Edge/CDN from caching ANY page HTML.
+  // Cached HTML has old /_next/static/* hashes → 404 after redeploy → ChunkLoadError on all pages.
+  res.headers.set("Cache-Control", "private, no-store, no-cache, must-revalidate, max-age=0");
+  res.headers.set("Netlify-CDN-Cache-Control", "no-store");
+  res.headers.set("Pragma", "no-cache");
+
+  return res;
 }
 
 export const config = {
