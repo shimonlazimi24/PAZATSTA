@@ -10,5 +10,12 @@
 [build.environment]
   NODE_VERSION = "20"
 
+# Prevent caching /verify HTML (stale HTML references old asset hashes → 404)
+[[headers]]
+  for = "/verify"
+  [headers.values]
+    Cache-Control = "private, no-store, no-cache, must-revalidate, max-age=0"
+    Pragma = "no-cache"
+
 [[plugins]]
   package = "@netlify/plugin-nextjs"

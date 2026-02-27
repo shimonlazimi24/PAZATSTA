@@ -21,7 +21,13 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/book", req.url));
   }
   if (isPublic(path)) {
-    return NextResponse.next();
+    const res = NextResponse.next();
+    // Prevent Netlify Edge from caching /verify HTML (stale HTML = wrong asset hashes = 404)
+    if (path === "/verify") {
+      res.headers.set("Cache-Control", "private, no-store, no-cache, must-revalidate, max-age=0");
+      res.headers.set("Pragma", "no-cache");
+    }
+    return res;
   }
 
   const session = req.cookies.get(SESSION_COOKIE)?.value;
