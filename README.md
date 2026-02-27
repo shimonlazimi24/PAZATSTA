@@ -9,6 +9,10 @@ Two-sided platform: **Teacher portal** (availability, complete lessons, PDF summ
 - Resend (email), Puppeteer (HTML → PDF)
 - Auth: Email OTP, HttpOnly session cookie, middleware role routing
 
+## Netlify deploy
+
+In Netlify UI, Build settings must have **Publish directory** = Not set and **Functions directory** = Not set, because the Next.js plugin manages functions output. The `netlify.toml` config is the source of truth.
+
 ## Run locally
 
 1. **Install**

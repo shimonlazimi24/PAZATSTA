@@ -5,7 +5,7 @@
 
 [build]
   command = "npx prisma migrate deploy && npm run build"
-  # Do NOT set publish - @netlify/plugin-nextjs manages output/functions
+  publish = ".next"
 
 [build.environment]
   NODE_VERSION = "20"
