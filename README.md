@@ -17,9 +17,10 @@ The plugin must be loaded **only once** (in `netlify.toml`). Do **not** add it t
 
 **Netlify UI** (Site → Site configuration → Build & deploy → Build settings → Edit settings):
 
-- [ ] **Publish directory** = **Not set** (click the field, clear any value, or leave blank)
-- [ ] **Base directory** = `/` or empty
+- [ ] **Publish directory** = **Not set** (clear any value; plugin manages output)
+- [ ] **Base directory** = empty
 - [ ] **Functions directory** = **Not set**
+- [ ] If deploy fails with "publish directory cannot be same as base", set Base directory to `./` in UI
 - [ ] No custom redirects that catch `/_next/*` and rewrite to HTML
 
 ### Post-deploy verification

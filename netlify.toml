@@ -1,11 +1,9 @@
 # Next.js App Router on Netlify - requires @netlify/plugin-nextjs for API routes.
-# The plugin transforms the Next.js build into Netlify Functions + Edge Functions.
-# publish must be set to something other than base dir, else plugin errors:
-# "Your publish directory cannot be the same as the base directory"
+# The plugin transforms the Next.js build and manages output. Do NOT set publish here.
+# In Netlify UI: Publish directory = Not set, Base directory = empty.
 
 [build]
   command = "npx prisma migrate deploy && npm run build"
-  publish = ".next"
 
 [build.environment]
   NODE_VERSION = "20"
