@@ -15,6 +15,7 @@
   for = "/verify"
   [headers.values]
     Cache-Control = "private, no-store, no-cache, must-revalidate, max-age=0"
+    Netlify-CDN-Cache-Control = "no-store"
     Pragma = "no-cache"
 
 [[plugins]]

@@ -22,9 +22,10 @@ export function middleware(req: NextRequest) {
   }
   if (isPublic(path)) {
     const res = NextResponse.next();
-    // Prevent Netlify Edge from caching /verify HTML (stale HTML = wrong asset hashes = 404)
+    // Prevent Netlify Edge/CDN from caching /verify HTML (stale HTML = wrong asset hashes = 404)
     if (path === "/verify") {
       res.headers.set("Cache-Control", "private, no-store, no-cache, must-revalidate, max-age=0");
+      res.headers.set("Netlify-CDN-Cache-Control", "no-store");
       res.headers.set("Pragma", "no-cache");
     }
     return res;
