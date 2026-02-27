@@ -4,19 +4,23 @@
 # The plugin transforms the Next.js build into Netlify Functions + Edge Functions.
 
 [build]
-  command = "npx prisma migrate deploy && npm run build"
-  # Do NOT set publish - @netlify/plugin-nextjs manages output. Setting it breaks /_next/static/* (404 + wrong MIME).
+  # Clean .next before build to avoid stale assets; plugin manages output (do NOT set publish)
+  command = "rm -rf .next && npx prisma migrate deploy && npm run build"
 
 [build.environment]
   NODE_VERSION = "20"
+  # Ensure plugin runs (skip only for static export)
+  NETLIFY_NEXT_PLUGIN_SKIP = "false"
 
-# Static assets: cache long (immutable)
+# IMPORTANT: Order matters. /_next/static/* first so assets get immutable, not no-store.
+# Static assets: long cache (immutable hashes)
 [[headers]]
   for = "/_next/static/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-# All page HTML: no-store (stale HTML = old asset hashes → 404 → ChunkLoadError + wrong MIME)
+# Page HTML: no-store (prevents stale HTML with old asset hashes → 404 → MIME errors)
+# Placed after /_next/static/* so assets keep immutable; pages get no-store
 [[headers]]
   for = "/*"
   [headers.values]

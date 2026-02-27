@@ -28,6 +28,8 @@
 
 ## מה תוקן בקוד
 
-- **אין `publish` ב-netlify.toml** – ה-plugin מנהל את הפלט. `publish = ".next"` גרם ל-404 על assets
-- **אין `@netlify/plugin-nextjs` ב-package.json** – טעינה כפולה שברה את `/_next/static/*`
-- **Redirect** `/next/*` → `/_next/*` – תיקון לכתובות שגויות (בלי קו תחתון) שמגיעות מ-cache
+- **אין `publish` ב-netlify.toml** – ה-plugin מנהל את הפלט
+- **`rm -rf .next`** בתחילת build – מונע assets ישנים
+- **`build:clean`** – `npm run build:clean` לניקוי מקומי לפני build
+- **NETLIFY_NEXT_PLUGIN_SKIP=false** – מוודא שה-plugin רץ
+- **Redirect** `/next/*` → `/_next/*` – תיקון לכתובות שגויות
