@@ -11,7 +11,24 @@ Two-sided platform: **Teacher portal** (availability, complete lessons, PDF summ
 
 ## Netlify deploy
 
-In Netlify UI, Build settings must have **Publish directory** = Not set and **Functions directory** = Not set, because the Next.js plugin manages functions output. The `netlify.toml` config is the source of truth.
+### Netlify deploy checklist
+
+- [ ] **Publish directory** in Netlify UI = **Not set** (required when using `@netlify/plugin-nextjs`; the plugin manages output)
+- [ ] **Functions directory** in Netlify UI = **Not set**
+- [ ] `@netlify/plugin-nextjs` in `netlify.toml` and `package.json` devDependencies
+- [ ] No custom redirects that catch `/_next/*` and rewrite to HTML (would cause 404 with `text/html` MIME)
+
+### Post-deploy verification
+
+After deploy, verify static assets return 200 with correct content-type:
+
+```bash
+# Replace <site> with your Netlify site (e.g. pazatsta-schedule)
+# Get a real path from your built .next/static/ or from the page source
+curl -I https://<site>.netlify.app/_next/static/css/<hash>.css
+```
+
+Expected: `HTTP/2 200` and `Content-Type: text/css`. If you get `text/html` or 404, the plugin is not running correctly or redirects are catching the request.
 
 ## Run locally
 

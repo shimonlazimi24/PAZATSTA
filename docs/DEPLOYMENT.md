@@ -38,7 +38,7 @@ npx prisma db seed
 
 Yes, **Netlify is fine** for this Next.js app. Use `@netlify/plugin-nextjs`.
 
-**Critical:** In Netlify UI, set **Publish directory** = Not set and **Functions directory** = Not set. The `netlify.toml` sets `publish = ".next"` explicitly (required to avoid "publish directory cannot be the same as base directory" plugin error).
+**Critical:** In Netlify UI, set **Publish directory** = Not set and **Functions directory** = Not set. Do **not** set `publish` in `netlify.toml`—the plugin manages output. Setting publish (or leaving it to default) causes `/_next/static/*` to return 404 with `text/html`.
 
 1. **Push your code to GitHub** (if not already).
 
@@ -46,7 +46,7 @@ Yes, **Netlify is fine** for this Next.js app. Use `@netlify/plugin-nextjs`.
 
 3. **Build settings:**
    - **Build command:** `npx prisma migrate deploy && npm run build` (or use `netlify.toml`)
-   - **Publish directory:** Not set (netlify.toml provides `publish = ".next"`)
+   - **Publish directory:** Not set (plugin manages output; do not set in netlify.toml either)
    - **Base directory:** leave empty unless the app is in a subfolder
 
 4. **Environment variables** (Site → Site configuration → Environment variables). Add:
@@ -65,7 +65,7 @@ Yes, **Netlify is fine** for this Next.js app. Use `@netlify/plugin-nextjs`.
 
 ### Netlify static assets checklist (if `/_next/static/*` returns 404)
 
-- [ ] **Publish directory** in Netlify UI is **Not set** (netlify.toml sets `publish = ".next"`)
+- [ ] **Publish directory** in Netlify UI is **Not set** (and not set in netlify.toml)
 - [ ] **Functions directory** in Netlify UI is **Not set**
 - [ ] **`@netlify/plugin-nextjs`** is enabled (in `netlify.toml` via `[[plugins]]` and/or Netlify UI)
 - [ ] Redeploy with **"Clear cache and deploy site"** (Site → Deploys → Trigger deploy → Clear cache and deploy site)
@@ -80,7 +80,7 @@ After deploying, verify that Next.js static assets are served correctly:
 curl -I https://<site>.netlify.app/_next/static/css/<hash>.css
 ```
 
-Expected: `HTTP/2 200` and `Content-Type: text/css`. If you get 404, the publish directory is likely misconfigured.
+Expected: `HTTP/2 200` and `Content-Type: text/css`. If you get 404 or `text/html`, the plugin is not running or redirects are catching the request.
 
 ---
 
