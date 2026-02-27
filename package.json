@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "rimraf .next && next build",
+    "build:vercel": "npx prisma migrate deploy && npm run build",
     "build:clean": "rimraf .next node_modules/.cache && npm run build",
     "start": "next start",
     "lint": "next lint",
