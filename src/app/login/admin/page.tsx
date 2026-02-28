@@ -87,11 +87,7 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center p-4 bg-[var(--color-bg)]"
-      dir="rtl"
-    >
-      <div className="w-full max-w-md space-y-8">
+    <div className="w-full max-w-md space-y-8">
         <div className="flex justify-center">
           <Logo alt="Paza" className="h-10 w-auto" width={140} height={48} />
         </div>
@@ -190,7 +186,6 @@ export default function AdminLoginPage() {
             </form>
           )}
         </div>
-      </div>
     </div>
   );
 }

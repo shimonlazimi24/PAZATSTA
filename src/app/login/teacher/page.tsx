@@ -89,8 +89,7 @@ export default function TeacherLoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background" dir="rtl">
-      <div className="w-full max-w-sm space-y-6">
+    <div className="w-full max-w-sm space-y-6">
         <BackLink href="/login" label="חזרה לבחירת סוג כניסה" />
         <div className="flex justify-center">
           <Logo alt="Paza" className="h-9 w-auto object-contain" width={120} height={40} />
@@ -182,7 +181,6 @@ export default function TeacherLoginPage() {
             )}
           </CardContent>
         </Card>
-      </div>
     </div>
   );
 }

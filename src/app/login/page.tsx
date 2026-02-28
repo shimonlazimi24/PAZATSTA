@@ -50,12 +50,8 @@ function LoginForm() {
   }
 
   return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center p-4 bg-[var(--color-bg)]"
-      dir="rtl"
-    >
-      <div className="w-full max-w-md space-y-8">
-        <div className="flex justify-center">
+    <div className="w-full max-w-md space-y-8">
+      <div className="flex justify-center">
           <Logo alt="Paza" className="h-10 w-auto" width={140} height={48} />
         </div>
         <h1 className="text-2xl font-bold text-center text-[var(--color-text)]">
@@ -149,18 +145,13 @@ function LoginForm() {
           </>
         )}
 
-      </div>
     </div>
   );
 }
 
 function LoginFallback() {
   return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center p-4 bg-[var(--color-bg)]"
-      dir="rtl"
-    >
-      <div className="w-full max-w-md space-y-8">
+    <div className="w-full max-w-md space-y-8">
         <div className="flex justify-center">
           <Logo alt="Paza" className="h-10 w-auto" width={140} height={48} />
         </div>
@@ -168,7 +159,6 @@ function LoginFallback() {
           התחברות
         </h1>
         <p className="text-center text-[var(--color-text-muted)]">טוען…</p>
-      </div>
     </div>
   );
 }

@@ -117,8 +117,7 @@ export default function StudentLoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background" dir="rtl">
-      <div className="w-full max-w-sm space-y-6">
+    <div className="w-full max-w-sm space-y-6">
         <BackLink href="/login" label="חזרה לבחירת סוג כניסה" />
         <Card className="rounded-2xl shadow-soft border-border">
           <CardContent className="p-6 space-y-6">
@@ -250,7 +249,6 @@ export default function StudentLoginPage() {
             </p>
           </CardContent>
         </Card>
-      </div>
     </div>
   );
 }
