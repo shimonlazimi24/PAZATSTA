@@ -15,7 +15,6 @@ const MENU_ITEMS = [
   { id: "teacher", label: "הגדרת מורה", href: "/admin?section=teacher" },
   { id: "teachers", label: "רשימת מורים", href: "/admin?section=teachers" },
   { id: "summary", label: "סיכום שעות לתשלום", href: "/admin?section=summary" },
-  { id: "pdf-links", label: "קישורי דוחות PDF", href: "/admin?section=pdf-links" },
 ] as const;
 
 interface AdminShellProps {

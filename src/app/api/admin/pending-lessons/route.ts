@@ -9,12 +9,8 @@ export async function GET() {
   if (!user || !canAccessAdmin(user)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-  const now = new Date();
   const lessons = await prisma.lesson.findMany({
-    where: {
-      status: "pending_approval",
-      approvalExpiresAt: { gt: now },
-    },
+    where: { status: "pending_approval" },
     include: {
       teacher: { select: { id: true, email: true, name: true } },
       student: { select: { id: true, email: true, name: true } },

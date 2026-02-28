@@ -64,6 +64,8 @@ model StudentProfile {
   createdAt              DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([currentScreeningDate])
 }
 
 model Availability {
@@ -109,6 +111,7 @@ model Lesson {
   @@index([status])
   @@index([status, approvalExpiresAt])
   @@index([approvalExpiresAt])
+  @@index([date, status])
 }
 
 model LessonSummary {
@@ -148,6 +151,9 @@ model Invite {
   expiresAt DateTime
   usedAt   DateTime?
   createdAt DateTime  @default(now())
+
+  @@index([email])
+  @@index([expiresAt])
 }
 
 model LoginCode {
