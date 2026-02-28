@@ -421,14 +421,14 @@ export async function sendAdminSummary(params: {
   }
 }
 
-/** Build weekly hours summary for admin (payment). */
+/** Build monthly hours summary for admin (payment). */
 export function getWeeklyHoursSummaryContent(params: {
   startDate: string;
   endDate: string;
   byTeacher: { teacherName: string; teacherEmail: string; hours: number; lessonCount: number }[];
 }) {
   const lines = [
-    `סיכום שעות שבועי לתשלום (${params.startDate} – ${params.endDate})`,
+    `סיכום שעות חודשי לתשלום (${params.startDate} – ${params.endDate})`,
     "",
     ...params.byTeacher.map(
       (t) =>

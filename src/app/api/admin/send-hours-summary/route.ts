@@ -4,7 +4,7 @@ import { getUserFromSession } from "@/lib/auth";
 import { canAccessAdmin } from "@/lib/admin";
 import { sendWeeklyHoursSummaryToAdmin } from "@/lib/email";
 
-const DEFAULT_DAYS = 7;
+const DEFAULT_DAYS = 30; // חודש (monthly report for payment)
 const EMAIL_TIMEZONE = "Asia/Jerusalem";
 
 /** Parse "HH:MM" or "HHMM" to minutes since midnight. */
@@ -37,7 +37,7 @@ function parseDateOnly(s: unknown): Date | null {
 /**
  * POST: Send hours summary to admin (for payment).
  * Body: { startDate?: "YYYY-MM-DD", endDate?: "YYYY-MM-DD" }
- * Default: last 7 days.
+ * Default: last 30 days (monthly).
  */
 export async function POST(req: Request) {
   const user = await getUserFromSession();

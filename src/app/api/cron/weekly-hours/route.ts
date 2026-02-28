@@ -18,25 +18,20 @@ function durationHours(startTime: string, endTime: string): number {
   return (end - start) / 60;
 }
 
-/** Last week = previous ISO week (Monday 00:00 UTC to next Monday 00:00 UTC). */
-function getLastWeekRange(): { start: Date; end: Date } {
+/** Last month = 1st of previous month 00:00 UTC to 1st of current month 00:00 UTC. */
+function getLastMonthRange(): { start: Date; end: Date } {
   const now = new Date();
-  const day = now.getUTCDay(); // 0 = Sun, 1 = Mon, ...
-  const mondayOffset = day === 0 ? -6 : 1 - day; // days back to last Monday
-  const lastMonday = new Date(now);
-  lastMonday.setUTCDate(now.getUTCDate() + mondayOffset - 7);
-  lastMonday.setUTCHours(0, 0, 0, 0);
-  const thisMonday = new Date(lastMonday);
-  thisMonday.setUTCDate(lastMonday.getUTCDate() + 7);
-  return { start: lastMonday, end: thisMonday };
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1, 0, 0, 0, 0));
+  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
+  return { start, end };
 }
 
-/** Run weekly: sum completed lesson hours per teacher for last week; email admin(s). */
+/** Run monthly: sum completed lesson hours per teacher for last month; email admin(s). */
 export async function GET(req: Request) {
   const authError = validateCronAuth(req);
   if (authError) return authError;
 
-  const { start, end } = getLastWeekRange();
+  const { start, end } = getLastMonthRange();
   const startStr = start.toISOString().slice(0, 10);
   const endStr = new Date(end.getTime() - 1).toISOString().slice(0, 10);
 
@@ -92,7 +87,7 @@ export async function GET(req: Request) {
     } catch (e) {
       console.error("[cron/weekly-hours] Send failed:", e);
       return NextResponse.json(
-        { error: "Failed to send weekly hours email" },
+        { error: "Failed to send monthly hours email" },
         { status: 500 }
       );
     }

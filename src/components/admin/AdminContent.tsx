@@ -7,6 +7,7 @@ import { AdminWeeklyCalendar } from "./AdminWeeklyCalendar";
 import { DefineTeacherForm } from "./DefineTeacherForm";
 import { SendHoursSummaryButton } from "./SendHoursSummaryButton";
 import { PdfLinksBlock } from "./PdfLinksBlock";
+import { TeachersListBlock } from "./TeachersListBlock";
 
 function AdminContentInner() {
   const searchParams = useSearchParams();
@@ -37,6 +38,20 @@ function AdminContentInner() {
     );
   }
 
+  if (section === "teachers") {
+    return (
+      <div className="max-w-2xl">
+        <h2 className="text-xl font-bold text-[var(--color-text)] mb-4 text-right">
+          רשימת מורים
+        </h2>
+        <p className="text-sm text-[var(--color-text-muted)] mb-4 text-right">
+          כל המורים הרשומים במערכת.
+        </p>
+        <TeachersListBlock />
+      </div>
+    );
+  }
+
   if (section === "summary") {
     return (
       <div className="max-w-xl">
@@ -44,7 +59,7 @@ function AdminContentInner() {
           סיכום שעות לתשלום
         </h2>
         <p className="text-sm text-[var(--color-text-muted)] mb-4 text-right">
-          שליחת סיכום שעות לכל מורה (שיעורים שהושלמו, 7 ימים אחרונים) לאימייל שלך — לצורך תשלום.
+          שליחת סיכום שעות לכל מורה (שיעורים שהושלמו, חודש האחרון) לאימייל שלך — לצורך תשלום.
         </p>
         <SendHoursSummaryButton />
       </div>
