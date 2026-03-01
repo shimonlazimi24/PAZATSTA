@@ -16,18 +16,25 @@ export default function LoginLayout({
 
   return (
     <div
-      className="fixed inset-0 flex flex-col justify-between overflow-hidden bg-[#F6F6F6] px-6"
+      className="fixed inset-0 flex flex-col overflow-hidden bg-[#F6F6F6] px-6"
       dir="rtl"
       style={{
         height: "100dvh",
         minHeight: "100vh",
-        paddingBottom: "env(safe-area-inset-bottom, 0px)",
       }}
     >
-      <div className="flex-1 flex flex-col items-center justify-center min-h-0 overflow-auto py-4">
+      <div
+        className="flex-1 flex flex-col items-center justify-center min-h-0 overflow-auto py-4"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 52px)" }}
+      >
         {children}
       </div>
-      <footer className="shrink-0 py-4 text-center text-sm text-[var(--color-text-muted)] opacity-70">
+      <footer
+        className="fixed bottom-0 left-0 right-0 py-4 text-center text-sm text-[var(--color-text-muted)] opacity-70 bg-[#F6F6F6]"
+        style={{
+          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 8px)",
+        }}
+      >
         כל הזכויות שמורות © פזצט״א
       </footer>
     </div>

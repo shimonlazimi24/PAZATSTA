@@ -10,6 +10,7 @@ import { formatHebrewShortDate } from "@/lib/dates";
 import { SCREENING_TOPICS } from "@/data/topics";
 import {
   getTipsForScreening,
+  hasPredefinedTips,
   parseTipsToIds,
   buildTipsFromIds,
   getTipsDisplayText,
@@ -24,6 +25,7 @@ type Lesson = {
   status: string;
   reportCompleted?: boolean;
   followUpCompletedAt?: string | null;
+  topic?: string | null;
   teacher?: { name: string | null; email: string };
   student: {
     name: string | null;
@@ -95,7 +97,7 @@ export default function TeacherLessonReportPage() {
 
   useEffect(() => {
     if (lesson) {
-      setScreeningType(lesson.student.screeningType ?? "");
+      setScreeningType(lesson.topic ?? lesson.student.screeningType ?? "");
       setScreeningDate(lesson.student.screeningDate ?? "");
       if (lesson.summary) {
         setSummaryText(lesson.summary.summaryText);
@@ -262,7 +264,7 @@ export default function TeacherLessonReportPage() {
                 </p>
                 <p>
                   <span className="text-[var(--color-text-muted)]">סוג המיון:</span>{" "}
-                  <bdi>{lesson.student.screeningType ?? "—"}</bdi>
+                  <bdi>{lesson.topic ?? lesson.student.screeningType ?? "—"}</bdi>
                 </p>
               </>
             ) : (
@@ -280,17 +282,23 @@ export default function TeacherLessonReportPage() {
                 </div>
                 <div>
                   <label className={labelClass}>סוג המיון</label>
-                  <select
-                    value={screeningType}
-                    onChange={(e) => setScreeningType(e.target.value)}
-                    className={fieldClass}
-                    disabled={status === "loading"}
-                  >
-                    <option value="">—</option>
-                    {SCREENING_TOPICS.map((t) => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
+                  {lesson.topic ? (
+                    <p className="py-2 text-sm text-[var(--color-text)]" dir="rtl">
+                      <bdi>{lesson.topic}</bdi>
+                    </p>
+                  ) : (
+                    <select
+                      value={screeningType}
+                      onChange={(e) => setScreeningType(e.target.value)}
+                      className={fieldClass}
+                      disabled={status === "loading"}
+                    >
+                      <option value="">—</option>
+                      {SCREENING_TOPICS.map((t) => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               </>
             )}
@@ -378,12 +386,8 @@ export default function TeacherLessonReportPage() {
               />
             </div>
             <div>
-              <label className={labelClass}>טיפים (בחירה לפי סוג המיון)</label>
-              {tipGroups.length === 0 ? (
-                <p className="text-sm text-[var(--color-text-muted)] mt-1">
-                  בחרו סוג מיון למעלה כדי לראות טיפים רלוונטיים
-                </p>
-              ) : (
+              <label className={labelClass}>טיפים</label>
+              {hasPredefinedTips(screeningType) ? (
                 <div className="mt-2 space-y-4">
                   {tipGroups.map((group) => (
                     <div key={group.label} className="space-y-2">
@@ -410,6 +414,18 @@ export default function TeacherLessonReportPage() {
                       </div>
                     </div>
                   ))}
+                </div>
+              ) : (
+                <div className="mt-2">
+                  <p className="text-sm text-[var(--color-text-muted)] mb-2">אחר — מלל חופשי</p>
+                  <textarea
+                    value={tips}
+                    onChange={(e) => setTips(e.target.value)}
+                    rows={4}
+                    className={fieldClass}
+                    placeholder="הזינו טיפים בהתאם לסוג המיון..."
+                    disabled={status === "loading"}
+                  />
                 </div>
               )}
             </div>

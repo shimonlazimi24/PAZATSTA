@@ -27,6 +27,7 @@ export async function GET(
     return NextResponse.json({ error: "Lesson not found" }, { status: 404 });
   }
   const profile = lesson.student.studentProfile;
+  const screeningType = lesson.topic ?? profile?.currentScreeningType ?? null;
   return NextResponse.json({
     id: lesson.id,
     date: lesson.date.toISOString().slice(0, 10),
@@ -40,9 +41,10 @@ export async function GET(
       id: lesson.student.id,
       email: lesson.student.email,
       name: lesson.student.name,
-      screeningType: profile?.currentScreeningType ?? null,
+      screeningType,
       screeningDate: profile?.currentScreeningDate?.toISOString().slice(0, 10) ?? null,
     },
+    topic: lesson.topic,
     summary: lesson.summary
       ? {
           summaryText: lesson.summary.summaryText,

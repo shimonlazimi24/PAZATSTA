@@ -20,6 +20,7 @@ export async function POST(req: Request) {
     const availabilityId = typeof body.availabilityId === "string" ? body.availabilityId.trim() : "";
     const teacherId = typeof body.teacherId === "string" ? body.teacherId.trim() : "";
     const selectedTopic = typeof body.selectedTopic === "string" ? body.selectedTopic.trim() : "";
+    const studentNameFromForm = typeof body.studentName === "string" ? body.studentName.trim() : "";
     const dateStr = typeof body.date === "string" ? body.date.trim() : "";
     const startTime = typeof body.startTime === "string" ? body.startTime.trim() : "";
     const endTime = typeof body.endTime === "string" ? body.endTime.trim() : "";
@@ -47,6 +48,7 @@ export async function POST(req: Request) {
             date: current.date,
             startTime: current.startTime,
             endTime: current.endTime,
+            topic: selectedTopic || null,
             status: "pending_approval",
             approvalExpiresAt: new Date(Date.now() + APPROVAL_WINDOW_MS),
           },
@@ -62,6 +64,17 @@ export async function POST(req: Request) {
         );
       }
       lesson = result;
+      if (studentNameFromForm) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { name: studentNameFromForm },
+        });
+        await prisma.studentProfile.upsert({
+          where: { userId: user.id },
+          create: { userId: user.id, studentFullName: studentNameFromForm },
+          update: { studentFullName: studentNameFromForm },
+        });
+      }
       admins = adminsPreload;
       const adminEmails = admins.map((a) => a.email).filter(Boolean);
       const toEmails = Array.from(
@@ -69,7 +82,7 @@ export async function POST(req: Request) {
       ).filter(Boolean);
       void sendApprovalRequest({
         to: toEmails,
-        studentName: lesson.student.name || lesson.student.email || "תלמיד",
+        studentName: studentNameFromForm || lesson.student.name || lesson.student.email || "תלמיד",
         teacherName: lesson.teacher.name || lesson.teacher.email || "מורה",
         date: formatDateInIsrael(lesson.date),
         timeRange: `${lesson.startTime}–${lesson.endTime}`,
@@ -118,6 +131,17 @@ export async function POST(req: Request) {
           { status: 409 }
         );
       }
+      if (studentNameFromForm) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { name: studentNameFromForm },
+        });
+        await prisma.studentProfile.upsert({
+          where: { userId: user.id },
+          create: { userId: user.id, studentFullName: studentNameFromForm },
+          update: { studentFullName: studentNameFromForm },
+        });
+      }
       lesson = await prisma.lesson.create({
         data: {
           teacherId: teacher.id,
@@ -125,6 +149,7 @@ export async function POST(req: Request) {
           date,
           startTime,
           endTime,
+          topic: selectedTopic || null,
           status: "pending_approval",
           approvalExpiresAt: new Date(Date.now() + APPROVAL_WINDOW_MS),
         },

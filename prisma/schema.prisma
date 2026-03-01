@@ -91,6 +91,7 @@ model Lesson {
   date                  DateTime
   startTime             String
   endTime               String
+  topic                 String?      // סוג מיון/מסלול שנבחר בהזמנה
   status                LessonStatus @default(pending_approval)
   approvalExpiresAt     DateTime?
   approvedByTeacherAt   DateTime?

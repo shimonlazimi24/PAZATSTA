@@ -310,7 +310,7 @@ export default function BookPage() {
       } catch (_) {}
       if (isRealTeacherId && selectedDate && selectedSlot) {
         try {
-          const body: { teacherId: string; date: string; startTime: string; endTime: string; availabilityId?: string; selectedTopic?: string } = {
+          const body: { teacherId: string; date: string; startTime: string; endTime: string; availabilityId?: string; selectedTopic?: string; studentName?: string } = {
             teacherId: teacher.id,
             date: selectedDate,
             startTime: selectedSlot.startTime,
@@ -320,6 +320,7 @@ export default function BookPage() {
             body.availabilityId = selectedSlot.id;
           }
           if (subOption?.label) body.selectedTopic = subOption.label;
+          if (name?.trim()) body.studentName = name.trim();
           const res = await fetch("/api/book/submit", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
