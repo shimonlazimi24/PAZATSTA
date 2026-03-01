@@ -13,8 +13,9 @@ type Teacher = {
 export function TeachersListBlock() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  useEffect(() => {
+  function fetchTeachers() {
     setLoading(true);
     apiJson<Teacher[]>("/api/admin/teachers")
       .then((r) => {
@@ -22,7 +23,23 @@ export function TeachersListBlock() {
         else setTeachers([]);
       })
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    fetchTeachers();
   }, []);
+
+  function handleDelete(t: Teacher) {
+    const label = t.name || t.email;
+    if (!confirm(`למחוק את המורה ${label}? פעולה זו תמחק גם את כל השיעורים והזמינות שלו.`)) return;
+    setDeletingId(t.id);
+    apiJson<{ ok?: boolean }>(`/api/admin/teachers/${t.id}`, { method: "DELETE" })
+      .then((r) => {
+        if (r.ok) fetchTeachers();
+        else alert(r.error || "שגיאה במחיקה");
+      })
+      .finally(() => setDeletingId(null));
+  }
 
   if (loading) {
     return (
@@ -57,6 +74,14 @@ export function TeachersListBlock() {
                 {t.phone ? ` · ${t.phone}` : ""}
               </span>
             </div>
+            <button
+              type="button"
+              onClick={() => handleDelete(t)}
+              disabled={!!deletingId}
+              className="shrink-0 px-3 py-2 rounded-[var(--radius-input)] border border-red-300 text-red-600 text-sm font-medium hover:bg-red-50 disabled:opacity-50"
+            >
+              {deletingId === t.id ? "מוחק…" : "מחק"}
+            </button>
           </li>
         ))}
       </ul>
