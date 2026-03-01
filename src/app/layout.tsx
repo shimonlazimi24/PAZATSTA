@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { ConditionalFooter } from "@/components/ConditionalFooter";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -26,9 +27,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen antialiased flex flex-col" dir="rtl">
         <div className="flex-1 flex flex-col min-h-0">{children}</div>
-        <footer className="shrink-0 py-6 text-center text-sm text-[var(--color-text-muted)] opacity-70">
-          זכויות יוצרים © פזצט״א
-        </footer>
+        <ConditionalFooter />
       </body>
     </html>
   );

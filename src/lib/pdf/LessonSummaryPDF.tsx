@@ -26,6 +26,9 @@ Font.register({
 // Disable hyphenation for Hebrew (prevents broken word splitting)
 Font.registerHyphenationCallback((word) => [word]);
 
+/** Space prefix - sacrificial first char to avoid Hebrew first-letter corruption in react-pdf */
+const PREFIX = " ";
+
 /** Normalize and trim content before rendering. Removes strange characters. */
 function normalize(str: string): string {
   if (typeof str !== "string") return "";
@@ -39,6 +42,7 @@ const ltr = { direction: "ltr" as const, textAlign: "left" as const };
 const styles = StyleSheet.create({
   page: {
     padding: 40,
+    paddingBottom: 56,
     fontFamily: "NotoSansHebrew",
     color: "#000",
     lineHeight: 1.2,
@@ -55,7 +59,7 @@ const styles = StyleSheet.create({
   },
   metaRtl: {
     fontSize: 12,
-    fontWeight: 700,
+    fontWeight: 400,
     color: "#000",
     marginBottom: 2,
     fontFamily: "NotoSansHebrew",
@@ -70,6 +74,20 @@ const styles = StyleSheet.create({
     fontFamily: "NotoSansHebrew",
     lineHeight: 1.3,
     ...ltr,
+  },
+  metaValue: {
+    fontSize: 12,
+    fontWeight: 400,
+    color: "#000",
+    marginBottom: 6,
+    fontFamily: "NotoSansHebrew",
+    lineHeight: 1.3,
+    direction: "ltr",
+    textAlign: "right",
+    width: "100%",
+  },
+  metaRow: {
+    marginBottom: 2,
   },
   metaBlock: {
     marginBottom: 24,
@@ -95,6 +113,16 @@ const styles = StyleSheet.create({
   },
   sectionLine: {
     marginBottom: 3,
+  },
+  footer: {
+    position: "absolute",
+    bottom: 24,
+    left: 40,
+    right: 40,
+    fontSize: 10,
+    color: "#666",
+    fontFamily: "NotoSansHebrew",
+    ...rtl,
   },
 });
 
@@ -173,16 +201,38 @@ export function createLessonSummaryDocument(props: LessonSummaryPDFProps) {
         <Text style={styles.title}>דוח סיום שיעור</Text>
 
         <View style={styles.metaBlock}>
-          <Text style={styles.metaRtl}>תלמיד: {sn}</Text>
+          <View style={styles.metaRow}>
+            <Text style={styles.metaRtl}>{PREFIX}תלמיד:</Text>
+          </View>
+          {sn && sn !== normalize(studentEmail || "") && (
+            <View style={styles.metaRow}>
+              <Text style={styles.metaValue}>{sn}</Text>
+            </View>
+          )}
           {studentEmail && (
-            <Text style={styles.metaLtr}>{normalize(studentEmail)}</Text>
+            <View style={styles.metaRow}>
+              <Text style={styles.metaValue}>{normalize(studentEmail)}</Text>
+            </View>
           )}
-          <Text style={styles.metaRtl}>מורה: {tn}</Text>
+          <View style={styles.metaRow}>
+            <Text style={styles.metaRtl}>{PREFIX}מורה:</Text>
+          </View>
+          {tn && tn !== normalize(teacherEmail || "") && (
+            <View style={styles.metaRow}>
+              <Text style={styles.metaValue}>{tn}</Text>
+            </View>
+          )}
           {teacherEmail && (
-            <Text style={styles.metaLtr}>{normalize(teacherEmail)}</Text>
+            <View style={styles.metaRow}>
+              <Text style={styles.metaValue}>{normalize(teacherEmail)}</Text>
+            </View>
           )}
-          <Text style={styles.metaRtl}>תאריך:</Text>
-          <Text style={styles.metaLtr}>{dt} {tr}</Text>
+          <View style={styles.metaRow}>
+            <Text style={styles.metaRtl}>{PREFIX}תאריך:</Text>
+          </View>
+          <View style={styles.metaRow}>
+            <Text style={styles.metaValue}>{dt} {tr}</Text>
+          </View>
         </View>
 
         <Section title="סיכום כללי" text={summaryText || "—"} />
@@ -191,6 +241,9 @@ export function createLessonSummaryDocument(props: LessonSummaryPDFProps) {
         <Section title="טיפים" text={tips} />
         <Section title="המלצות להמשך" text={recommendations} />
         <Section title="משימות לתרגול" text={homeworkText || "—"} />
+        <View style={styles.footer} fixed>
+          <Text>כל הזכויות שמורות © פזצט״א</Text>
+        </View>
       </Page>
     </Document>
   );

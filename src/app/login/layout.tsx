@@ -16,11 +16,16 @@ export default function LoginLayout({
 
   return (
     <div
-      className="fixed inset-0 flex flex-col items-center justify-center overflow-hidden bg-[#F6F6F6] px-6"
+      className="fixed inset-0 flex flex-col overflow-hidden bg-[#F6F6F6] px-6"
       dir="rtl"
-      style={{ height: "100dvh", minHeight: "100dvh" }}
+      style={{ height: "100dvh", minHeight: "100vh" }}
     >
-      {children}
+      <div className="flex-1 flex flex-col items-center justify-center min-h-0 overflow-auto">
+        {children}
+      </div>
+      <footer className="shrink-0 py-4 text-center text-sm text-[var(--color-text-muted)] opacity-70">
+        זכויות יוצרים © פזצט״א
+      </footer>
     </div>
   );
 }

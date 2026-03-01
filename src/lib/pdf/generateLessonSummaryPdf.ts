@@ -42,7 +42,13 @@ export async function generateLessonPdfBuffer(
       where: { id: lessonId },
       include: {
         teacher: { select: { name: true, email: true } },
-        student: { select: { name: true, email: true } },
+        student: {
+          select: {
+            name: true,
+            email: true,
+            studentProfile: { select: { studentFullName: true } },
+          },
+        },
         summary: true,
       },
     });
@@ -65,14 +71,18 @@ export async function generateLessonPdfBuffer(
   }
 
   const summary = lesson.summary;
-  const studentName = lesson.student.name || lesson.student.email;
+  const studentFullName =
+    lesson.student.studentProfile?.studentFullName?.trim() ||
+    lesson.student.name?.trim() ||
+    "";
+  const studentName = studentFullName || undefined;
   const teacherName = lesson.teacher.name || lesson.teacher.email;
   const dateStr = safeDateStr(lesson.date);
   const timeRange = `${lesson.startTime}–${lesson.endTime}`;
 
   try {
     const doc = createLessonSummaryDocument({
-      studentName,
+      studentName: studentName || "",
       teacherName,
       studentEmail: lesson.student.email || undefined,
       teacherEmail: lesson.teacher.email || undefined,
