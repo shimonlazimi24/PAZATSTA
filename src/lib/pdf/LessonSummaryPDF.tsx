@@ -8,11 +8,13 @@ import {
   View,
   StyleSheet,
   Font,
+  Image,
 } from "@react-pdf/renderer";
 
 // Hebrew font from public/fonts - TTF required (WOFF causes fontkit "Offset outside bounds" crash)
 // Register Regular + Bold. Prioritize NotoSansHebrew-Bold.ttf for high-contrast rendering; fallback to regular only if bold missing.
 const fontDir = path.join(process.cwd(), "public", "fonts");
+const logoPath = path.join(process.cwd(), "public", "logo.png");
 const regularTtf = path.join(fontDir, "NotoSansHebrew-Regular.ttf");
 const boldTtf = path.join(fontDir, "NotoSansHebrew-Bold.ttf");
 Font.register({
@@ -124,6 +126,12 @@ const styles = StyleSheet.create({
     fontFamily: "NotoSansHebrew",
     ...rtl,
   },
+  logo: {
+    width: 56,
+    height: 56,
+    marginBottom: 16,
+    objectFit: "contain",
+  },
 });
 
 function Section({
@@ -198,6 +206,9 @@ export function createLessonSummaryDocument(props: LessonSummaryPDFProps) {
       subject={`דוח שיעור – ${sn}`}
     >
       <Page size="A4" style={styles.page}>
+        {fs.existsSync(logoPath) && (
+          <Image src={logoPath} style={styles.logo} />
+        )}
         <Text style={styles.title}>דוח סיום שיעור</Text>
 
         <View style={styles.metaBlock}>
