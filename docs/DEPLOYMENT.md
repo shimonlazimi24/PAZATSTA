@@ -14,7 +14,8 @@ The **whole UI and API** run on the deployment host. Visitors get a single publi
 
    | Name | Value | Notes |
    |------|--------|--------|
-   | `DATABASE_URL` | Your Supabase connection string | Same as in `.env` (Supabase Dashboard → Project Settings → Database → Connection string, “URI”) |
+   | `DATABASE_URL` | Supabase pooler (Transaction mode, port 6543) | For runtime. Use pooler URI from Supabase Dashboard |
+   | `DIRECT_URL` | Supabase direct connection | **Required for migrations.** Dashboard → Database → "Direct connection" (not pooler). Prevents "max clients reached" during build |
    | `COOKIE_SECRET` | Random string ≥ 32 chars | e.g. `openssl rand -hex 32` |
    | `RESEND_API_KEY` | Your Resend API key | So login OTP and booking emails work |
    | `RESEND_FROM` | (optional) e.g. `noreply@yourdomain.com` | Must be a verified domain in Resend or use `onboarding@resend.dev` for testing |

@@ -23,8 +23,8 @@ Netlify + Next.js גורמים לבעיות חוזרות (404 על assets, MIME 
 
 | Name | Value |
 |------|-------|
-| `DATABASE_URL` | connection string מ-Supabase |
-| `DIRECT_URL` | (אם יש ב-Netlify) |
+| `DATABASE_URL` | Pooler connection string (Supabase: Transaction mode port 6543) |
+| `DIRECT_URL` | **חובה** – Direct connection למיגרציות. Supabase Dashboard → Database → Connection string → "Direct connection" (לא pooler). מונע שגיאת "max clients reached" |
 | `COOKIE_SECRET` | מפתח סודי (32+ תווים) |
 | `RESEND_API_KEY` | מפתח Resend |
 | `RESEND_FROM` | כתובת השליחה (או `onboarding@resend.dev`) |
