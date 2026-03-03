@@ -6,6 +6,7 @@ import { sendLessonCompleted } from "@/lib/email";
 import { createLessonSummaryLink } from "@/lib/publicPdfLink";
 import { isLessonEnded } from "@/lib/dates";
 import { formatDateInIsrael } from "@/lib/date-utils";
+import { isValidEmail } from "@/lib/validation";
 
 export const runtime = "nodejs";
 
@@ -54,7 +55,7 @@ export async function POST(
 
     const lesson = await prisma.lesson.findFirst({
       where: { id: lessonId, teacherId: user.id },
-      include: { teacher: true, student: true },
+      include: { teacher: true, student: { include: { studentProfile: true } } },
     });
     if (!lesson) {
       return NextResponse.json({ error: "השיעור לא נמצא או שאין לך הרשאה" }, { status: 404 });
@@ -144,9 +145,11 @@ export async function POST(
       where: { role: "admin" },
       select: { email: true },
     });
+    const parentEmail = lesson.student.studentProfile?.parentEmail?.trim();
     const toEmails = [
       lesson.teacher.email,
       lesson.student.email,
+      ...(parentEmail && isValidEmail(parentEmail) ? [parentEmail] : []),
       ...adminUsers.map((a) => a.email),
     ];
 

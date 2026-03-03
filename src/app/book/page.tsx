@@ -161,6 +161,7 @@ export default function BookPage() {
   const [email, setEmail] = useState("");
   const [parentName, setParentName] = useState("");
   const [parentPhone, setParentPhone] = useState("");
+  const [parentEmail, setParentEmail] = useState("");
   const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const subOptionsRef = useRef<HTMLDivElement>(null);
@@ -277,6 +278,8 @@ export default function BookPage() {
     if (!parentName.trim()) e.parentName = "נא להזין שם מלא של אחד ההורים";
     if (!parentPhone.trim()) e.parentPhone = "נא להזין טלפון של אחד ההורים";
     else if (!isValidPhone(parentPhone)) e.parentPhone = "נא להזין מספר טלפון תקין (9–11 ספרות)";
+    if (!parentEmail.trim()) e.parentEmail = "נא להזין אימייל של אחד ההורים";
+    else if (!isValidEmail(parentEmail)) e.parentEmail = "נא להזין כתובת אימייל תקינה";
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -302,6 +305,7 @@ export default function BookPage() {
         email,
         parentName,
         parentPhone,
+        parentEmail,
         notes,
         status: isRealTeacherId && selectedDate && selectedSlot ? "pending_approval" : undefined,
       };
@@ -310,7 +314,7 @@ export default function BookPage() {
       } catch (_) {}
       if (isRealTeacherId && selectedDate && selectedSlot) {
         try {
-          const body: { teacherId: string; date: string; startTime: string; endTime: string; availabilityId?: string; selectedTopic?: string; studentName?: string } = {
+          const body: { teacherId: string; date: string; startTime: string; endTime: string; availabilityId?: string; selectedTopic?: string; studentName?: string; parentName?: string; parentPhone?: string; parentEmail?: string } = {
             teacherId: teacher.id,
             date: selectedDate,
             startTime: selectedSlot.startTime,
@@ -321,6 +325,9 @@ export default function BookPage() {
           }
           if (subOption?.label) body.selectedTopic = subOption.label;
           if (name?.trim()) body.studentName = name.trim();
+          if (parentName?.trim()) body.parentName = parentName.trim();
+          if (parentPhone?.trim()) body.parentPhone = parentPhone.trim();
+          if (parentEmail?.trim()) body.parentEmail = parentEmail.trim();
           const res = await fetch("/api/book/submit", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -546,6 +553,18 @@ export default function BookPage() {
                 required
                 error={errors.parentPhone}
               />
+              <FormField
+                label="אימייל של אחד ההורים"
+                name="parentEmail"
+                type="email"
+                value={parentEmail}
+                onChange={(v) => {
+                  setParentEmail(v);
+                  if (errors.parentEmail) setErrors((e) => ({ ...e, parentEmail: "" }));
+                }}
+                required
+                error={errors.parentEmail}
+              />
               <FormField label="במה תרצו להתמקד בשיעור" name="notes" value={notes} onChange={setNotes} />
             </div>
           </Card>
@@ -569,6 +588,7 @@ export default function BookPage() {
                 { label: "אימייל תלמיד", value: email },
                 { label: "שם הורה", value: parentName },
                 { label: "טלפון הורה", value: parentPhone },
+                { label: "אימייל הורה", value: parentEmail },
                 ...(notes ? [{ label: "הערות", value: notes }] : []),
               ].filter((r): r is { label: string; value: string } => Boolean(r.value))}
             />

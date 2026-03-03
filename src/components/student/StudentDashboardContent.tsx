@@ -23,6 +23,14 @@ function formatLessonDate(dateStr: string): string {
   });
 }
 
+function getStatusLabel(status: string): string {
+  if (status === "pending_approval") return "ממתין לאישור";
+  if (status === "scheduled") return "מתוזמן";
+  if (status === "completed") return "הושלם";
+  if (status === "canceled") return "בוטל";
+  return status;
+}
+
 export function StudentDashboardContent() {
   const [upcoming, setUpcoming] = useState<Lesson[]>([]);
   const [past, setPast] = useState<Lesson[]>([]);
@@ -115,8 +123,14 @@ export function StudentDashboardContent() {
                             {teacherLabel}
                           </p>
                         </div>
-                        <span className="rounded-full bg-[var(--color-primary)]/15 px-2.5 py-0.5 text-xs font-medium text-[var(--color-primary)]">
-                          מתוזמן
+                        <span
+                          className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                            l.status === "pending_approval"
+                              ? "bg-amber-100 text-amber-800"
+                              : "bg-[var(--color-primary)]/15 text-[var(--color-primary)]"
+                          }`}
+                        >
+                          {getStatusLabel(l.status)}
                         </span>
                       </div>
                     </li>

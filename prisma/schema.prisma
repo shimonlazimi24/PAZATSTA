@@ -58,6 +58,7 @@ model StudentProfile {
   studentFullName        String?
   parentFullName         String?
   parentPhone            String?
+  parentEmail            String?
   currentScreeningType   String?   // selected topic
   currentScreeningDate   DateTime?
   followUpReminderSentAt DateTime?  // reminder tracking

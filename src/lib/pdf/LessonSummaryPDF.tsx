@@ -127,8 +127,8 @@ const styles = StyleSheet.create({
     ...rtl,
   },
   logo: {
-    width: 56,
-    height: 56,
+    width: 72,
+    height: 72,
     marginBottom: 16,
     objectFit: "contain",
   },

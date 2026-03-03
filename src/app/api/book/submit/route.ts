@@ -3,15 +3,27 @@ import { prisma } from "@/lib/db";
 import { getUserFromSession } from "@/lib/auth";
 import { sendApprovalRequest } from "@/lib/email";
 import { formatDateInIsrael } from "@/lib/date-utils";
+import { ADMIN_TEACHER_EMAILS, ADMIN_NOTIFICATION_EMAILS } from "@/lib/admin";
 
 const APPROVAL_WINDOW_MS = 2 * 60 * 60 * 1000; // 2 hours
 
 /** Create a lesson as pending_approval; email sent only after teacher/admin approve. */
 export async function POST(req: Request) {
-  const [user, adminsPreload] = await Promise.all([
+  const [user, adminsFromDb, adminTeachersFromDb] = await Promise.all([
     getUserFromSession(),
     prisma.user.findMany({ where: { role: "admin" }, select: { email: true } }),
+    ADMIN_TEACHER_EMAILS.length > 0
+      ? prisma.user.findMany({
+          where: { email: { in: ADMIN_TEACHER_EMAILS } },
+          select: { email: true },
+        })
+      : Promise.resolve([]),
   ]);
+  const adminEmailsSet = new Set<string>();
+  for (const a of adminsFromDb) if (a.email) adminEmailsSet.add(a.email.toLowerCase());
+  for (const t of adminTeachersFromDb) if (t.email) adminEmailsSet.add(t.email.toLowerCase());
+  for (const e of ADMIN_NOTIFICATION_EMAILS) adminEmailsSet.add(e);
+  const adminsPreload = Array.from(adminEmailsSet).map((email) => ({ email }));
   if (!user || user.role !== "student") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -21,6 +33,9 @@ export async function POST(req: Request) {
     const teacherId = typeof body.teacherId === "string" ? body.teacherId.trim() : "";
     const selectedTopic = typeof body.selectedTopic === "string" ? body.selectedTopic.trim() : "";
     const studentNameFromForm = typeof body.studentName === "string" ? body.studentName.trim() : "";
+    const parentNameFromForm = typeof body.parentName === "string" ? body.parentName.trim() : "";
+    const parentPhoneFromForm = typeof body.parentPhone === "string" ? body.parentPhone.trim() : "";
+    const parentEmailFromForm = typeof body.parentEmail === "string" ? body.parentEmail.trim() : "";
     const dateStr = typeof body.date === "string" ? body.date.trim() : "";
     const startTime = typeof body.startTime === "string" ? body.startTime.trim() : "";
     const endTime = typeof body.endTime === "string" ? body.endTime.trim() : "";
@@ -64,15 +79,22 @@ export async function POST(req: Request) {
         );
       }
       lesson = result;
-      if (studentNameFromForm) {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { name: studentNameFromForm },
-        });
+      if (studentNameFromForm || parentNameFromForm || parentPhoneFromForm || parentEmailFromForm) {
+        if (studentNameFromForm) {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { name: studentNameFromForm },
+          });
+        }
+        const profileData: { studentFullName?: string; parentFullName?: string; parentPhone?: string; parentEmail?: string } = {};
+        if (studentNameFromForm) profileData.studentFullName = studentNameFromForm;
+        if (parentNameFromForm) profileData.parentFullName = parentNameFromForm;
+        if (parentPhoneFromForm) profileData.parentPhone = parentPhoneFromForm;
+        if (parentEmailFromForm) profileData.parentEmail = parentEmailFromForm;
         await prisma.studentProfile.upsert({
           where: { userId: user.id },
-          create: { userId: user.id, studentFullName: studentNameFromForm },
-          update: { studentFullName: studentNameFromForm },
+          create: { userId: user.id, ...profileData },
+          update: profileData,
         });
       }
       admins = adminsPreload;
@@ -131,15 +153,22 @@ export async function POST(req: Request) {
           { status: 409 }
         );
       }
-      if (studentNameFromForm) {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { name: studentNameFromForm },
-        });
+      if (studentNameFromForm || parentNameFromForm || parentPhoneFromForm || parentEmailFromForm) {
+        if (studentNameFromForm) {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { name: studentNameFromForm },
+          });
+        }
+        const profileData: { studentFullName?: string; parentFullName?: string; parentPhone?: string; parentEmail?: string } = {};
+        if (studentNameFromForm) profileData.studentFullName = studentNameFromForm;
+        if (parentNameFromForm) profileData.parentFullName = parentNameFromForm;
+        if (parentPhoneFromForm) profileData.parentPhone = parentPhoneFromForm;
+        if (parentEmailFromForm) profileData.parentEmail = parentEmailFromForm;
         await prisma.studentProfile.upsert({
           where: { userId: user.id },
-          create: { userId: user.id, studentFullName: studentNameFromForm },
-          update: { studentFullName: studentNameFromForm },
+          create: { userId: user.id, ...profileData },
+          update: profileData,
         });
       }
       lesson = await prisma.lesson.create({
