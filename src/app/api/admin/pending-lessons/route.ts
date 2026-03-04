@@ -10,14 +10,14 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   const lessons = await prisma.lesson.findMany({
-    where: { status: "pending_approval" },
+    where: { status: "pending_approval", approvalExpiresAt: { gt: new Date() } },
     include: {
       teacher: { select: { id: true, email: true, name: true } },
       student: { select: { id: true, email: true, name: true } },
     },
     orderBy: [{ approvalExpiresAt: "asc" }, { date: "asc" }, { startTime: "asc" }],
   });
-  return NextResponse.json(
+  const res = NextResponse.json(
     lessons.map((l) => ({
       id: l.id,
       date: formatDateInIsrael(l.date),
@@ -28,4 +28,6 @@ export async function GET() {
       student: l.student,
     }))
   );
+  res.headers.set("Cache-Control", "no-store, max-age=0");
+  return res;
 }

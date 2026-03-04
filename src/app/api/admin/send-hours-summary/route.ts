@@ -4,8 +4,15 @@ import { getUserFromSession } from "@/lib/auth";
 import { canAccessAdmin } from "@/lib/admin";
 import { sendWeeklyHoursSummaryToAdmin } from "@/lib/email";
 
-const DEFAULT_DAYS = 30; // חודש (monthly report for payment)
 const EMAIL_TIMEZONE = "Asia/Jerusalem";
+
+/** חודש קלנדרי קודם מלא: 1 בחודש הקודם עד סוף החודש הקודם. שליחה ב-2 בפברואר → כל ינואר. */
+function getPreviousMonthRange(): { start: Date; end: Date } {
+  const now = new Date();
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1, 0, 0, 0, 0));
+  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
+  return { start, end };
+}
 
 /** Parse "HH:MM" or "HHMM" to minutes since midnight. */
 function timeToMinutes(t: string): number {
@@ -37,7 +44,7 @@ function parseDateOnly(s: unknown): Date | null {
 /**
  * POST: Send hours summary to admin (for payment).
  * Body: { startDate?: "YYYY-MM-DD", endDate?: "YYYY-MM-DD" }
- * Default: last 30 days (monthly).
+ * Default: חודש קלנדרי קודם מלא (1 בחודש הקודם עד סוף החודש).
  */
 export async function POST(req: Request) {
   const user = await getUserFromSession();
@@ -78,11 +85,9 @@ export async function POST(req: Request) {
       startDateStr = body.startDate.trim();
       endDateStr = body.endDate.trim();
     } else {
-      end = new Date();
-      end.setHours(23, 59, 59, 999);
-      start = new Date(end);
-      start.setDate(start.getDate() - DEFAULT_DAYS);
-      start.setHours(0, 0, 0, 0);
+      const { start: rangeStart, end: rangeEnd } = getPreviousMonthRange();
+      start = rangeStart;
+      end = new Date(rangeEnd.getTime() - 1); // end of last day of previous month
       startDateStr = formatDateIsrael(start);
       endDateStr = formatDateIsrael(end);
     }

@@ -17,18 +17,25 @@ export function PendingLessonsBlock() {
   const [loading, setLoading] = useState(true);
   const [approvingId, setApprovingId] = useState<string | null>(null);
 
-  function fetchPending() {
-    setLoading(true);
+  function fetchPending(silent = false) {
+    if (!silent) setLoading(true);
     apiJson<PendingLesson[]>("/api/admin/pending-lessons")
       .then((r) => {
         if (r.ok) setLessons(r.data);
         else setLessons([]);
       })
-      .finally(() => setLoading(false));
+      .finally(() => { if (!silent) setLoading(false); });
   }
 
   useEffect(() => {
     fetchPending();
+    const interval = setInterval(() => fetchPending(true), 30_000);
+    const onFocus = () => fetchPending(true);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
   }, []);
 
   function handleApprove(id: string) {

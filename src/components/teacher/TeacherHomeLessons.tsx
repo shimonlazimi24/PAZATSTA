@@ -11,6 +11,7 @@ type Lesson = {
   date: string;
   startTime: string;
   endTime: string;
+  topic?: string | null;
   status: string;
   followUpCompletedAt: string | null;
   questionFromStudent: string | null;
@@ -117,7 +118,8 @@ export function TeacherHomeLessons() {
           <ul className="divide-y divide-[var(--color-border)] rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white overflow-hidden shadow-[var(--shadow-card)]">
             {upcoming.map((l) => {
               const studentLabel = l.student.name || l.student.email;
-              const calendarTitle = `שיעור פזצט״א – ${studentLabel}`;
+              const topicLabel = l.topic?.trim() || "שיעור פזצט״א";
+              const calendarTitle = `${topicLabel} – ${studentLabel}`;
               return (
                 <li key={l.id} className="p-4 hover:bg-[var(--color-bg-muted)]/50 transition-colors">
                   <div className="flex flex-wrap justify-between items-start gap-2">

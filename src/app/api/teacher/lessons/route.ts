@@ -27,6 +27,7 @@ function mapLesson(l: {
   date: Date;
   startTime: string;
   endTime: string;
+  topic: string | null;
   status: string;
   followUpCompletedAt: Date | null;
   questionFromStudent: string | null;
@@ -45,6 +46,7 @@ function mapLesson(l: {
     date: l.date.toISOString().slice(0, 10),
     startTime: l.startTime,
     endTime: l.endTime,
+    topic: l.topic ?? null,
     status: l.status,
     followUpCompletedAt: l.followUpCompletedAt?.toISOString() ?? null,
     questionFromStudent: l.questionFromStudent,
