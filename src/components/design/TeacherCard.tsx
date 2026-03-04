@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { TeacherAvatar } from "@/components/TeacherAvatar";
 import type { MockTeacher } from "@/data/mockTeachers";
 
 interface TeacherCardProps {
@@ -20,12 +21,12 @@ export function TeacherCard({ teacher, selected, onSelect }: TeacherCardProps) {
       )}
     >
       <div className="flex gap-4">
-        <div className="h-16 w-16 shrink-0 rounded-[var(--radius-card)] overflow-hidden bg-[var(--color-bg-muted)] border-2 border-white shadow flex items-center justify-center text-[var(--color-text-muted)] text-xs">
-          {teacher.photo ? (
-            <img src={teacher.photo} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <span>תמונה</span>
-          )}
+        <div className="h-16 w-16 shrink-0 rounded-[var(--radius-card)] overflow-hidden border-2 border-white shadow">
+          <TeacherAvatar
+            avatarType={teacher.avatarType}
+            profileImageUrl={teacher.photo}
+            className="w-full h-full object-cover"
+          />
         </div>
         <div className="min-w-0 flex-1">
           <div className="text-sm">

@@ -8,15 +8,14 @@ import { FormField } from "@/components/design/FormField";
 import { apiJson } from "@/lib/api";
 import { isValidPhone } from "@/lib/validation";
 import { BOOKING_TOPIC_LABELS } from "@/data/topics";
-
-const ALLOWED_MIMES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB
+import { TeacherAvatar } from "@/components/TeacherAvatar";
 
 type ProfileResponse = {
   name: string;
   phone: string;
   email: string;
   profileImageUrl: string | null;
+  avatarType: string | null;
   displayName: string | null;
   bio: string | null;
   specialization: string | null;
@@ -27,14 +26,14 @@ export default function TeacherProfilePage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [profileImageUrl, setProfileImageUrl] = useState("");
+  const [avatarType, setAvatarType] = useState<string>("");
+  const [profileImageUrl, setProfileImageUrl] = useState<string>("");
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [specialization, setSpecialization] = useState("");
   const [specialties, setSpecialties] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
@@ -45,6 +44,7 @@ export default function TeacherProfilePage() {
         setName(p.name ?? "");
         setPhone(p.phone ?? "");
         setEmail(p.email ?? "");
+        setAvatarType(p.avatarType === "male" || p.avatarType === "female" ? p.avatarType : "");
         setProfileImageUrl(p.profileImageUrl ?? "");
         setDisplayName(p.displayName ?? "");
         setBio(p.bio ?? "");
@@ -54,53 +54,6 @@ export default function TeacherProfilePage() {
       setLoading(false);
     });
   }, []);
-
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setError("");
-    if (!ALLOWED_MIMES.includes(file.type)) {
-      setError("סוג קובץ לא נתמך. השתמש ב-JPG, PNG, GIF או WebP.");
-      e.target.value = "";
-      return;
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      setError("גודל הקובץ מקסימלי 3MB.");
-      e.target.value = "";
-      return;
-    }
-    setUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/teacher/profile/upload", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "שגיאה בהעלאה");
-        setUploading(false);
-        e.target.value = "";
-        return;
-      }
-      if (data.url) {
-        setSuccess(false);
-        // Cache busting: force browser to show new image after re-upload (server may also return ?v=).
-        setProfileImageUrl(`${data.url}${data.url.includes("?") ? "&" : "?"}v=${Date.now()}`);
-        const patch = await apiJson<{ ok?: boolean }>("/api/teacher/profile", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ profileImageUrl: data.url }),
-        });
-        if (!patch.ok) setError(patch.error);
-      }
-    } catch {
-      setError("Network error");
-    }
-    setUploading(false);
-    e.target.value = "";
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -117,7 +70,7 @@ export default function TeacherProfilePage() {
       body: JSON.stringify({
         name: name.trim(),
         phone: phone.trim(),
-        profileImageUrl: profileImageUrl.trim() || null,
+        avatarType: avatarType || null,
         displayName: displayName.trim() || null,
         bio: bio.trim() || null,
         specialization: specialization.trim() || null,
@@ -147,35 +100,37 @@ export default function TeacherProfilePage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="flex flex-col sm:flex-row gap-6 items-start">
               <div className="shrink-0">
-                <div className="w-28 h-28 rounded-2xl border-2 border-[var(--color-border)] bg-[var(--color-bg-muted)] overflow-hidden flex items-center justify-center text-[var(--color-text-muted)] text-sm">
-                  {profileImageUrl ? (
-                    <img
-                      src={profileImageUrl}
-                      alt="תמונת פרופיל"
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
-                    />
-                  ) : (
-                    <span>תמונה</span>
-                  )}
-                </div>
+                <TeacherAvatar avatarType={avatarType || null} profileImageUrl={profileImageUrl || null} className="w-28 h-28 rounded-2xl" />
               </div>
               <div className="flex-1 w-full min-w-0 text-right">
-                <label htmlFor="profileImageFile" className="block text-sm font-medium text-[var(--color-text)] mb-1">
-                  העלאת תמונת פרופיל
+                <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+                  מגדר (לדמות הפרופיל)
                 </label>
-                <input
-                  id="profileImageFile"
-                  type="file"
-                  accept="image/jpeg,image/png,image/gif,image/webp"
-                  onChange={handleFileChange}
-                  disabled={uploading}
-                  className="w-full rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-4 py-3 text-[var(--color-text)] file:mr-2 file:rounded file:border-0 file:bg-[var(--color-primary)] file:px-3 file:py-1.5 file:text-white file:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-                />
-                {uploading && <p className="mt-1 text-xs text-[var(--color-text-muted)]">מעלה…</p>}
-                <p className="mt-1 text-xs text-[var(--color-text-muted)]">JPG, PNG, GIF או WebP. עד 3MB.</p>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => { setAvatarType("male"); setSuccess(false); setError(""); }}
+                    className={`flex-1 rounded-[var(--radius-input)] border-2 px-4 py-3 text-sm font-medium transition-colors ${
+                      avatarType === "male"
+                        ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
+                        : "border-[var(--color-border)] bg-white text-[var(--color-text)] hover:bg-[var(--color-bg-muted)]"
+                    }`}
+                  >
+                    גבר
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAvatarType("female"); setSuccess(false); setError(""); }}
+                    className={`flex-1 rounded-[var(--radius-input)] border-2 px-4 py-3 text-sm font-medium transition-colors ${
+                      avatarType === "female"
+                        ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
+                        : "border-[var(--color-border)] bg-white text-[var(--color-text)] hover:bg-[var(--color-bg-muted)]"
+                    }`}
+                  >
+                    אישה
+                  </button>
+                </div>
+                <p className="mt-1 text-xs text-[var(--color-text-muted)]">דמות גנרית תוצג בכרטיס המורה</p>
               </div>
             </div>
 

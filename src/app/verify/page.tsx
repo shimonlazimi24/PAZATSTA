@@ -79,7 +79,7 @@ function VerifyForm() {
       }
       const redirectPath = result.data?.redirect;
       const safePath = safeRedirectPath(redirectPath, role);
-      router.push(safePath);
+      window.location.href = safePath;
     } catch (err) {
       setStatus("error");
       setMessage("שגיאה באימות. נסו שוב.");

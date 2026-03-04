@@ -45,7 +45,8 @@ model TeacherProfile {
   userId           String   @unique
   displayName      String?
   bio              String?
-  profileImageUrl  String?
+  profileImageUrl  String?  // deprecated - use avatarType
+  avatarType       String?  // "male" | "female" - generic avatar
   specialization   String?  // legacy single string
   specialties      String[] @default([]) // multi-select, must match booking topic labels exactly
   createdAt        DateTime @default(now())

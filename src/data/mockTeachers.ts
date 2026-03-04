@@ -4,6 +4,8 @@ export interface MockTeacher {
   id: string;
   name: string;
   photo: string;
+  /** "male" | "female" - generic avatar when no photo */
+  avatarType?: string | null;
   bio: string;
   subjects: SubjectId[];
   rating: number;

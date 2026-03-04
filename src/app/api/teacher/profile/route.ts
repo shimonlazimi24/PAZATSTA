@@ -31,7 +31,7 @@ export async function GET() {
       phone: true,
       email: true,
       teacherProfile: {
-        select: { profileImageUrl: true, displayName: true, bio: true, specialization: true, specialties: true },
+        select: { profileImageUrl: true, avatarType: true, displayName: true, bio: true, specialization: true, specialties: true },
       },
     },
   });
@@ -44,6 +44,7 @@ export async function GET() {
     phone: row.phone ?? "",
     email: row.email,
     profileImageUrl: profile?.profileImageUrl ?? null,
+    avatarType: profile?.avatarType ?? null,
     displayName: profile?.displayName ?? null,
     bio: profile?.bio ?? null,
     specialization: profile?.specialization ?? null,
@@ -60,10 +61,12 @@ export async function PATCH(req: Request) {
     const body = await req.json().catch(() => ({}));
     const name = trimAndCap(body.name, MAX_LENGTHS.name);
     const phone = trimAndCap(body.phone, MAX_LENGTHS.phone);
-    const profileImageUrl =
-      typeof body.profileImageUrl === "string"
-        ? body.profileImageUrl.trim().slice(0, MAX_LENGTHS.profileImageUrl) || null
-        : undefined;
+    const avatarType =
+      body.avatarType === "male" || body.avatarType === "female"
+        ? body.avatarType
+        : body.avatarType === null || body.avatarType === ""
+          ? null
+          : undefined;
     const displayName = trimAndCap(body.displayName, MAX_LENGTHS.displayName);
     const bio = trimAndCap(body.bio, MAX_LENGTHS.bio);
     const specialization = trimAndCap(body.specialization, MAX_LENGTHS.specialization);
@@ -76,8 +79,11 @@ export async function PATCH(req: Request) {
     if (name !== undefined) userData.name = name;
     if (phone !== undefined) userData.phone = phone;
 
-    const profileData: { profileImageUrl?: string | null; displayName?: string | null; bio?: string | null; specialization?: string | null; specialties?: string[] } = {};
-    if (profileImageUrl !== undefined) profileData.profileImageUrl = profileImageUrl;
+    const profileData: { profileImageUrl?: string | null; avatarType?: string | null; displayName?: string | null; bio?: string | null; specialization?: string | null; specialties?: string[] } = {};
+    if (avatarType !== undefined) {
+      profileData.avatarType = avatarType;
+      if (avatarType) profileData.profileImageUrl = null;
+    }
     if (displayName !== undefined) profileData.displayName = displayName;
     if (bio !== undefined) profileData.bio = bio;
     if (specialization !== undefined) profileData.specialization = specialization;

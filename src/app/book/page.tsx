@@ -124,6 +124,7 @@ type ApiTeacher = {
   name: string | null;
   bio: string | null;
   profileImageUrl: string | null;
+  avatarType: string | null;
   specialization: string | null;
   specialties?: string[];
 };
@@ -133,6 +134,7 @@ function toMockTeacher(t: ApiTeacher): MockTeacher {
     id: t.id,
     name: t.name || "",
     photo: t.profileImageUrl || "",
+    avatarType: t.avatarType || null,
     bio: t.bio || "",
     subjects: ["psychometric"],
     rating: 0,

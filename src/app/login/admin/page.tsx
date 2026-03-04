@@ -79,7 +79,7 @@ export default function AdminLoginPage() {
       const safePath = typeof redirectPath === "string" && redirectPath.startsWith("/") && !redirectPath.startsWith("//")
         ? redirectPath
         : "/admin";
-      router.push(safePath);
+      window.location.href = safePath;
     } catch {
       setVerifyStatus("error");
       setVerifyMessage("שגיאה באימות. נסו שוב.");

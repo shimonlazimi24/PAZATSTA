@@ -102,13 +102,17 @@ export async function POST(req: Request) {
       const toEmails = Array.from(
         new Set([lesson.teacher.email, ...adminEmails])
       ).filter(Boolean);
-      void sendApprovalRequest({
-        to: toEmails,
-        studentName: studentNameFromForm || lesson.student.name || lesson.student.email || "תלמיד",
-        teacherName: lesson.teacher.name || lesson.teacher.email || "מורה",
-        date: formatDateInIsrael(lesson.date),
-        timeRange: `${lesson.startTime}–${lesson.endTime}`,
-      }).catch((err) => console.error("[book/submit] Approval request email failed:", err));
+      try {
+        await sendApprovalRequest({
+          to: toEmails,
+          studentName: studentNameFromForm || lesson.student.name || lesson.student.email || "תלמיד",
+          teacherName: lesson.teacher.name || lesson.teacher.email || "מורה",
+          date: formatDateInIsrael(lesson.date),
+          timeRange: `${lesson.startTime}–${lesson.endTime}`,
+        });
+      } catch (err) {
+        console.error("[book/submit] Approval request email failed:", err);
+      }
       return NextResponse.json({
         id: lesson.id,
         status: lesson.status,
@@ -195,14 +199,17 @@ export async function POST(req: Request) {
     const toEmails = Array.from(
       new Set([lesson.teacher.email, ...adminEmails])
     ).filter(Boolean);
-    // Send approval email in background — don't block response
-    void sendApprovalRequest({
-      to: toEmails,
-      studentName,
-      teacherName,
-      date: formattedDate,
-      timeRange,
-    }).catch((err) => console.error("[book/submit] Approval request email failed:", err));
+    try {
+      await sendApprovalRequest({
+        to: toEmails,
+        studentName,
+        teacherName,
+        date: formattedDate,
+        timeRange,
+      });
+    } catch (err) {
+      console.error("[book/submit] Approval request email failed:", err);
+    }
 
     return NextResponse.json({
       id: lesson.id,
