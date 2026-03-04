@@ -154,6 +154,10 @@ export async function POST(
     const adminEmailsSet = new Set<string>();
     for (const a of adminUsers) if (a.email && isValidDeliveryEmail(a.email)) adminEmailsSet.add(a.email.toLowerCase());
     for (const e of ADMIN_NOTIFICATION_EMAILS) if (isValidDeliveryEmail(e)) adminEmailsSet.add(e.toLowerCase());
+    // Runtime fallback: env may not be loaded at module init in serverless
+    const envAdmin = process.env.ADMIN_NOTIFICATION_EMAILS ?? "";
+    const envAdminList = envAdmin ? envAdmin.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean) : [];
+    for (const e of envAdminList) if (isValidDeliveryEmail(e)) adminEmailsSet.add(e);
     if (adminEmailsSet.size === 0) {
       for (const e of ["shachar.cygler@gmail.com", "admin@pazatsta.co.il"]) adminEmailsSet.add(e);
     }
@@ -166,16 +170,17 @@ export async function POST(
       : [];
     console.log("[complete] parentEmailFromBody:", parentEmailFromBody, "fromProfile:", parentEmailFromProfile, "final:", parentEmail, "included:", parentEmails.length > 0);
     const adminEmailsList = Array.from(adminEmailsSet);
-    if (adminEmailsList.length === 0) {
-      console.warn("[complete] No admin emails in list - check ADMIN_NOTIFICATION_EMAILS and DB admin users");
-    }
+    const DEFAULT_ADMIN_EMAILS = ["shachar.cygler@gmail.com", "admin@pazatsta.co.il"];
+    const allAdminEmails = adminEmailsList.length > 0 ? adminEmailsList : DEFAULT_ADMIN_EMAILS;
+
     const toEmails = [
       lesson.teacher.email,
       lesson.student.email,
       ...parentEmails,
-      ...adminEmailsList,
+      ...allAdminEmails,
     ];
-    console.log("[complete] toEmails:", toEmails);
+    const toEmailsDeduped = Array.from(new Set(toEmails.map((e) => e.toLowerCase())));
+    console.log("[complete] toEmails:", toEmailsDeduped, "count:", toEmailsDeduped.length);
 
     const baseUrl = (process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
     let publicPdfUrl: string | undefined;
@@ -194,7 +199,7 @@ export async function POST(
 
     try {
       await sendLessonCompleted({
-        to: Array.from(new Set(toEmails)),
+        to: toEmailsDeduped,
         lessonId,
         studentName,
         teacherName,

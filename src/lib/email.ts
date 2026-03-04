@@ -293,7 +293,10 @@ export async function sendLessonCompleted(params: {
   }
   const resend = getResend();
   const fromAddr = from();
-  for (const email of params.to) {
+  const delayMs = 600; // Resend: 2 req/sec — delay between sends to avoid 429
+  for (let i = 0; i < params.to.length; i++) {
+    if (i > 0) await new Promise((r) => setTimeout(r, delayMs));
+    const email = params.to[i];
     const result = await resend.emails.send({
       from: fromAddr,
       to: email,
@@ -315,7 +318,10 @@ export async function sendLessonCompleted(params: {
       } else {
         console.error("[sendLessonCompleted] Failed for", email, result.error);
       }
-      throw new Error(result.error.message ?? "Failed to send lesson completed email");
+      // Don't throw — continue to other recipients (Resend rate limit may have caused failure)
+      if (String(result.error?.message ?? "").includes("429")) {
+        console.warn("[sendLessonCompleted] Rate limited, skipping", email);
+      }
     }
   }
 }

@@ -70,6 +70,7 @@ function mapLesson(l: {
 }
 
 export async function GET(req: Request) {
+  try {
   const user = await getUserFromSession();
   if (!user || user.role !== "teacher") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -173,4 +174,11 @@ export async function GET(req: Request) {
     ...(past && !upcoming ? { take: 50 } : {}),
   });
   return NextResponse.json(lessons.map((l) => mapLesson(l as Parameters<typeof mapLesson>[0])));
+  } catch (e) {
+    console.error("[teacher/lessons] Error:", e);
+    return NextResponse.json(
+      { error: process.env.NODE_ENV === "development" && e instanceof Error ? e.message : "שגיאה בטעינת השיעורים" },
+      { status: 500 }
+    );
+  }
 }
