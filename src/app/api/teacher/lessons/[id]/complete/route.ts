@@ -6,7 +6,7 @@ import { sendLessonCompleted } from "@/lib/email";
 import { createLessonSummaryLink } from "@/lib/publicPdfLink";
 import { isLessonEnded } from "@/lib/dates";
 import { formatDateInIsrael } from "@/lib/date-utils";
-import { isValidEmail } from "@/lib/validation";
+import { isValidEmail, isValidDeliveryEmail } from "@/lib/validation";
 
 export const runtime = "nodejs";
 
@@ -146,11 +146,17 @@ export async function POST(
       select: { email: true },
     });
     const parentEmail = lesson.student.studentProfile?.parentEmail?.trim();
+    const parentEmails = parentEmail && isValidEmail(parentEmail) && isValidDeliveryEmail(parentEmail)
+      ? [parentEmail]
+      : [];
+    if (process.env.NODE_ENV === "development" && parentEmail) {
+      console.log("[complete] parentEmail:", parentEmail, "included:", parentEmails.length > 0);
+    }
     const toEmails = [
       lesson.teacher.email,
       lesson.student.email,
-      ...(parentEmail && isValidEmail(parentEmail) ? [parentEmail] : []),
-      ...adminUsers.map((a) => a.email),
+      ...parentEmails,
+      ...adminUsers.map((a) => a.email).filter(Boolean),
     ];
 
     const baseUrl = (process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");

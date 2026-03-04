@@ -17,6 +17,7 @@ export async function GET() {
       studentFullName: null,
       parentFullName: null,
       parentPhone: null,
+      parentEmail: null,
       currentScreeningType: null,
       currentScreeningDate: null,
     });
@@ -25,6 +26,7 @@ export async function GET() {
     studentFullName: profile.studentFullName,
     parentFullName: profile.parentFullName,
     parentPhone: profile.parentPhone,
+    parentEmail: profile.parentEmail,
     currentScreeningType: profile.currentScreeningType,
     currentScreeningDate: profile.currentScreeningDate?.toISOString().slice(0, 10) ?? null,
   });
@@ -40,6 +42,12 @@ export async function PATCH(req: Request) {
     const studentFullName = typeof body.studentFullName === "string" ? body.studentFullName.trim() : undefined;
     const parentFullName = typeof body.parentFullName === "string" ? body.parentFullName.trim() : undefined;
     const parentPhone = typeof body.parentPhone === "string" ? body.parentPhone.trim() : undefined;
+    const parentEmail =
+      body.parentEmail === null || body.parentEmail === ""
+        ? null
+        : typeof body.parentEmail === "string"
+          ? body.parentEmail.trim() || null
+          : undefined;
     const currentScreeningType = typeof body.currentScreeningType === "string" ? body.currentScreeningType.trim() : undefined;
     const currentScreeningDate = typeof body.currentScreeningDate === "string" && body.currentScreeningDate
       ? new Date(body.currentScreeningDate)
@@ -49,6 +57,7 @@ export async function PATCH(req: Request) {
     if (studentFullName !== undefined) data.studentFullName = studentFullName;
     if (parentFullName !== undefined) data.parentFullName = parentFullName;
     if (parentPhone !== undefined) data.parentPhone = parentPhone;
+    if (parentEmail !== undefined) data.parentEmail = parentEmail;
     if (currentScreeningType !== undefined) data.currentScreeningType = currentScreeningType;
     if (currentScreeningDate !== undefined) data.currentScreeningDate = currentScreeningDate;
 

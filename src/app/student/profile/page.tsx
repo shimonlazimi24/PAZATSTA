@@ -5,12 +5,13 @@ import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { BackLink } from "@/components/design/BackLink";
 import { apiJson } from "@/lib/api";
-import { isValidPhone } from "@/lib/validation";
+import { isValidPhone, isValidEmail } from "@/lib/validation";
 
 type ProfileResponse = {
   studentFullName?: string | null;
   parentFullName?: string | null;
   parentPhone?: string | null;
+  parentEmail?: string | null;
 };
 
 export default function StudentProfilePage() {
@@ -18,6 +19,7 @@ export default function StudentProfilePage() {
   const [studentFullName, setStudentFullName] = useState("");
   const [parentFullName, setParentFullName] = useState("");
   const [parentPhone, setParentPhone] = useState("");
+  const [parentEmail, setParentEmail] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -29,6 +31,7 @@ export default function StudentProfilePage() {
         setStudentFullName(p.studentFullName ?? "");
         setParentFullName(p.parentFullName ?? "");
         setParentPhone(p.parentPhone ?? "");
+        setParentEmail(p.parentEmail ?? "");
       }
       setLoading(false);
     });
@@ -41,6 +44,10 @@ export default function StudentProfilePage() {
       setError("נא להזין מספר טלפון תקין (9–11 ספרות)");
       return;
     }
+    if (parentEmail.trim() && !isValidEmail(parentEmail.trim())) {
+      setError("נא להזין כתובת אימייל תקינה להורה");
+      return;
+    }
     setSaving(true);
     const result = await apiJson<{ ok?: boolean }>("/api/student/profile", {
       method: "PATCH",
@@ -49,6 +56,7 @@ export default function StudentProfilePage() {
         studentFullName: studentFullName.trim(),
         parentFullName: parentFullName.trim(),
         parentPhone: parentPhone.trim(),
+        parentEmail: parentEmail.trim() || null,
       }),
     });
     setSaving(false);
@@ -108,6 +116,19 @@ export default function StudentProfilePage() {
               value={parentPhone}
               onChange={(e) => setParentPhone(e.target.value)}
               required
+              className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-input)]"
+            />
+          </div>
+          <div>
+            <label htmlFor="parentEmail" className="block text-sm font-medium text-[var(--color-text)] mb-1">
+              אימייל הורה (לשליחת סיכום שיעור)
+            </label>
+            <input
+              id="parentEmail"
+              type="email"
+              value={parentEmail}
+              onChange={(e) => setParentEmail(e.target.value)}
+              placeholder="parent@example.com"
               className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-input)]"
             />
           </div>

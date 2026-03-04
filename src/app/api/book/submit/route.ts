@@ -51,11 +51,12 @@ export async function POST(req: Request) {
     let admins: { email: string }[] = [];
 
     if (availabilityId) {
-      const result = await prisma.$transaction(async (tx) => {
-        const current = await tx.availability.findFirst({
-          where: { id: availabilityId },
-          include: { teacher: { include: { teacherProfile: true } } },
-        });
+      const result = await prisma.$transaction(
+        async (tx) => {
+          const current = await tx.availability.findFirst({
+            where: { id: availabilityId },
+            include: { teacher: { include: { teacherProfile: true } } },
+          });
         if (!current) return null;
         if (selectedTopic) {
           const specialties = current.teacher.teacherProfile?.specialties ?? [];
@@ -77,8 +78,10 @@ export async function POST(req: Request) {
           include: { teacher: true, student: true },
         });
         await tx.availability.delete({ where: { id: current.id } });
-        return created;
-      });
+          return created;
+        },
+        { timeout: 15_000 }
+      );
       if (!result) {
         return NextResponse.json(
           { error: "הזמן נתפס, בחר זמן אחר" },
