@@ -41,6 +41,10 @@ function setNoStore(res: NextResponse): void {
   res.headers.set("Pragma", "no-cache");
 }
 
+// DEPLOYMENT SAFETY: Never run middleware on /_next/*, /api/*, or static assets.
+// Excluding these prevents accidental interception that could cause 404/MIME errors.
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    "/((?!_next|api|favicon\\.ico|logo\\.svg|robots\\.txt|sitemap\\.xml|fonts/).*)",
+  ],
 };

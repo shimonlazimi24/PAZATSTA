@@ -19,10 +19,17 @@ export async function POST(req: Request) {
         })
       : Promise.resolve([]),
   ]);
+  const isValidDeliveryEmail = (e: string) => {
+    const lower = e.toLowerCase().trim();
+    if (!lower || !lower.includes("@")) return false;
+    if (lower.endsWith(".local") || lower.includes("@localhost")) return false;
+    if (/@.*\.(local|test|example)$/i.test(lower)) return false;
+    return true;
+  };
   const adminEmailsSet = new Set<string>();
-  for (const a of adminsFromDb) if (a.email) adminEmailsSet.add(a.email.toLowerCase());
-  for (const t of adminTeachersFromDb) if (t.email) adminEmailsSet.add(t.email.toLowerCase());
-  for (const e of ADMIN_NOTIFICATION_EMAILS) adminEmailsSet.add(e);
+  for (const a of adminsFromDb) if (a.email && isValidDeliveryEmail(a.email)) adminEmailsSet.add(a.email.toLowerCase());
+  for (const t of adminTeachersFromDb) if (t.email && isValidDeliveryEmail(t.email)) adminEmailsSet.add(t.email.toLowerCase());
+  for (const e of ADMIN_NOTIFICATION_EMAILS) if (isValidDeliveryEmail(e)) adminEmailsSet.add(e.toLowerCase());
   const adminsPreload = Array.from(adminEmailsSet).map((email) => ({ email }));
   if (!user || user.role !== "student") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

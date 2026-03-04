@@ -13,7 +13,7 @@ export const ADMIN_TEACHER_EMAILS = ADMIN_EMAILS_RAW
 const ADMIN_NOTIFY_RAW = process.env.ADMIN_NOTIFICATION_EMAILS ?? "";
 export const ADMIN_NOTIFICATION_EMAILS = ADMIN_NOTIFY_RAW
   ? ADMIN_NOTIFY_RAW.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean)
-  : ["shachar.cygler@gmail.com"];
+  : ["shachar.cygler@gmail.com", "admin@pazatsta.co.il"];
 
 export function canAccessAdmin(user: { role: string; email: string }): boolean {
   if (user.role === "admin") return true;

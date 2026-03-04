@@ -10,7 +10,8 @@
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
-    "db:seed": "npx tsx prisma/seed.ts"
+    "db:seed": "npx tsx prisma/seed.ts",
+    "healthcheck:prod": "tsx scripts/healthcheck-prod.ts"
   },
   "dependencies": {
     "@fontsource/heebo": "^5.2.8",

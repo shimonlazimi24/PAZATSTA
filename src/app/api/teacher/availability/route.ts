@@ -78,6 +78,17 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
+    const existing = await prisma.availability.findFirst({
+      where: { teacherId: user.id, date, startTime },
+    });
+    if (existing) {
+      return NextResponse.json({
+        id: existing.id,
+        date: existing.date.toISOString().slice(0, 10),
+        startTime: existing.startTime,
+        endTime: existing.endTime,
+      });
+    }
     const slot = await prisma.availability.create({
       data: {
         teacherId: user.id,
@@ -93,8 +104,16 @@ export async function POST(req: Request) {
       endTime: slot.endTime,
     });
   } catch (e) {
+    const prismaErr = e as { code?: string };
+    if (prismaErr?.code === "P2002") {
+      return NextResponse.json(
+        { error: "משבצת זו כבר קיימת. ייתכן שנוספה קודם." },
+        { status: 409 }
+      );
+    }
+    console.error("[teacher/availability] POST error:", e);
     return NextResponse.json(
-      { error: "Failed to create availability" },
+      { error: "שגיאה בשמירת המשבצת. נסו שוב." },
       { status: 500 }
     );
   }

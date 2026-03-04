@@ -9,7 +9,26 @@ Two-sided platform: **Teacher portal** (availability, complete lessons, PDF summ
 - Resend (email), Puppeteer (HTML → PDF)
 - Auth: Email OTP, HttpOnly session cookie, middleware role routing
 
-## Netlify deploy
+## Deployment Safety (Vercel)
+
+**Guardrails to prevent static asset 404/MIME errors:**
+
+- [ ] Do **not** set `output: "export"` in next.config.js
+- [ ] Do **not** add rewrites/redirects that capture `/_next/*` or `/api/*`
+- [ ] Middleware must bypass `/_next`, `/api`, and static assets (see `middleware.ts` matcher)
+- [ ] After deploy: run `APP_URL=https://your-site.vercel.app npm run healthcheck:prod`
+
+**Post-deploy health check:**
+
+```bash
+APP_URL=https://pazatsta.vercel.app npm run healthcheck:prod
+```
+
+Or trigger via GitHub Actions: **Actions** → **CI** → **Run workflow** → enter `APP_URL`.
+
+---
+
+## Netlify deploy (legacy)
 
 ### Netlify deploy checklist
 

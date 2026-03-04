@@ -3,7 +3,10 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ["@react-pdf/renderer"],
   },
-  // Do NOT add assetPrefix - it breaks @netlify/plugin-nextjs static asset serving
+  // DEPLOYMENT SAFETY: Do NOT add these - they break static asset serving (404 + wrong MIME):
+  // - output: "export" (static export; use SSR)
+  // - assetPrefix (breaks /_next/static/* on some hosts)
+  // - rewrites that capture /_next/* or /api/*
 };
 
 module.exports = nextConfig;
