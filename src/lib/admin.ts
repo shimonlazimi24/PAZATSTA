@@ -9,11 +9,15 @@ export const ADMIN_TEACHER_EMAILS = ADMIN_EMAILS_RAW
     ? []
     : ["teacher@test.com"];
 
-/** Extra emails to receive approval notifications (comma-separated). Use when admin isn't in User table. */
+/** Extra emails to receive approval + lesson summary (comma-separated). Use when admin isn't in User table. */
 const ADMIN_NOTIFY_RAW = process.env.ADMIN_NOTIFICATION_EMAILS ?? "";
-export const ADMIN_NOTIFICATION_EMAILS = ADMIN_NOTIFY_RAW
+const ADMIN_NOTIFY_PARSED = ADMIN_NOTIFY_RAW
   ? ADMIN_NOTIFY_RAW.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean)
-  : ["shachar.cygler@gmail.com", "admin@pazatsta.co.il"];
+  : [];
+export const ADMIN_NOTIFICATION_EMAILS =
+  ADMIN_NOTIFY_PARSED.length > 0
+    ? ADMIN_NOTIFY_PARSED
+    : ["shachar.cygler@gmail.com", "admin@pazatsta.co.il"];
 
 export function canAccessAdmin(user: { role: string; email: string }): boolean {
   if (user.role === "admin") return true;

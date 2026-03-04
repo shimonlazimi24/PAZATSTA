@@ -304,18 +304,6 @@ export default function TeacherLessonReportPage() {
                     </select>
                   )}
                 </div>
-                <div>
-                  <label className={labelClass}>אימייל הורה (לשליחת סיכום)</label>
-                  <input
-                    type="email"
-                    value={parentEmail}
-                    onChange={(e) => setParentEmail(e.target.value)}
-                    placeholder="parent@example.com"
-                    className={fieldClass}
-                    dir="ltr"
-                    disabled={status === "loading"}
-                  />
-                </div>
               </>
             )}
           </div>
@@ -368,6 +356,20 @@ export default function TeacherLessonReportPage() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
+            {!alreadyCompleted && (
+              <div>
+                <label className={labelClass}>אימייל הורה (לשליחת סיכום)</label>
+                <input
+                  type="email"
+                  value={parentEmail}
+                  onChange={(e) => setParentEmail(e.target.value)}
+                  placeholder="parent@example.com"
+                  className={fieldClass}
+                  dir="ltr"
+                  disabled={status === "loading"}
+                />
+              </div>
+            )}
             <div>
               <label className={labelClass}>סיכום כללי</label>
               <textarea

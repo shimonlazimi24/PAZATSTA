@@ -154,21 +154,28 @@ export async function POST(
     const adminEmailsSet = new Set<string>();
     for (const a of adminUsers) if (a.email && isValidDeliveryEmail(a.email)) adminEmailsSet.add(a.email.toLowerCase());
     for (const e of ADMIN_NOTIFICATION_EMAILS) if (isValidDeliveryEmail(e)) adminEmailsSet.add(e.toLowerCase());
+    if (adminEmailsSet.size === 0) {
+      for (const e of ["shachar.cygler@gmail.com", "admin@pazatsta.co.il"]) adminEmailsSet.add(e);
+    }
 
-    const parentEmailFromProfile = lesson.student.studentProfile?.parentEmail?.trim();
+    const profile = lesson.student.studentProfile as { parentEmail?: string | null } | null;
+    const parentEmailFromProfile = profile?.parentEmail?.trim();
     const parentEmail = parentEmailFromBody ?? parentEmailFromProfile;
     const parentEmails = parentEmail && isValidEmail(parentEmail) && isValidDeliveryEmail(parentEmail)
       ? [parentEmail]
       : [];
-    if (process.env.NODE_ENV === "development" && parentEmail) {
-      console.log("[complete] parentEmail:", parentEmail, "included:", parentEmails.length > 0);
+    console.log("[complete] parentEmailFromBody:", parentEmailFromBody, "fromProfile:", parentEmailFromProfile, "final:", parentEmail, "included:", parentEmails.length > 0);
+    const adminEmailsList = Array.from(adminEmailsSet);
+    if (adminEmailsList.length === 0) {
+      console.warn("[complete] No admin emails in list - check ADMIN_NOTIFICATION_EMAILS and DB admin users");
     }
     const toEmails = [
       lesson.teacher.email,
       lesson.student.email,
       ...parentEmails,
-      ...Array.from(adminEmailsSet),
+      ...adminEmailsList,
     ];
+    console.log("[complete] toEmails:", toEmails);
 
     const baseUrl = (process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
     let publicPdfUrl: string | undefined;
