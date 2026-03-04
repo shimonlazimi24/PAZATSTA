@@ -32,6 +32,7 @@ type Lesson = {
     email: string;
     screeningType?: string | null;
     screeningDate?: string | null;
+    parentEmail?: string | null;
   };
   summary: {
     summaryText: string;
@@ -58,6 +59,7 @@ export default function TeacherLessonReportPage() {
   const [recommendations, setRecommendations] = useState("");
   const [screeningType, setScreeningType] = useState("");
   const [screeningDate, setScreeningDate] = useState("");
+  const [parentEmail, setParentEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState("");
 
@@ -99,6 +101,7 @@ export default function TeacherLessonReportPage() {
     if (lesson) {
       setScreeningType(lesson.topic ?? lesson.student.screeningType ?? "");
       setScreeningDate(lesson.student.screeningDate ?? "");
+      setParentEmail(lesson.student.parentEmail ?? "");
       if (lesson.summary) {
         setSummaryText(lesson.summary.summaryText);
         setHomeworkText(lesson.summary.homeworkText);
@@ -181,6 +184,7 @@ export default function TeacherLessonReportPage() {
         recommendations: recommendations.trim(),
         screeningType: screeningType.trim() || undefined,
         screeningDate: screeningDate.trim() || undefined,
+        parentEmail: parentEmail.trim() || undefined,
       }),
     });
     if (!result.ok) {
@@ -299,6 +303,18 @@ export default function TeacherLessonReportPage() {
                       ))}
                     </select>
                   )}
+                </div>
+                <div>
+                  <label className={labelClass}>אימייל הורה (לשליחת סיכום)</label>
+                  <input
+                    type="email"
+                    value={parentEmail}
+                    onChange={(e) => setParentEmail(e.target.value)}
+                    placeholder="parent@example.com"
+                    className={fieldClass}
+                    dir="ltr"
+                    disabled={status === "loading"}
+                  />
                 </div>
               </>
             )}

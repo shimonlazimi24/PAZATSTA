@@ -7,6 +7,7 @@ import { createLessonSummaryLink } from "@/lib/publicPdfLink";
 import { isLessonEnded } from "@/lib/dates";
 import { formatDateInIsrael } from "@/lib/date-utils";
 import { isValidEmail, isValidDeliveryEmail } from "@/lib/validation";
+import { ADMIN_NOTIFICATION_EMAILS } from "@/lib/admin";
 
 export const runtime = "nodejs";
 
@@ -40,6 +41,7 @@ export async function POST(
     const tips = typeof body.tips === "string" ? body.tips.trim() : "";
     const recommendations = typeof body.recommendations === "string" ? body.recommendations.trim() : "";
     const screeningType = typeof body.screeningType === "string" ? body.screeningType.trim() || null : null;
+    const parentEmailFromBody = typeof body.parentEmail === "string" ? body.parentEmail.trim() || null : null;
     const screeningDateStr = typeof body.screeningDate === "string" ? body.screeningDate.trim() : "";
     const screeningDate = screeningDateStr && /^\d{4}-\d{2}-\d{2}$/.test(screeningDateStr)
       ? new Date(screeningDateStr + "T12:00:00")
@@ -100,16 +102,20 @@ export async function POST(
       }),
     ]);
 
-    if (screeningType !== null || screeningDate !== null) {
-      const createData: { userId: string; currentScreeningType?: string; currentScreeningDate?: Date } = {
+    if (screeningType !== null || screeningDate !== null || (parentEmailFromBody && isValidEmail(parentEmailFromBody))) {
+      const createData: { userId: string; currentScreeningType?: string; currentScreeningDate?: Date; parentEmail?: string } = {
         userId: lesson.studentId,
       };
       if (screeningType !== null) createData.currentScreeningType = screeningType;
       if (screeningDate !== null) createData.currentScreeningDate = screeningDate;
+      if (parentEmailFromBody && isValidEmail(parentEmailFromBody)) createData.parentEmail = parentEmailFromBody;
 
-      const updateData: { currentScreeningType?: string; currentScreeningDate?: Date } = {};
+      const updateData: { currentScreeningType?: string; currentScreeningDate?: Date; parentEmail?: string | null } = {};
       if (screeningType !== null) updateData.currentScreeningType = screeningType;
       if (screeningDate !== null) updateData.currentScreeningDate = screeningDate;
+      if (parentEmailFromBody !== undefined) {
+        updateData.parentEmail = parentEmailFromBody && isValidEmail(parentEmailFromBody) ? parentEmailFromBody : null;
+      }
 
       await prisma.studentProfile.upsert({
         where: { userId: lesson.studentId },
@@ -145,7 +151,12 @@ export async function POST(
       where: { role: "admin" },
       select: { email: true },
     });
-    const parentEmail = lesson.student.studentProfile?.parentEmail?.trim();
+    const adminEmailsSet = new Set<string>();
+    for (const a of adminUsers) if (a.email && isValidDeliveryEmail(a.email)) adminEmailsSet.add(a.email.toLowerCase());
+    for (const e of ADMIN_NOTIFICATION_EMAILS) if (isValidDeliveryEmail(e)) adminEmailsSet.add(e.toLowerCase());
+
+    const parentEmailFromProfile = lesson.student.studentProfile?.parentEmail?.trim();
+    const parentEmail = parentEmailFromBody ?? parentEmailFromProfile;
     const parentEmails = parentEmail && isValidEmail(parentEmail) && isValidDeliveryEmail(parentEmail)
       ? [parentEmail]
       : [];
@@ -156,7 +167,7 @@ export async function POST(
       lesson.teacher.email,
       lesson.student.email,
       ...parentEmails,
-      ...adminUsers.map((a) => a.email).filter(Boolean),
+      ...Array.from(adminEmailsSet),
     ];
 
     const baseUrl = (process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");

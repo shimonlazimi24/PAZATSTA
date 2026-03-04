@@ -17,7 +17,7 @@ export async function GET(
       teacher: { select: { id: true, email: true, name: true } },
       student: {
         include: {
-          studentProfile: { select: { currentScreeningType: true, currentScreeningDate: true } },
+          studentProfile: true,
         },
       },
       summary: true,
@@ -43,6 +43,7 @@ export async function GET(
       name: lesson.student.name,
       screeningType,
       screeningDate: profile?.currentScreeningDate?.toISOString().slice(0, 10) ?? null,
+      parentEmail: profile?.parentEmail ?? null,
     },
     topic: lesson.topic,
     summary: lesson.summary
