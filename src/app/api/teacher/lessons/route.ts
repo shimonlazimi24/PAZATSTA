@@ -5,6 +5,8 @@ import { todayIsraelYYYYMMDD, nowIsraelHHMM, normalizeTimeForCompare } from "@/l
 import { formatDateInIsrael } from "@/lib/date-utils";
 import type { Prisma } from "@prisma/client";
 
+export const dynamic = "force-dynamic";
+
 const includeStudentSummary = {
   student: {
     select: {
