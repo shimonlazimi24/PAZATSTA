@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import { BackLink } from "@/components/design/BackLink";
 import { apiJson } from "@/lib/api";
@@ -220,9 +219,7 @@ export default function TeacherLessonReportPage() {
     return (
       <AppShell title="דוח סיום שיעור">
         <p className="text-sm text-[var(--color-text-muted)]">שיעור לא נמצא.</p>
-        <Link href="/teacher/dashboard" className="text-[var(--color-primary)] hover:underline mt-2 inline-block">
-          חזרה ללוח המורה
-        </Link>
+        <BackLink href="/teacher/dashboard" label="חזרה ללוח המורה" refreshOnNavigate className="text-[var(--color-primary)] hover:underline mt-2 inline-block" />
       </AppShell>
     );
   }
@@ -237,7 +234,7 @@ export default function TeacherLessonReportPage() {
   return (
     <AppShell title="דוח סיום שיעור">
       <div className="max-w-xl space-y-6" dir="rtl">
-        <BackLink href="/teacher/dashboard" label="חזרה ללוח המורה" />
+        <BackLink href="/teacher/dashboard" label="חזרה ללוח המורה" refreshOnNavigate />
 
         {/* Standalone title - not concatenated with LTR content */}
         <header>
@@ -316,9 +313,7 @@ export default function TeacherLessonReportPage() {
                 ? "השיעור לא אושר"
                 : "אפשר למלא דוח רק אחרי השיעור"}
             </p>
-            <Link href="/teacher/dashboard" className="text-[var(--color-primary)] hover:underline mt-2 inline-block">
-              חזרה ללוח המורה
-            </Link>
+            <BackLink href="/teacher/dashboard" label="חזרה ללוח המורה" refreshOnNavigate className="text-[var(--color-primary)] hover:underline mt-2 inline-block" />
           </div>
         ) : alreadyCompleted ? (
           <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-bg-muted)] p-4 space-y-4">

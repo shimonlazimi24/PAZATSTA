@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CalendarDays, CalendarPlus } from "lucide-react";
 import { addToCalendar } from "@/lib/calendar";
 import { isLessonEnded, isLessonStarted } from "@/lib/dates";
@@ -42,6 +43,8 @@ function getStatusLabel(status: string): string {
 }
 
 export function TeacherHomeLessons() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [upcoming, setUpcoming] = useState<Lesson[]>([]);
   const [past, setPast] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,6 +64,13 @@ export function TeacherHomeLessons() {
   useEffect(() => {
     load();
   }, []);
+
+  // Clean cache-busting param from URL after load (e.g. when returning from report page)
+  useEffect(() => {
+    if (searchParams.has("r")) {
+      router.replace("/teacher/dashboard", { scroll: false });
+    }
+  }, [router, searchParams]);
 
   useEffect(() => {
     const onRefresh = () => load();
