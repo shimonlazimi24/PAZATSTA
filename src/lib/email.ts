@@ -13,6 +13,25 @@ function getResend() {
 const RESEND_DEV_FROM = "onboarding@resend.dev";
 const from = () => process.env.RESEND_FROM ?? RESEND_DEV_FROM;
 
+/** Resend rate limit: 2 req/sec. Delay between batch sends. */
+const RATE_LIMIT_DELAY_MS = 600;
+/** On 429, wait before retry (exponential: 1.5s, 2s, 2.5s) */
+async function sendWith429Retry<T>(
+  sendFn: () => Promise<{ data?: T; error: { message?: string } | null }>,
+  maxRetries = 3
+): Promise<{ data?: T; error: { message?: string } | null }> {
+  let result = await sendFn();
+  let retries = 0;
+  while (result.error && String(result.error?.message ?? "").includes("429") && retries < maxRetries) {
+    retries++;
+    const waitMs = 1000 + retries * 500;
+    console.warn(`[email] Rate limited (429), retrying in ${waitMs}ms (attempt ${retries + 1}/${maxRetries + 1})`);
+    await new Promise((r) => setTimeout(r, waitMs));
+    result = await sendFn();
+  }
+  return result;
+}
+
 /** Resend SDK returns { data, error } and does not throw. Error has { name, message }. */
 function isDomainNotVerifiedError(error: { name?: string; message?: string } | null): boolean {
   if (!error) return false;
@@ -108,26 +127,19 @@ export async function sendApprovalRequest(params: {
   }
   const fromAddr = from();
   const resend = getResend();
-  for (const email of toEmails) {
-    const result = await resend.emails.send({
-      from: fromAddr,
-      to: email,
-      subject,
-      text,
-    });
+  for (let i = 0; i < toEmails.length; i++) {
+    if (i > 0) await new Promise((r) => setTimeout(r, RATE_LIMIT_DELAY_MS));
+    const email = toEmails[i];
+    let result = await sendWith429Retry(() =>
+      resend.emails.send({ from: fromAddr, to: email, subject, text })
+    );
+    if (result.error && fromAddr !== RESEND_DEV_FROM && isDomainNotVerifiedError(result.error)) {
+      result = await sendWith429Retry(() =>
+        resend.emails.send({ from: RESEND_DEV_FROM, to: email, subject, text })
+      );
+    }
     if (result.error) {
-      if (fromAddr !== RESEND_DEV_FROM && isDomainNotVerifiedError(result.error)) {
-        const retry = await resend.emails.send({
-          from: RESEND_DEV_FROM,
-          to: email,
-          subject,
-          text,
-        });
-        if (!retry.error) continue;
-        console.error("[sendApprovalRequest] Retry failed for", email, retry.error);
-      } else {
-        console.error("[sendApprovalRequest] Failed for", email, result.error);
-      }
+      console.error("[sendApprovalRequest] Failed for", email, result.error);
       throw new Error(result.error.message ?? "Failed to send approval email");
     }
   }
@@ -168,26 +180,19 @@ export async function sendBookingConfirmation(params: {
   }
   const resend = getResend();
   const fromAddr = from();
-  for (const email of params.to) {
-    const result = await resend.emails.send({
-      from: fromAddr,
-      to: email,
-      subject,
-      text,
-    });
+  for (let i = 0; i < params.to.length; i++) {
+    if (i > 0) await new Promise((r) => setTimeout(r, RATE_LIMIT_DELAY_MS));
+    const email = params.to[i];
+    let result = await sendWith429Retry(() =>
+      resend.emails.send({ from: fromAddr, to: email, subject, text })
+    );
+    if (result.error && fromAddr !== RESEND_DEV_FROM && isDomainNotVerifiedError(result.error)) {
+      result = await sendWith429Retry(() =>
+        resend.emails.send({ from: RESEND_DEV_FROM, to: email, subject, text })
+      );
+    }
     if (result.error) {
-      if (fromAddr !== RESEND_DEV_FROM && isDomainNotVerifiedError(result.error)) {
-        const retry = await resend.emails.send({
-          from: RESEND_DEV_FROM,
-          to: email,
-          subject,
-          text,
-        });
-        if (!retry.error) continue;
-        console.error("[sendBookingConfirmation] Retry failed for", email, retry.error);
-      } else {
-        console.error("[sendBookingConfirmation] Failed for", email, result.error);
-      }
+      console.error("[sendBookingConfirmation] Failed for", email, result.error);
       throw new Error(result.error.message ?? "Failed to send booking confirmation");
     }
   }
@@ -293,35 +298,20 @@ export async function sendLessonCompleted(params: {
   }
   const resend = getResend();
   const fromAddr = from();
-  const delayMs = 600; // Resend: 2 req/sec — delay between sends to avoid 429
   for (let i = 0; i < params.to.length; i++) {
-    if (i > 0) await new Promise((r) => setTimeout(r, delayMs));
+    if (i > 0) await new Promise((r) => setTimeout(r, RATE_LIMIT_DELAY_MS));
     const email = params.to[i];
-    const result = await resend.emails.send({
-      from: fromAddr,
-      to: email,
-      subject,
-      text,
-      html,
-    });
+    let result = await sendWith429Retry(() =>
+      resend.emails.send({ from: fromAddr, to: email, subject, text, html })
+    );
+    if (result.error && fromAddr !== RESEND_DEV_FROM && isDomainNotVerifiedError(result.error)) {
+      result = await sendWith429Retry(() =>
+        resend.emails.send({ from: RESEND_DEV_FROM, to: email, subject, text, html })
+      );
+    }
     if (result.error) {
-      if (fromAddr !== RESEND_DEV_FROM && isDomainNotVerifiedError(result.error)) {
-        const retry = await resend.emails.send({
-          from: RESEND_DEV_FROM,
-          to: email,
-          subject,
-          text,
-          html,
-        });
-        if (!retry.error) continue;
-        console.error("[sendLessonCompleted] Retry failed for", email, retry.error);
-      } else {
-        console.error("[sendLessonCompleted] Failed for", email, result.error);
-      }
-      // Don't throw — continue to other recipients (Resend rate limit may have caused failure)
-      if (String(result.error?.message ?? "").includes("429")) {
-        console.warn("[sendLessonCompleted] Rate limited, skipping", email);
-      }
+      console.error("[sendLessonCompleted] Failed for", email, result.error);
+      throw new Error(result.error.message ?? "Failed to send lesson completed email");
     }
   }
 }
@@ -462,13 +452,12 @@ export async function sendWeeklyHoursSummaryToAdmin(params: {
     return;
   }
   const resend = getResend();
-  for (const email of params.to) {
-    const result = await resend.emails.send({
-      from: from(),
-      to: email,
-      subject,
-      text,
-    });
+  for (let i = 0; i < params.to.length; i++) {
+    if (i > 0) await new Promise((r) => setTimeout(r, RATE_LIMIT_DELAY_MS));
+    const email = params.to[i];
+    const result = await sendWith429Retry(() =>
+      resend.emails.send({ from: from(), to: email, subject, text })
+    );
     if (result.error) {
       console.error("[sendWeeklyHoursSummaryToAdmin] Failed for", email, result.error);
       throw new Error(result.error.message ?? "Failed to send weekly hours summary");
