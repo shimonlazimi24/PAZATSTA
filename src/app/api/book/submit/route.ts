@@ -5,7 +5,7 @@ import { sendApprovalRequest } from "@/lib/email";
 import { formatDateInIsrael } from "@/lib/date-utils";
 import { ADMIN_TEACHER_EMAILS, ADMIN_NOTIFICATION_EMAILS } from "@/lib/admin";
 
-const APPROVAL_WINDOW_MS = 2 * 60 * 60 * 1000; // 2 hours
+const APPROVAL_WINDOW_MS = 12 * 60 * 60 * 1000; // 12 hours
 
 /** Create a lesson as pending_approval; email sent only after teacher/admin approve. */
 export async function POST(req: Request) {

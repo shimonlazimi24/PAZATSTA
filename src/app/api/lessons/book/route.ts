@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { getUserFromSession } from "@/lib/auth";
 
 const SLOT_TAKEN_ERROR = "הזמן נתפס, בחר זמן אחר";
-const APPROVAL_WINDOW_MS = 2 * 60 * 60 * 1000; // 2 hours
+const APPROVAL_WINDOW_MS = 12 * 60 * 60 * 1000; // 12 hours
 
 export async function POST(req: Request) {
   const user = await getUserFromSession();
