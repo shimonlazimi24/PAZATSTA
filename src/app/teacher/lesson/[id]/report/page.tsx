@@ -158,15 +158,13 @@ export default function TeacherLessonReportPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const hasAny =
-      summaryText.trim() ||
-      homeworkText.trim() ||
-      pointsToKeep.trim() ||
-      pointsToImprove.trim() ||
-      tips.trim() ||
-      recommendations.trim();
-    if (!hasAny) {
-      setError("נא למלא לפחות שדה אחד בדוח.");
+    const missing: string[] = [];
+    if (!summaryText.trim()) missing.push("סיכום כללי");
+    if (!pointsToKeep.trim()) missing.push("נקודות לשימור");
+    if (!pointsToImprove.trim()) missing.push("נקודות לשיפור");
+    if (!recommendations.trim()) missing.push("המלצות להמשך");
+    if (missing.length > 0) {
+      setError(`נא למלא את השדות החובה: ${missing.join(", ")}`);
       return;
     }
     setStatus("loading");
@@ -366,7 +364,7 @@ export default function TeacherLessonReportPage() {
               </div>
             )}
             <div>
-              <label className={labelClass}>סיכום כללי</label>
+              <label className={labelClass}>סיכום כללי <span className="text-red-600" aria-hidden>*</span></label>
               <textarea
                 value={summaryText}
                 onChange={(e) => setSummaryText(e.target.value)}
@@ -374,10 +372,11 @@ export default function TeacherLessonReportPage() {
                 className={fieldClass}
                 placeholder="סיכום כללי של השיעור"
                 disabled={status === "loading"}
+                required
               />
             </div>
             <div>
-              <label className={labelClass}>נקודות לשימור</label>
+              <label className={labelClass}>נקודות לשימור <span className="text-red-600" aria-hidden>*</span></label>
               <textarea
                 value={pointsToKeep}
                 onChange={(e) => setPointsToKeep(e.target.value)}
@@ -385,10 +384,11 @@ export default function TeacherLessonReportPage() {
                 className={fieldClass}
                 placeholder="מה עבד טוב, לשמור עליו"
                 disabled={status === "loading"}
+                required
               />
             </div>
             <div>
-              <label className={labelClass}>נקודות לשיפור</label>
+              <label className={labelClass}>נקודות לשיפור <span className="text-red-600" aria-hidden>*</span></label>
               <textarea
                 value={pointsToImprove}
                 onChange={(e) => setPointsToImprove(e.target.value)}
@@ -396,6 +396,7 @@ export default function TeacherLessonReportPage() {
                 className={fieldClass}
                 placeholder="מה לשפר"
                 disabled={status === "loading"}
+                required
               />
             </div>
             <div>
@@ -443,7 +444,7 @@ export default function TeacherLessonReportPage() {
               )}
             </div>
             <div>
-              <label className={labelClass}>המלצות להמשך</label>
+              <label className={labelClass}>המלצות להמשך <span className="text-red-600" aria-hidden>*</span></label>
               <textarea
                 value={recommendations}
                 onChange={(e) => setRecommendations(e.target.value)}
@@ -451,6 +452,7 @@ export default function TeacherLessonReportPage() {
                 className={fieldClass}
                 placeholder="המלצות לשיעורים הבאים"
                 disabled={status === "loading"}
+                required
               />
             </div>
             <div>

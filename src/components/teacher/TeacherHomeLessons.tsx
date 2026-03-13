@@ -16,6 +16,7 @@ type Lesson = {
   status: string;
   followUpCompletedAt: string | null;
   questionFromStudent: string | null;
+  teacher?: { name: string | null; email: string };
   student: {
     id: string;
     email: string;
@@ -128,8 +129,18 @@ export function TeacherHomeLessons() {
           <ul className="divide-y divide-[var(--color-border)] rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white overflow-hidden shadow-[var(--shadow-card)]">
             {upcoming.map((l) => {
               const studentLabel = l.student.name || l.student.email;
+              const teacherLabel = l.teacher?.name || l.teacher?.email || "מורה";
               const topicLabel = l.topic?.trim() || "שיעור פזצט״א";
               const calendarTitle = `${topicLabel} – ${studentLabel}`;
+              const calendarDescription = [
+                `מורה: ${teacherLabel}`,
+                `תלמיד: ${studentLabel}`,
+                `תאריך: ${formatLessonDate(l.date)}`,
+                `שעה: ${l.startTime}–${l.endTime}`,
+                topicLabel !== "שיעור פזצט״א" ? `סוג: ${topicLabel}` : null,
+              ]
+                .filter(Boolean)
+                .join("\n");
               return (
                 <li key={l.id} className="p-4 hover:bg-[var(--color-bg-muted)]/50 transition-colors">
                   <div className="flex flex-wrap justify-between items-start gap-2">
@@ -156,7 +167,8 @@ export function TeacherHomeLessons() {
                               startTime: l.startTime,
                               endTime: l.endTime,
                               title: calendarTitle,
-                              attendees: [l.student.email],
+                              description: calendarDescription,
+                              attendees: [l.student.email, "admin@pazatsta.co.il"],
                             })
                           }
                           className="inline-flex items-center gap-1.5 rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs font-medium text-[var(--color-text)] hover:bg-[var(--color-bg-muted)]"

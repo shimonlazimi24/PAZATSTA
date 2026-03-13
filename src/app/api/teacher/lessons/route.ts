@@ -8,6 +8,7 @@ import type { Prisma } from "@prisma/client";
 export const dynamic = "force-dynamic";
 
 const includeStudentSummary = {
+  teacher: { select: { name: true, email: true } },
   student: {
     select: {
       id: true,
@@ -33,6 +34,7 @@ function mapLesson(l: {
   status: string;
   followUpCompletedAt: Date | null;
   questionFromStudent: string | null;
+  teacher: { name: string | null; email: string };
   student: {
     id: string;
     email: string;
@@ -52,6 +54,7 @@ function mapLesson(l: {
     status: l.status,
     followUpCompletedAt: l.followUpCompletedAt?.toISOString() ?? null,
     questionFromStudent: l.questionFromStudent,
+    teacher: { name: l.teacher.name, email: l.teacher.email },
     student: {
       id: student.id,
       email: student.email,

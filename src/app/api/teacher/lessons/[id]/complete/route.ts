@@ -46,11 +46,14 @@ export async function POST(
     const screeningDate = screeningDateStr && /^\d{4}-\d{2}-\d{2}$/.test(screeningDateStr)
       ? new Date(screeningDateStr + "T12:00:00")
       : null;
-    const hasAny =
-      summaryText || homeworkText || pointsToKeep || pointsToImprove || tips || recommendations;
-    if (!hasAny) {
+    const missing: string[] = [];
+    if (!summaryText) missing.push("סיכום כללי");
+    if (!pointsToKeep) missing.push("נקודות לשימור");
+    if (!pointsToImprove) missing.push("נקודות לשיפור");
+    if (!recommendations) missing.push("המלצות להמשך");
+    if (missing.length > 0) {
       return NextResponse.json(
-        { error: "נא למלא לפחות שדה אחד בדוח" },
+        { error: `נא למלא את השדות החובה: ${missing.join(", ")}` },
         { status: 400 }
       );
     }
