@@ -316,7 +316,7 @@ export default function BookPage() {
       } catch (_) {}
       if (isRealTeacherId && selectedDate && selectedSlot) {
         try {
-          const body: { teacherId: string; date: string; startTime: string; endTime: string; availabilityId?: string; selectedTopic?: string; studentName?: string; phone?: string; parentName?: string; parentPhone?: string; parentEmail?: string } = {
+          const body: { teacherId: string; date: string; startTime: string; endTime: string; availabilityId?: string; selectedTopic?: string; studentName?: string; phone?: string; parentName?: string; parentPhone?: string; parentEmail?: string; notes?: string } = {
             teacherId: teacher.id,
             date: selectedDate,
             startTime: selectedSlot.startTime,
@@ -331,6 +331,7 @@ export default function BookPage() {
           if (parentName?.trim()) body.parentName = parentName.trim();
           if (parentPhone?.trim()) body.parentPhone = parentPhone.trim();
           if (parentEmail?.trim()) body.parentEmail = parentEmail.trim();
+          if (notes?.trim()) body.notes = notes.trim();
           const res = await fetch("/api/book/submit", {
             method: "POST",
             headers: { "Content-Type": "application/json" },

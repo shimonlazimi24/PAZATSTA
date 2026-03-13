@@ -89,8 +89,12 @@ export async function sendLoginCode(email: string, code: string): Promise<boolea
 /** Build approval-request email (sent to admin + teacher when student books). */
 export function getApprovalRequestContent(params: {
   studentName: string;
+  studentEmail?: string | null;
   studentPhone?: string | null;
+  parentName?: string | null;
   parentPhone?: string | null;
+  parentEmail?: string | null;
+  notes?: string | null;
   teacherName: string;
   date: string;
   timeRange: string;
@@ -98,9 +102,13 @@ export function getApprovalRequestContent(params: {
   const lines = [
     "בקשה לאישור נשלחה — יש לאשר באפליקציה.",
     "",
-    `תלמיד: ${params.studentName}`,
+    `שם מלא של התלמיד: ${params.studentName}`,
+    ...(params.studentEmail ? [`אימייל תלמיד: ${params.studentEmail}`] : []),
     ...(params.studentPhone ? [`טלפון תלמיד: ${params.studentPhone}`] : []),
+    ...(params.parentName ? [`שם מלא של אחד ההורים: ${params.parentName}`] : []),
     ...(params.parentPhone ? [`טלפון הורה: ${params.parentPhone}`] : []),
+    ...(params.parentEmail ? [`אימייל הורה: ${params.parentEmail}`] : []),
+    ...(params.notes ? [`במה תרצו להתמקד בשיעור: ${params.notes}`] : []),
     `מורה: ${params.teacherName}`,
     `תאריך ושעה: ${params.date} ${params.timeRange}`,
     "",
@@ -115,8 +123,12 @@ export function getApprovalRequestContent(params: {
 export async function sendApprovalRequest(params: {
   to: string[];
   studentName: string;
+  studentEmail?: string | null;
   studentPhone?: string | null;
+  parentName?: string | null;
   parentPhone?: string | null;
+  parentEmail?: string | null;
+  notes?: string | null;
   teacherName: string;
   date: string;
   timeRange: string;
@@ -150,19 +162,27 @@ export async function sendApprovalRequest(params: {
 /** Build booking confirmation email content (for preview or send). */
 export function getBookingConfirmationContent(params: {
   studentName: string;
+  studentEmail?: string | null;
+  studentPhone?: string | null;
+  parentName?: string | null;
+  parentPhone?: string | null;
+  parentEmail?: string | null;
+  notes?: string | null;
   teacherName: string;
   date: string;
   timeRange: string;
   topic?: string;
   screeningDate?: string;
-  studentPhone?: string;
-  parentPhone?: string;
 }) {
   let text = `שיעור נקבע: ${params.studentName} עם ${params.teacherName} בתאריך ${params.date} בשעה ${params.timeRange}.`;
   if (params.topic) text += `\nסוג המיון: ${params.topic}`;
   if (params.screeningDate) text += `\nתאריך המיון: ${params.screeningDate}`;
+  if (params.studentEmail) text += `\nאימייל תלמיד: ${params.studentEmail}`;
   if (params.studentPhone) text += `\nטלפון תלמיד: ${params.studentPhone}`;
+  if (params.parentName) text += `\nשם מלא של אחד ההורים: ${params.parentName}`;
   if (params.parentPhone) text += `\nטלפון הורה: ${params.parentPhone}`;
+  if (params.parentEmail) text += `\nאימייל הורה: ${params.parentEmail}`;
+  if (params.notes) text += `\nבמה תרצו להתמקד בשיעור: ${params.notes}`;
   text += "\nקישור ל-Google Meet יישלח בנפרד (או יופיע בהזמנת היומן).";
   return {
     subject: "סיכום הזמנה – פזצט״א",
@@ -173,13 +193,17 @@ export function getBookingConfirmationContent(params: {
 export async function sendBookingConfirmation(params: {
   to: string[];
   studentName: string;
+  studentEmail?: string | null;
+  studentPhone?: string | null;
+  parentName?: string | null;
+  parentPhone?: string | null;
+  parentEmail?: string | null;
+  notes?: string | null;
   teacherName: string;
   date: string;
   timeRange: string;
   topic?: string;
   screeningDate?: string;
-  studentPhone?: string;
-  parentPhone?: string;
 }): Promise<void> {
   const { subject, text } = getBookingConfirmationContent(params);
   if (isDev && noRealKey()) {

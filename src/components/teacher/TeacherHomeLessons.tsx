@@ -22,7 +22,9 @@ type Lesson = {
     email: string;
     name: string | null;
     phone?: string | null;
+    parentName?: string | null;
     parentPhone?: string | null;
+    parentEmail?: string | null;
     screeningDate?: string | null;
     screeningType?: string | null;
   };
@@ -135,10 +137,14 @@ export function TeacherHomeLessons() {
               const topicLabel = l.topic?.trim() || "שיעור פזצט״א";
               const calendarTitle = `${topicLabel} – ${studentLabel}`;
               const calendarDescription = [
-                `מורה: ${teacherLabel}`,
-                `תלמיד: ${studentLabel}`,
+                `שם מלא של התלמיד: ${studentLabel}`,
+                l.student.email ? `אימייל תלמיד: ${l.student.email}` : null,
                 l.student.phone ? `טלפון תלמיד: ${l.student.phone}` : null,
+                l.student.parentName ? `שם מלא של אחד ההורים: ${l.student.parentName}` : null,
                 l.student.parentPhone ? `טלפון הורה: ${l.student.parentPhone}` : null,
+                l.student.parentEmail ? `אימייל הורה: ${l.student.parentEmail}` : null,
+                l.questionFromStudent ? `במה תרצו להתמקד בשיעור: ${l.questionFromStudent}` : null,
+                `מורה: ${teacherLabel}`,
                 topicLabel !== "שיעור פזצט״א" ? `סוג: ${topicLabel}` : null,
               ]
                 .filter(Boolean)

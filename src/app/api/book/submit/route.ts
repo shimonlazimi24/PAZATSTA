@@ -44,6 +44,7 @@ export async function POST(req: Request) {
     const parentNameFromForm = typeof body.parentName === "string" ? body.parentName.trim() : "";
     const parentPhoneFromForm = typeof body.parentPhone === "string" ? body.parentPhone.trim() : "";
     const parentEmailFromForm = typeof body.parentEmail === "string" ? body.parentEmail.trim() : "";
+    const notesFromForm = typeof body.notes === "string" ? body.notes.trim() : "";
     const dateStr = typeof body.date === "string" ? body.date.trim() : "";
     const startTime = typeof body.startTime === "string" ? body.startTime.trim() : "";
     const endTime = typeof body.endTime === "string" ? body.endTime.trim() : "";
@@ -73,6 +74,7 @@ export async function POST(req: Request) {
             startTime: current.startTime,
             endTime: current.endTime,
             topic: selectedTopic || null,
+            questionFromStudent: notesFromForm || null,
             status: "pending_approval",
             approvalExpiresAt: new Date(Date.now() + APPROVAL_WINDOW_MS),
           },
@@ -120,8 +122,12 @@ export async function POST(req: Request) {
         await sendApprovalRequest({
           to: toEmails,
           studentName: studentNameFromForm || lesson.student.name || lesson.student.email || "תלמיד",
+          studentEmail: lesson.student.email,
           studentPhone: (studentPhoneFromForm || (lesson.student as { phone?: string | null }).phone) ?? null,
+          parentName: parentNameFromForm || null,
           parentPhone: parentPhoneFromForm || null,
+          parentEmail: parentEmailFromForm || null,
+          notes: notesFromForm || null,
           teacherName: lesson.teacher.name || lesson.teacher.email || "מורה",
           date: formatDateInIsrael(lesson.date),
           timeRange: `${lesson.startTime}–${lesson.endTime}`,
@@ -202,6 +208,7 @@ export async function POST(req: Request) {
           startTime,
           endTime,
           topic: selectedTopic || null,
+          questionFromStudent: notesFromForm || null,
           status: "pending_approval",
           approvalExpiresAt: new Date(Date.now() + APPROVAL_WINDOW_MS),
         },
@@ -222,8 +229,12 @@ export async function POST(req: Request) {
       await sendApprovalRequest({
         to: toEmails,
         studentName,
+        studentEmail: lesson.student.email,
         studentPhone: (studentPhoneFromForm || (lesson.student as { phone?: string | null }).phone) ?? null,
+        parentName: parentNameFromForm || null,
         parentPhone: parentPhoneFromForm || null,
+        parentEmail: parentEmailFromForm || null,
+        notes: notesFromForm || null,
         teacherName,
         date: formattedDate,
         timeRange,

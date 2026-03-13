@@ -49,6 +49,10 @@ export async function POST(
     return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
   }
 
+  const studentProfile = await prisma.studentProfile.findUnique({
+    where: { userId: lesson.studentId },
+  });
+
   const approvedByTeacherAt = isTeacher ? now : lesson.approvedByTeacherAt ?? undefined;
   const approvedByAdminAt = isAdmin ? now : lesson.approvedByAdminAt ?? undefined;
 
@@ -66,9 +70,6 @@ export async function POST(
   const studentName = lesson.student.name || lesson.student.email;
   const dateStr = formatDateInIsrael(lesson.date);
 
-  const studentProfile = await prisma.studentProfile.findUnique({
-    where: { userId: lesson.studentId },
-  });
   const topic = studentProfile?.currentScreeningType ?? undefined;
   const screeningDate = studentProfile?.currentScreeningDate
     ? formatDateInIsrael(studentProfile.currentScreeningDate)
@@ -87,13 +88,17 @@ export async function POST(
     await sendBookingConfirmation({
       to: toEmails,
       studentName: studentName || "תלמיד",
+      studentEmail: lesson.student.email,
+      studentPhone: lesson.student.phone ?? undefined,
+      parentName: studentProfile?.parentFullName ?? undefined,
+      parentPhone: studentProfile?.parentPhone ?? undefined,
+      parentEmail: studentProfile?.parentEmail ?? undefined,
+      notes: lesson.questionFromStudent ?? undefined,
       teacherName,
       date: dateStr,
       timeRange,
       topic,
       screeningDate,
-      studentPhone: lesson.student.phone ?? undefined,
-      parentPhone: studentProfile?.parentPhone ?? undefined,
     });
   } catch (emailErr) {
     console.error("[lessons/approve] Email send failed:", emailErr);

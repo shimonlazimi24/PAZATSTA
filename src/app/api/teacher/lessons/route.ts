@@ -19,7 +19,9 @@ const includeStudentSummary = {
         select: {
           currentScreeningDate: true,
           currentScreeningType: true,
+          parentFullName: true,
           parentPhone: true,
+          parentEmail: true,
         },
       },
     },
@@ -42,7 +44,7 @@ function mapLesson(l: {
     email: string;
     name: string | null;
     phone?: string | null;
-    studentProfile?: { currentScreeningDate: Date | null; currentScreeningType: string | null; parentPhone: string | null } | null;
+    studentProfile?: { currentScreeningDate: Date | null; currentScreeningType: string | null; parentFullName: string | null; parentPhone: string | null; parentEmail: string | null } | null;
   } | null;
   summary?: { id: string; summaryText: string; homeworkText: string; pdfUrl: string | null; createdAt: Date } | null;
 }) {
@@ -65,11 +67,13 @@ function mapLesson(l: {
           email: student.email,
           name: student.name,
           phone: student.phone ?? null,
+          parentName: profile?.parentFullName ?? null,
           parentPhone: profile?.parentPhone ?? null,
+          parentEmail: profile?.parentEmail ?? null,
           screeningDate: profile?.currentScreeningDate?.toISOString().slice(0, 10) ?? null,
           screeningType: profile?.currentScreeningType ?? null,
         }
-      : { id: "", email: "", name: null, phone: null, parentPhone: null, screeningDate: null, screeningType: null },
+      : { id: "", email: "", name: null, phone: null, parentName: null, parentPhone: null, parentEmail: null, screeningDate: null, screeningType: null },
     summary: l.summary
       ? {
           id: l.summary.id,
