@@ -139,8 +139,6 @@ export function TeacherHomeLessons() {
                 `תלמיד: ${studentLabel}`,
                 l.student.phone ? `טלפון תלמיד: ${l.student.phone}` : null,
                 l.student.parentPhone ? `טלפון הורה: ${l.student.parentPhone}` : null,
-                `תאריך: ${formatLessonDate(l.date)}`,
-                `שעה: ${l.startTime}–${l.endTime}`,
                 topicLabel !== "שיעור פזצט״א" ? `סוג: ${topicLabel}` : null,
               ]
                 .filter(Boolean)
