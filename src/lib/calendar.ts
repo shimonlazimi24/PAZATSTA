@@ -90,7 +90,6 @@ export function buildIcsBlob(event: CalendarEvent): Blob {
 }
 
 export function buildGoogleCalendarUrl(event: CalendarEvent): string {
-  const title = encodeURIComponent(event.title);
   const start = formatIcsDateTime(event.date, event.startTime);
   const end = formatIcsDateTime(event.date, event.endTime);
   const params = new URLSearchParams({
@@ -98,6 +97,9 @@ export function buildGoogleCalendarUrl(event: CalendarEvent): string {
     text: event.title,
     dates: `${start}/${end}`,
   });
+  if (event.description) {
+    params.set("details", event.description);
+  }
   const attendees = event.attendees?.filter((e) => e && e.includes("@")) ?? [];
   for (const email of attendees) {
     params.append("add", email.trim());

@@ -90,6 +90,7 @@ export async function sendLoginCode(email: string, code: string): Promise<boolea
 export function getApprovalRequestContent(params: {
   studentName: string;
   studentPhone?: string | null;
+  parentPhone?: string | null;
   teacherName: string;
   date: string;
   timeRange: string;
@@ -99,6 +100,7 @@ export function getApprovalRequestContent(params: {
     "",
     `תלמיד: ${params.studentName}`,
     ...(params.studentPhone ? [`טלפון תלמיד: ${params.studentPhone}`] : []),
+    ...(params.parentPhone ? [`טלפון הורה: ${params.parentPhone}`] : []),
     `מורה: ${params.teacherName}`,
     `תאריך ושעה: ${params.date} ${params.timeRange}`,
     "",
@@ -114,6 +116,7 @@ export async function sendApprovalRequest(params: {
   to: string[];
   studentName: string;
   studentPhone?: string | null;
+  parentPhone?: string | null;
   teacherName: string;
   date: string;
   timeRange: string;
@@ -156,10 +159,14 @@ export function getBookingConfirmationContent(params: {
   timeRange: string;
   topic?: string;
   screeningDate?: string;
+  studentPhone?: string;
+  parentPhone?: string;
 }) {
   let text = `שיעור נקבע: ${params.studentName} עם ${params.teacherName} בתאריך ${params.date} בשעה ${params.timeRange}.`;
   if (params.topic) text += `\nסוג המיון: ${params.topic}`;
   if (params.screeningDate) text += `\nתאריך המיון: ${params.screeningDate}`;
+  if (params.studentPhone) text += `\nטלפון תלמיד: ${params.studentPhone}`;
+  if (params.parentPhone) text += `\nטלפון הורה: ${params.parentPhone}`;
   text += "\nקישור ל-Google Meet יישלח בנפרד (או יופיע בהזמנת היומן).";
   return {
     subject: "סיכום הזמנה – פזצט״א",
@@ -175,6 +182,8 @@ export async function sendBookingConfirmation(params: {
   timeRange: string;
   topic?: string;
   screeningDate?: string;
+  studentPhone?: string;
+  parentPhone?: string;
 }): Promise<void> {
   const { subject, text } = getBookingConfirmationContent(params);
   if (isDev && noRealKey()) {

@@ -19,6 +19,7 @@ const includeStudentSummary = {
         select: {
           currentScreeningDate: true,
           currentScreeningType: true,
+          parentPhone: true,
         },
       },
     },
@@ -35,18 +36,19 @@ function mapLesson(l: {
   status: string;
   followUpCompletedAt: Date | null;
   questionFromStudent: string | null;
-  teacher: { name: string | null; email: string };
-  student: {
+  teacher?: { name: string | null; email: string } | null;
+  student?: {
     id: string;
     email: string;
     name: string | null;
-    phone: string | null;
-    studentProfile: { currentScreeningDate: Date | null; currentScreeningType: string | null } | null;
-  };
-  summary: { id: string; summaryText: string; homeworkText: string; pdfUrl: string | null; createdAt: Date } | null;
+    phone?: string | null;
+    studentProfile?: { currentScreeningDate: Date | null; currentScreeningType: string | null; parentPhone: string | null } | null;
+  } | null;
+  summary?: { id: string; summaryText: string; homeworkText: string; pdfUrl: string | null; createdAt: Date } | null;
 }) {
   const student = l.student;
-  const profile = student.studentProfile;
+  const teacher = l.teacher;
+  const profile = student?.studentProfile;
   return {
     id: l.id,
     date: l.date.toISOString().slice(0, 10),
@@ -56,15 +58,18 @@ function mapLesson(l: {
     status: l.status,
     followUpCompletedAt: l.followUpCompletedAt?.toISOString() ?? null,
     questionFromStudent: l.questionFromStudent,
-    teacher: { name: l.teacher.name, email: l.teacher.email },
-    student: {
-      id: student.id,
-      email: student.email,
-      name: student.name,
-      phone: student.phone,
-      screeningDate: profile?.currentScreeningDate?.toISOString().slice(0, 10) ?? null,
-      screeningType: profile?.currentScreeningType ?? null,
-    },
+    teacher: { name: teacher?.name ?? null, email: teacher?.email ?? "" },
+    student: student
+      ? {
+          id: student.id,
+          email: student.email,
+          name: student.name,
+          phone: student.phone ?? null,
+          parentPhone: profile?.parentPhone ?? null,
+          screeningDate: profile?.currentScreeningDate?.toISOString().slice(0, 10) ?? null,
+          screeningType: profile?.currentScreeningType ?? null,
+        }
+      : { id: "", email: "", name: null, phone: null, parentPhone: null, screeningDate: null, screeningType: null },
     summary: l.summary
       ? {
           id: l.summary.id,

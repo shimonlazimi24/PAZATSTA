@@ -27,7 +27,7 @@ export async function POST(
     where: { id: lessonId },
     include: {
       teacher: { select: { id: true, email: true, name: true } },
-      student: { select: { id: true, email: true, name: true } },
+      student: { select: { id: true, email: true, name: true, phone: true } },
     },
   });
   if (!lesson) {
@@ -92,6 +92,8 @@ export async function POST(
       timeRange,
       topic,
       screeningDate,
+      studentPhone: lesson.student.phone ?? undefined,
+      parentPhone: studentProfile?.parentPhone ?? undefined,
     });
   } catch (emailErr) {
     console.error("[lessons/approve] Email send failed:", emailErr);
