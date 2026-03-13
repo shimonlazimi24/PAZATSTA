@@ -40,6 +40,7 @@ export async function POST(req: Request) {
     const teacherId = typeof body.teacherId === "string" ? body.teacherId.trim() : "";
     const selectedTopic = typeof body.selectedTopic === "string" ? body.selectedTopic.trim() : "";
     const studentNameFromForm = typeof body.studentName === "string" ? body.studentName.trim() : "";
+    const studentPhoneFromForm = typeof body.phone === "string" ? body.phone.trim() : "";
     const parentNameFromForm = typeof body.parentName === "string" ? body.parentName.trim() : "";
     const parentPhoneFromForm = typeof body.parentPhone === "string" ? body.parentPhone.trim() : "";
     const parentEmailFromForm = typeof body.parentEmail === "string" ? body.parentEmail.trim() : "";
@@ -89,11 +90,14 @@ export async function POST(req: Request) {
         );
       }
       lesson = result;
-      if (studentNameFromForm || parentNameFromForm || parentPhoneFromForm || parentEmailFromForm) {
-        if (studentNameFromForm) {
+      if (studentNameFromForm || studentPhoneFromForm || parentNameFromForm || parentPhoneFromForm || parentEmailFromForm) {
+        const userData: { name?: string; phone?: string } = {};
+        if (studentNameFromForm) userData.name = studentNameFromForm;
+        if (studentPhoneFromForm) userData.phone = studentPhoneFromForm;
+        if (Object.keys(userData).length > 0) {
           await prisma.user.update({
             where: { id: user.id },
-            data: { name: studentNameFromForm },
+            data: userData,
           });
         }
         const profileData: { studentFullName?: string; parentFullName?: string; parentPhone?: string; parentEmail?: string } = {};
@@ -116,7 +120,7 @@ export async function POST(req: Request) {
         await sendApprovalRequest({
           to: toEmails,
           studentName: studentNameFromForm || lesson.student.name || lesson.student.email || "תלמיד",
-          studentPhone: (lesson.student as { phone?: string | null }).phone ?? null,
+          studentPhone: (studentPhoneFromForm || (lesson.student as { phone?: string | null }).phone) ?? null,
           parentPhone: parentPhoneFromForm || null,
           teacherName: lesson.teacher.name || lesson.teacher.email || "מורה",
           date: formatDateInIsrael(lesson.date),
@@ -169,11 +173,14 @@ export async function POST(req: Request) {
           { status: 409 }
         );
       }
-      if (studentNameFromForm || parentNameFromForm || parentPhoneFromForm || parentEmailFromForm) {
-        if (studentNameFromForm) {
+      if (studentNameFromForm || studentPhoneFromForm || parentNameFromForm || parentPhoneFromForm || parentEmailFromForm) {
+        const userData: { name?: string; phone?: string } = {};
+        if (studentNameFromForm) userData.name = studentNameFromForm;
+        if (studentPhoneFromForm) userData.phone = studentPhoneFromForm;
+        if (Object.keys(userData).length > 0) {
           await prisma.user.update({
             where: { id: user.id },
-            data: { name: studentNameFromForm },
+            data: userData,
           });
         }
         const profileData: { studentFullName?: string; parentFullName?: string; parentPhone?: string; parentEmail?: string } = {};
@@ -215,7 +222,7 @@ export async function POST(req: Request) {
       await sendApprovalRequest({
         to: toEmails,
         studentName,
-        studentPhone: (lesson.student as { phone?: string | null }).phone ?? null,
+        studentPhone: (studentPhoneFromForm || (lesson.student as { phone?: string | null }).phone) ?? null,
         parentPhone: parentPhoneFromForm || null,
         teacherName,
         date: formattedDate,
