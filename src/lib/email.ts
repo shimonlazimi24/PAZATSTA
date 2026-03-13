@@ -133,21 +133,17 @@ export async function sendApprovalRequest(params: {
   }
   const fromAddr = from();
   const resend = getResend();
-  for (let i = 0; i < toEmails.length; i++) {
-    if (i > 0) await new Promise((r) => setTimeout(r, RATE_LIMIT_DELAY_MS));
-    const email = toEmails[i];
-    let result = await sendWith429Retry(() =>
-      resend.emails.send({ from: fromAddr, to: email, subject, text })
+  let result = await sendWith429Retry(() =>
+    resend.emails.send({ from: fromAddr, to: toEmails, subject, text })
+  );
+  if (result.error && fromAddr !== RESEND_DEV_FROM && isDomainNotVerifiedError(result.error)) {
+    result = await sendWith429Retry(() =>
+      resend.emails.send({ from: RESEND_DEV_FROM, to: toEmails, subject, text })
     );
-    if (result.error && fromAddr !== RESEND_DEV_FROM && isDomainNotVerifiedError(result.error)) {
-      result = await sendWith429Retry(() =>
-        resend.emails.send({ from: RESEND_DEV_FROM, to: email, subject, text })
-      );
-    }
-    if (result.error) {
-      console.error("[sendApprovalRequest] Failed for", email, result.error);
-      throw new Error(result.error.message ?? "Failed to send approval email");
-    }
+  }
+  if (result.error) {
+    console.error("[sendApprovalRequest] Failed for", toEmails, result.error);
+    throw new Error(result.error.message ?? "Failed to send approval email");
   }
 }
 
