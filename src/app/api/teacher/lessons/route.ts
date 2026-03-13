@@ -14,6 +14,7 @@ const includeStudentSummary = {
       id: true,
       email: true,
       name: true,
+      phone: true,
       studentProfile: {
         select: {
           currentScreeningDate: true,
@@ -39,6 +40,7 @@ function mapLesson(l: {
     id: string;
     email: string;
     name: string | null;
+    phone: string | null;
     studentProfile: { currentScreeningDate: Date | null; currentScreeningType: string | null } | null;
   };
   summary: { id: string; summaryText: string; homeworkText: string; pdfUrl: string | null; createdAt: Date } | null;
@@ -59,6 +61,7 @@ function mapLesson(l: {
       id: student.id,
       email: student.email,
       name: student.name,
+      phone: student.phone,
       screeningDate: profile?.currentScreeningDate?.toISOString().slice(0, 10) ?? null,
       screeningType: profile?.currentScreeningType ?? null,
     },

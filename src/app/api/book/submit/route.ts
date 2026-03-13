@@ -116,6 +116,7 @@ export async function POST(req: Request) {
         await sendApprovalRequest({
           to: toEmails,
           studentName: studentNameFromForm || lesson.student.name || lesson.student.email || "תלמיד",
+          studentPhone: (lesson.student as { phone?: string | null }).phone ?? null,
           teacherName: lesson.teacher.name || lesson.teacher.email || "מורה",
           date: formatDateInIsrael(lesson.date),
           timeRange: `${lesson.startTime}–${lesson.endTime}`,
@@ -213,6 +214,7 @@ export async function POST(req: Request) {
       await sendApprovalRequest({
         to: toEmails,
         studentName,
+        studentPhone: (lesson.student as { phone?: string | null }).phone ?? null,
         teacherName,
         date: formattedDate,
         timeRange,

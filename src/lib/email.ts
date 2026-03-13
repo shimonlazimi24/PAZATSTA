@@ -89,28 +89,31 @@ export async function sendLoginCode(email: string, code: string): Promise<boolea
 /** Build approval-request email (sent to admin + teacher when student books). */
 export function getApprovalRequestContent(params: {
   studentName: string;
+  studentPhone?: string | null;
   teacherName: string;
   date: string;
   timeRange: string;
 }) {
-  const text = [
+  const lines = [
     "בקשה לאישור נשלחה — יש לאשר באפליקציה.",
     "",
     `תלמיד: ${params.studentName}`,
+    ...(params.studentPhone ? [`טלפון תלמיד: ${params.studentPhone}`] : []),
     `מורה: ${params.teacherName}`,
     `תאריך ושעה: ${params.date} ${params.timeRange}`,
     "",
     "היכנסו לאפליקציה ולחצו על 'לאשר' בסעיף 'שיעורים בהמתנה לאישור'.",
-  ].join("\n");
+  ];
   return {
     subject: "בקשה לאישור שיעור – פזצט״א",
-    text,
+    text: lines.join("\n"),
   };
 }
 
 export async function sendApprovalRequest(params: {
   to: string[];
   studentName: string;
+  studentPhone?: string | null;
   teacherName: string;
   date: string;
   timeRange: string;

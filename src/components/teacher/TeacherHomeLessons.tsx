@@ -21,6 +21,7 @@ type Lesson = {
     id: string;
     email: string;
     name: string | null;
+    phone?: string | null;
     screeningDate?: string | null;
     screeningType?: string | null;
   };
@@ -135,6 +136,7 @@ export function TeacherHomeLessons() {
               const calendarDescription = [
                 `מורה: ${teacherLabel}`,
                 `תלמיד: ${studentLabel}`,
+                l.student.phone ? `טלפון תלמיד: ${l.student.phone}` : null,
                 `תאריך: ${formatLessonDate(l.date)}`,
                 `שעה: ${l.startTime}–${l.endTime}`,
                 topicLabel !== "שיעור פזצט״א" ? `סוג: ${topicLabel}` : null,
