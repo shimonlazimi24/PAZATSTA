@@ -241,64 +241,66 @@ export function AdminWeeklyCalendar() {
                     const endMin = parseTime(l.endTime);
                     return slotMin >= startMin && slotMin < endMin;
                   });
-                  const topLesson = matchingLessons[0];
-                  const isFirstSlot =
-                    topLesson &&
-                    parseTime(topLesson.startTime) === slotMin;
+                  const lessonsStartingHere = matchingLessons.filter(
+                    (l) => parseTime(l.startTime) === slotMin
+                  );
 
                   return (
                     <td
                       key={date}
                       className="p-1 align-top border-b border-r last:border-r-0 border-[var(--color-border)] min-h-[36px]"
                     >
-                      {isFirstSlot && topLesson && (
-                        <div
-                          className="rounded-[var(--radius-input)] p-2 text-xs border border-[var(--color-border)] bg-white shadow-sm"
-                          style={{
-                            minHeight: Math.max(
-                              36,
-                              ((parseTime(topLesson.endTime) - parseTime(topLesson.startTime)) /
-                                SLOT_MINUTES) *
-                                36
-                            ),
-                          }}
-                        >
-                          <div className="font-medium text-[var(--color-text)]">
-                            {topLesson.startTime}–{topLesson.endTime}
-                          </div>
-                          <div className="text-[var(--color-text-muted)] mt-0.5 truncate">
-                            {topLesson.teacher.name || topLesson.teacher.email} ↔{" "}
-                            {topLesson.student.name || topLesson.student.email}
-                          </div>
-                          <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                            <span
-                              className={`inline-block px-1.5 py-0.5 rounded text-[10px] ${
-                                topLesson.status === "pending_approval"
-                                  ? "bg-amber-100 text-amber-800"
-                                  : topLesson.status === "completed"
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-[var(--color-primary)]/15 text-[var(--color-primary)]"
-                              }`}
-                            >
-                              {topLesson.status === "pending_approval"
-                                ? "ממתין"
-                                : topLesson.status === "completed"
-                                  ? "הושלם"
-                                  : "מתוזמן"}
-                            </span>
-                            {topLesson.status === "scheduled" && (
-                              <button
-                                type="button"
-                                onClick={() => handleCancel(topLesson.id)}
-                                disabled={!!cancelingId}
-                                className="text-[10px] text-amber-700 hover:underline disabled:opacity-50"
+                      <div className="flex flex-col gap-1">
+                        {lessonsStartingHere.map((lesson) => (
+                          <div
+                            key={lesson.id}
+                            className="rounded-[var(--radius-input)] p-2 text-xs border border-[var(--color-border)] bg-white shadow-sm"
+                            style={{
+                              minHeight: Math.max(
+                                36,
+                                ((parseTime(lesson.endTime) - parseTime(lesson.startTime)) /
+                                  SLOT_MINUTES) *
+                                  36
+                              ),
+                            }}
+                          >
+                            <div className="font-medium text-[var(--color-text)]">
+                              {lesson.startTime}–{lesson.endTime}
+                            </div>
+                            <div className="text-[var(--color-text-muted)] mt-0.5 truncate">
+                              {lesson.teacher.name || lesson.teacher.email} ↔{" "}
+                              {lesson.student.name || lesson.student.email}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                              <span
+                                className={`inline-block px-1.5 py-0.5 rounded text-[10px] ${
+                                  lesson.status === "pending_approval"
+                                    ? "bg-amber-100 text-amber-800"
+                                    : lesson.status === "completed"
+                                      ? "bg-green-100 text-green-800"
+                                      : "bg-[var(--color-primary)]/15 text-[var(--color-primary)]"
+                                }`}
                               >
-                                {cancelingId === topLesson.id ? "מבטל…" : "בטל"}
-                              </button>
-                            )}
+                                {lesson.status === "pending_approval"
+                                  ? "ממתין"
+                                  : lesson.status === "completed"
+                                    ? "הושלם"
+                                    : "מתוזמן"}
+                              </span>
+                              {lesson.status === "scheduled" && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleCancel(lesson.id)}
+                                  disabled={!!cancelingId}
+                                  className="text-[10px] text-amber-700 hover:underline disabled:opacity-50"
+                                >
+                                  {cancelingId === lesson.id ? "מבטל…" : "בטל"}
+                                </button>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        ))}
+                      </div>
                     </td>
                   );
                 })}

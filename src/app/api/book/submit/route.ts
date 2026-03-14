@@ -1,12 +1,44 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getUserFromSession } from "@/lib/auth";
 import { sendApprovalRequest } from "@/lib/email";
 import { teacherMatchesTopic } from "@/lib/topics";
 import { formatDateInIsrael } from "@/lib/date-utils";
 import { ADMIN_TEACHER_EMAILS, ADMIN_NOTIFICATION_EMAILS } from "@/lib/admin";
+import { isValidDeliveryEmail } from "@/lib/validation";
 
 const APPROVAL_WINDOW_MS = 12 * 60 * 60 * 1000; // 12 hours
+
+const trimString = (s: unknown) => (typeof s === "string" ? s.trim() : "");
+
+const BookSubmitSchema = z.object({
+  availabilityId: z.unknown().optional().transform(trimString),
+  teacherId: z.unknown().optional().transform(trimString),
+  selectedTopic: z.unknown().optional().transform(trimString),
+  studentName: z.unknown().optional().transform(trimString),
+  phone: z.unknown().optional().transform(trimString),
+  parentName: z.unknown().optional().transform(trimString),
+  parentPhone: z.unknown().optional().transform(trimString),
+  parentEmail: z.unknown().optional().transform(trimString),
+  notes: z.unknown().optional().transform(trimString),
+  date: z.unknown().optional().transform(trimString),
+  startTime: z.unknown().optional().transform(trimString),
+  endTime: z.unknown().optional().transform(trimString),
+}).transform((o) => ({
+  availabilityId: o.availabilityId || "",
+  teacherId: o.teacherId || "",
+  selectedTopic: o.selectedTopic || "",
+  studentNameFromForm: o.studentName || "",
+  studentPhoneFromForm: o.phone || "",
+  parentNameFromForm: o.parentName || "",
+  parentPhoneFromForm: o.parentPhone || "",
+  parentEmailFromForm: o.parentEmail || "",
+  notesFromForm: o.notes || "",
+  dateStr: o.date || "",
+  startTime: o.startTime || "",
+  endTime: o.endTime || "",
+}));
 
 /** Create a lesson as pending_approval; email sent only after teacher/admin approve. */
 export async function POST(req: Request) {
@@ -20,13 +52,6 @@ export async function POST(req: Request) {
         })
       : Promise.resolve([]),
   ]);
-  const isValidDeliveryEmail = (e: string) => {
-    const lower = e.toLowerCase().trim();
-    if (!lower || !lower.includes("@")) return false;
-    if (lower.endsWith(".local") || lower.includes("@localhost")) return false;
-    if (/@.*\.(local|test|example)$/i.test(lower)) return false;
-    return true;
-  };
   const adminEmailsSet = new Set<string>();
   for (const a of adminsFromDb) if (a.email && isValidDeliveryEmail(a.email)) adminEmailsSet.add(a.email.toLowerCase());
   for (const t of adminTeachersFromDb) if (t.email && isValidDeliveryEmail(t.email)) adminEmailsSet.add(t.email.toLowerCase());
@@ -37,18 +62,27 @@ export async function POST(req: Request) {
   }
   try {
     const body = await req.json();
-    const availabilityId = typeof body.availabilityId === "string" ? body.availabilityId.trim() : "";
-    const teacherId = typeof body.teacherId === "string" ? body.teacherId.trim() : "";
-    const selectedTopic = typeof body.selectedTopic === "string" ? body.selectedTopic.trim() : "";
-    const studentNameFromForm = typeof body.studentName === "string" ? body.studentName.trim() : "";
-    const studentPhoneFromForm = typeof body.phone === "string" ? body.phone.trim() : "";
-    const parentNameFromForm = typeof body.parentName === "string" ? body.parentName.trim() : "";
-    const parentPhoneFromForm = typeof body.parentPhone === "string" ? body.parentPhone.trim() : "";
-    const parentEmailFromForm = typeof body.parentEmail === "string" ? body.parentEmail.trim() : "";
-    const notesFromForm = typeof body.notes === "string" ? body.notes.trim() : "";
-    const dateStr = typeof body.date === "string" ? body.date.trim() : "";
-    const startTime = typeof body.startTime === "string" ? body.startTime.trim() : "";
-    const endTime = typeof body.endTime === "string" ? body.endTime.trim() : "";
+    const parsed = BookSubmitSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "נתוני הבקשה לא תקינים" },
+        { status: 400 }
+      );
+    }
+    const {
+      availabilityId,
+      teacherId,
+      selectedTopic,
+      studentNameFromForm,
+      studentPhoneFromForm,
+      parentNameFromForm,
+      parentPhoneFromForm,
+      parentEmailFromForm,
+      notesFromForm,
+      dateStr,
+      startTime,
+      endTime,
+    } = parsed.data;
 
     let lesson: { id: string; status: string; date: Date; startTime: string; endTime: string; teacher: { email: string; name: string | null }; student: { email: string; name: string | null } };
     let admins: { email: string }[] = [];

@@ -1,51 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CalendarDays, CalendarPlus } from "lucide-react";
 import { addToCalendar } from "@/lib/calendar";
 import { isLessonStarted } from "@/lib/dates";
+import { formatLessonDate, getStatusLabel } from "@/lib/lesson-utils";
+import type { DisplayLesson } from "@/types";
 
-type Lesson = {
-  id: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  topic?: string | null;
-  status: string;
-  followUpCompletedAt: string | null;
-  questionFromStudent: string | null;
-  teacher?: { name: string | null; email: string };
-  student: {
-    id: string;
-    email: string;
-    name: string | null;
-    phone?: string | null;
-    parentName?: string | null;
-    parentPhone?: string | null;
-    parentEmail?: string | null;
-    screeningDate?: string | null;
-    screeningType?: string | null;
-  };
+type Lesson = DisplayLesson & {
+  student: NonNullable<DisplayLesson["student"]> & { id: string };
   summary: { pdfUrl: string | null } | null;
 };
-
-function formatLessonDate(dateStr: string): string {
-  return new Date(dateStr + "T12:00:00").toLocaleDateString("he-IL", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function getStatusLabel(status: string): string {
-  if (status === "pending_approval") return "ממתין לאישור";
-  if (status === "scheduled") return "מתוזמן";
-  if (status === "completed") return "הושלם";
-  if (status === "canceled") return "בוטל";
-  return status;
-}
 
 export function TeacherHomeLessons() {
   const router = useRouter();
@@ -53,25 +20,63 @@ export function TeacherHomeLessons() {
   const [upcoming, setUpcoming] = useState<Lesson[]>([]);
   const [past, setPast] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [followUpLoadingId, setFollowUpLoadingId] = useState<string | null>(null);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
+  const retryingRef = useRef(false);
 
-  function load() {
+  function load(retryCount = 0) {
     setLoading(true);
+    setLoadError(null);
+    const maxRetries = 2;
     fetch("/api/teacher/lessons?upcoming=true&past=true", { cache: "no-store", credentials: "include" })
-      .then((r) => (r.ok ? r.json() : { upcoming: [], past: [] }))
-      .then((data) => {
-        setUpcoming(data.upcoming ?? []);
-        setPast(data.past ?? []);
+      .then((r) => {
+        if (r.ok) return r.json();
+        if (r.status === 403 && retryCount < maxRetries) {
+          retryingRef.current = true;
+          return new Promise<{ upcoming: Lesson[]; past: Lesson[] } | null>((resolve) => {
+            setTimeout(() => {
+              load(retryCount + 1);
+              resolve(null);
+            }, 400 + retryCount * 300);
+          });
+        }
+        return null;
       })
-      .finally(() => setLoading(false));
+      .then((data) => {
+        if (data && Array.isArray(data.upcoming)) {
+          setUpcoming(data.upcoming ?? []);
+          setPast(data.past ?? []);
+        } else if (data === null && !retryingRef.current) {
+          setLoadError("שגיאה בטעינת השיעורים. נסו לרענן את הדף.");
+        }
+      })
+      .catch(() => {
+        if (retryCount < maxRetries) {
+          retryingRef.current = true;
+          setTimeout(() => load(retryCount + 1), 500);
+        } else {
+          setLoadError("שגיאה בטעינת השיעורים. נסו לרענן את הדף.");
+        }
+      })
+      .finally(() => {
+        if (!retryingRef.current) setLoading(false);
+        retryingRef.current = false;
+      });
   }
 
   useEffect(() => {
     load();
   }, []);
 
-  // Clean cache-busting param from URL after load (e.g. when returning from report page)
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") load();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, []);
+
   useEffect(() => {
     if (searchParams.has("r")) {
       router.replace("/teacher/dashboard", { scroll: false });
@@ -122,6 +127,20 @@ export function TeacherHomeLessons() {
 
   const hasUpcoming = upcoming.length > 0;
   const hasPast = past.length > 0;
+  if (loadError) {
+    return (
+      <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-8 shadow-[var(--shadow-card)] text-center" dir="rtl">
+        <p className="text-[var(--color-text)]">{loadError}</p>
+        <button
+          type="button"
+          onClick={() => load()}
+          className="mt-4 rounded-[var(--radius-input)] bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+        >
+          נסו שוב
+        </button>
+      </div>
+    );
+  }
   if (!hasUpcoming && !hasPast) {
     return (
       <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-8 sm:p-10 shadow-[var(--shadow-card)] text-center" dir="rtl">

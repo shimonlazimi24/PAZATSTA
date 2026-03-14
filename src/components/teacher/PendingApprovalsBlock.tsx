@@ -16,6 +16,7 @@ export function PendingApprovalsBlock() {
   const [loading, setLoading] = useState(true);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectedMessage, setRejectedMessage] = useState<string | null>(null);
 
   function fetchPending() {
     setLoading(true);
@@ -47,9 +48,12 @@ export function PendingApprovalsBlock() {
 
   function handleReject(id: string) {
     setRejectingId(id);
+    setRejectedMessage(null);
     apiJson<{ ok?: boolean }>(`/api/lessons/${id}/reject`, { method: "POST", credentials: "include" })
       .then((r) => {
         if (r.ok) {
+          setRejectedMessage("השיעור לא אושר");
+          setTimeout(() => setRejectedMessage(null), 4000);
           fetchPending();
           setTimeout(() => {
             window.dispatchEvent(new Event("teacher-lessons-refresh"));
@@ -71,6 +75,11 @@ export function PendingApprovalsBlock() {
   return (
     <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 shadow-[var(--shadow-card)]" dir="rtl">
       <h2 className="text-lg font-semibold text-[var(--color-text)] mb-3">שיעורים בהמתנה לאישור</h2>
+      {rejectedMessage && (
+        <p className="mb-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-[var(--radius-input)] px-3 py-2 text-right">
+          {rejectedMessage}
+        </p>
+      )}
       {lessons.length === 0 ? (
         <p className="text-sm text-[var(--color-text-muted)]">אין שיעורים בהמתנה. שיעורים שאושרו מופיעים בשיעורים הקרובים למטה.</p>
       ) : (

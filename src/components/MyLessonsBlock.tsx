@@ -4,13 +4,10 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/design/Card";
 import { Button } from "@/components/design/Button";
 import { CalendarDays } from "lucide-react";
+import { formatLessonDateTime, getStatusLabel } from "@/lib/lesson-utils";
+import type { DisplayLesson } from "@/types";
 
-type Lesson = {
-  id: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  status: string;
+type Lesson = DisplayLesson & {
   teacher: { name: string | null; email: string };
   student?: { name: string | null; email: string; phone: string | null };
   summary?: { pdfUrl: string | null } | null;
@@ -18,23 +15,6 @@ type Lesson = {
 
 function displayLabel(l: Lesson): string {
   return l.teacher?.name || l.teacher?.email || "—";
-}
-
-function getStatusLabel(status: string): string {
-  if (status === "pending_approval") return "ממתין לאישור";
-  if (status === "scheduled") return "מתוזמן";
-  if (status === "completed") return "הושלם";
-  if (status === "canceled") return "בוטל";
-  return status;
-}
-
-function formatLessonDate(dateStr: string, startTime: string): string {
-  const d = new Date(dateStr + "T12:00:00");
-  return (
-    d.toLocaleDateString("he-IL", { weekday: "short", day: "numeric", month: "short" }) +
-    " " +
-    startTime
-  );
 }
 
 interface MyLessonsBlockProps {
@@ -117,7 +97,7 @@ export function MyLessonsBlock({ compact }: MyLessonsBlockProps = {}) {
                     מורה: {teacherLabel}
                   </p>
                   <p className="text-sm text-[var(--color-text-muted)] mt-1">
-                    {formatLessonDate(l.date, l.startTime)}
+                    {formatLessonDateTime(l.date, l.startTime)}
                   </p>
                   <span
                     className={`inline-block mt-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
@@ -152,7 +132,7 @@ export function MyLessonsBlock({ compact }: MyLessonsBlockProps = {}) {
                   מורה: {displayLabel(l)}
                 </p>
                 <p className="text-sm text-[var(--color-text-muted)] mt-1">
-                  {formatLessonDate(l.date, l.startTime)}
+                  {formatLessonDateTime(l.date, l.startTime)}
                 </p>
                 <span className="inline-block mt-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-[var(--color-bg-muted)] text-[var(--color-text-muted)]">
                   סטטוס: {getStatusLabel(l.status)}

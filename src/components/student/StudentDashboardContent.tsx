@@ -4,32 +4,13 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import { CalendarPlus } from "lucide-react";
+import { formatLessonDate, getStatusLabel } from "@/lib/lesson-utils";
+import type { DisplayLesson } from "@/types";
 
-type Lesson = {
-  id: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  status: string;
+type Lesson = DisplayLesson & {
   teacher: { id: string; email: string; name: string | null };
   summary: { pdfUrl: string | null } | null;
 };
-
-function formatLessonDate(dateStr: string): string {
-  return new Date(dateStr + "T12:00:00").toLocaleDateString("he-IL", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function getStatusLabel(status: string): string {
-  if (status === "pending_approval") return "ממתין לאישור";
-  if (status === "scheduled") return "מתוזמן";
-  if (status === "completed") return "הושלם";
-  if (status === "canceled") return "בוטל";
-  return status;
-}
 
 export function StudentDashboardContent() {
   const [upcoming, setUpcoming] = useState<Lesson[]>([]);
