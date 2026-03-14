@@ -24,11 +24,11 @@ function minutesToTime(min: number): string {
   return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
 }
 
-/** Israel-safe week dates (YYYY-MM-DD). Avoids UTC shift from toISOString().slice(0,10). */
+/** Israel-safe: 2 weeks of dates (YYYY-MM-DD). Avoids UTC shift from toISOString().slice(0,10). */
 function getWeekDatesIsrael(): string[] {
   const startStr = formatIsraelYYYYMMDD(new Date());
   const out: string[] = [startStr];
-  for (let i = 1; i < 7; i++) out.push(addDaysYYYYMMDD(startStr, i));
+  for (let i = 1; i < 14; i++) out.push(addDaysYYYYMMDD(startStr, i));
   return out;
 }
 
@@ -83,6 +83,7 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange }:
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [toggling, setToggling] = useState<string | null>(null);
+  const [fullDayLoading, setFullDayLoading] = useState(false);
 
   const load = useCallback(() => {
     if (!selectedDate || weekDates.length === 0) return;
@@ -138,6 +139,55 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange }:
       isAdded: !!existing,
     };
   });
+
+  const allSlotsAdded = selectedDate && slotOptions.every((o) => o.isAdded);
+
+  async function toggleFullDay() {
+    if (!selectedDate || fullDayLoading || toggling) return;
+
+    if (allSlotsAdded) {
+      setFullDayLoading(true);
+      try {
+        const res = await fetch(
+          `/api/teacher/availability?date=${encodeURIComponent(selectedDate)}`,
+          { method: "DELETE" }
+        );
+        if (res.ok) {
+          setSlots((prev) => {
+            const next = prev.filter((s) => s.date !== selectedDate);
+            onSlotsChange?.(next);
+            return next;
+          });
+        } else {
+          setLoadError("שגיאה בהסרת המשבצות. נסו שוב.");
+        }
+      } catch {
+        setLoadError("שגיאה בהסרת המשבצות. נסו שוב.");
+      } finally {
+        setFullDayLoading(false);
+        load();
+      }
+      return;
+    }
+
+    setFullDayLoading(true);
+    const toAdd = slotOptions.filter((o) => !o.isAdded);
+    const slotsPayload = toAdd.map((o) => ({
+      date: selectedDate,
+      startTime: o.startTime,
+      endTime: o.endTime,
+    }));
+    const res = await fetch("/api/teacher/availability/batch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slots: slotsPayload }),
+    });
+    if (!res.ok) {
+      setLoadError("שגיאה בשמירת המשבצות. נסו שוב.");
+    }
+    setFullDayLoading(false);
+    load();
+  }
 
   async function toggleSlot(opt: (typeof slotOptions)[0]) {
     if (!selectedDate || toggling) return;
@@ -218,7 +268,23 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange }:
       </div>
       {selectedDate && (
         <div>
-          <p className="text-[var(--color-text-muted)] text-right mb-2 mt-6">בחרו שעות פנויות</p>
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-2 mt-6">
+            <p className="text-[var(--color-text-muted)] text-right">בחרו שעות פנויות</p>
+            <button
+              type="button"
+              disabled={loading || fullDayLoading}
+              onClick={toggleFullDay}
+              className={cn(
+                "rounded-[var(--radius-input)] border px-3 py-1.5 text-sm font-medium transition-colors",
+                allSlotsAdded
+                  ? "border-amber-500 bg-amber-50 text-amber-800 hover:bg-amber-100"
+                  : "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20",
+                (loading || fullDayLoading) && "opacity-50 cursor-not-allowed"
+              )}
+            >
+              {fullDayLoading ? "מעבד…" : allSlotsAdded ? "הסר כל היום" : "פנוי כל היום"}
+            </button>
+          </div>
           {loading ? (
             <p className="text-sm text-[var(--color-text-muted)]">טוען…</p>
           ) : (

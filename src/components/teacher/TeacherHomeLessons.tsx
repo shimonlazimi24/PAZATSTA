@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CalendarDays, CalendarPlus } from "lucide-react";
 import { addToCalendar } from "@/lib/calendar";
-import { isLessonEnded, isLessonStarted } from "@/lib/dates";
+import { isLessonStarted } from "@/lib/dates";
 
 type Lesson = {
   id: string;
@@ -54,6 +54,7 @@ export function TeacherHomeLessons() {
   const [past, setPast] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [followUpLoadingId, setFollowUpLoadingId] = useState<string | null>(null);
+  const [cancelingId, setCancelingId] = useState<string | null>(null);
 
   function load() {
     setLoading(true);
@@ -93,6 +94,20 @@ export function TeacherHomeLessons() {
       if (res.ok) load();
     } finally {
       setFollowUpLoadingId(null);
+    }
+  }
+
+  async function handleCancel(lessonId: string) {
+    if (!confirm("האם לבטל את השיעור? המשבצת תחזור לזמינות.")) return;
+    setCancelingId(lessonId);
+    try {
+      const res = await fetch(`/api/lessons/${lessonId}/cancel`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (res.ok) load();
+    } finally {
+      setCancelingId(null);
     }
   }
 
@@ -165,7 +180,25 @@ export function TeacherHomeLessons() {
                         </p>
                       )}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {l.status === "scheduled" && isLessonStarted(l.date, l.startTime) && !l.summary && (
+                        <Link
+                          href={`/teacher/lesson/${l.id}/report`}
+                          className="inline-flex items-center gap-1.5 rounded-[var(--radius-input)] bg-[var(--color-primary)] px-2.5 py-1.5 text-xs font-medium text-white hover:opacity-90"
+                        >
+                          מלא דוח שיעור
+                        </Link>
+                      )}
+                      {l.status === "scheduled" && (
+                        <button
+                          type="button"
+                          onClick={() => handleCancel(l.id)}
+                          disabled={!!cancelingId}
+                          className="inline-flex items-center gap-1.5 rounded-[var(--radius-input)] border border-amber-500 bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+                        >
+                          {cancelingId === l.id ? "מבטל…" : "בטל שיעור"}
+                        </button>
+                      )}
                       {l.status === "scheduled" && !isLessonStarted(l.date, l.startTime) && (
                         <button
                           type="button"
@@ -184,6 +217,16 @@ export function TeacherHomeLessons() {
                           <CalendarPlus className="h-3.5 w-3.5" aria-hidden />
                           הוסף ללוח השנה
                         </button>
+                      )}
+                      {l.status === "scheduled" && isLessonStarted(l.date, l.startTime) && l.summary && (
+                        <a
+                          href={l.summary?.pdfUrl ?? `/api/pdf/lesson-summaries/lesson-${l.id}.pdf`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-[var(--color-primary)] hover:underline"
+                        >
+                          צפייה ב-PDF
+                        </a>
                       )}
                       <span
                         className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
@@ -265,12 +308,12 @@ export function TeacherHomeLessons() {
                         </>
                       ) : (() => {
                         const isApproved = l.status === "scheduled";
-                        const lessonEnded = isLessonEnded(l.date, l.endTime);
-                        const canFillReport = isApproved && lessonEnded;
+                        const lessonStarted = isLessonStarted(l.date, l.startTime);
+                        const canFillReport = isApproved && lessonStarted;
                         if (!canFillReport) {
                           const msg = !isApproved
                             ? "השיעור לא אושר"
-                            : "אפשר למלא דוח רק אחרי השיעור";
+                            : "אפשר למלא דוח רק אחרי תחילת השיעור";
                           return (
                             <span className="text-sm text-red-600">
                               {msg}

@@ -15,6 +15,7 @@ export function PendingApprovalsBlock() {
   const [lessons, setLessons] = useState<PendingLesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
 
   function fetchPending() {
     setLoading(true);
@@ -36,13 +37,26 @@ export function PendingApprovalsBlock() {
       .then((r) => {
         if (r.ok) {
           fetchPending();
-          // Brief delay so DB commit is visible before refresh
           setTimeout(() => {
             window.dispatchEvent(new Event("teacher-lessons-refresh"));
           }, 150);
         }
       })
       .finally(() => setApprovingId(null));
+  }
+
+  function handleReject(id: string) {
+    setRejectingId(id);
+    apiJson<{ ok?: boolean }>(`/api/lessons/${id}/reject`, { method: "POST", credentials: "include" })
+      .then((r) => {
+        if (r.ok) {
+          fetchPending();
+          setTimeout(() => {
+            window.dispatchEvent(new Event("teacher-lessons-refresh"));
+          }, 150);
+        }
+      })
+      .finally(() => setRejectingId(null));
   }
 
   if (loading) {
@@ -69,14 +83,24 @@ export function PendingApprovalsBlock() {
             <span className="text-[var(--color-text)]">
               {l.student.name || l.student.email} — {l.date} {l.startTime}–{l.endTime}
             </span>
-            <button
-              type="button"
-              disabled={!!approvingId}
-              onClick={() => handleApprove(l.id)}
-              className="rounded-[var(--radius-input)] bg-[var(--color-primary)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
-            >
-              {approvingId === l.id ? "מאשר…" : "אשר"}
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={!!approvingId || !!rejectingId}
+                onClick={() => handleApprove(l.id)}
+                className="rounded-[var(--radius-input)] bg-[var(--color-primary)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+              >
+                {approvingId === l.id ? "מאשר…" : "אשר"}
+              </button>
+              <button
+                type="button"
+                disabled={!!approvingId || !!rejectingId}
+                onClick={() => handleReject(l.id)}
+                className="rounded-[var(--radius-input)] border border-amber-500 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+              >
+                {rejectingId === l.id ? "דוחה…" : "לא לאשר"}
+              </button>
+            </div>
           </li>
         ))}
       </ul>

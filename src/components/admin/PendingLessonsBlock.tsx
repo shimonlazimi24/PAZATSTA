@@ -16,6 +16,7 @@ export function PendingLessonsBlock() {
   const [lessons, setLessons] = useState<PendingLesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
 
   function fetchPending(silent = false) {
     if (!silent) setLoading(true);
@@ -47,6 +48,15 @@ export function PendingLessonsBlock() {
       .finally(() => setApprovingId(null));
   }
 
+  function handleReject(id: string) {
+    setRejectingId(id);
+    apiJson<{ ok?: boolean }>(`/api/lessons/${id}/reject`, { method: "POST" })
+      .then((r) => {
+        if (r.ok) fetchPending();
+      })
+      .finally(() => setRejectingId(null));
+  }
+
   if (loading) {
     return (
       <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 shadow-sm" dir="rtl">
@@ -69,14 +79,24 @@ export function PendingLessonsBlock() {
             <span className="text-[var(--color-text)] text-sm sm:text-base min-w-0">
               {l.teacher.name || l.teacher.email} ↔ {l.student.name || l.student.email} — {l.date} {l.startTime}–{l.endTime}
             </span>
-            <button
-              type="button"
-              disabled={!!approvingId}
-              onClick={() => handleApprove(l.id)}
-              className="w-full sm:w-auto rounded-[var(--radius-input)] bg-[var(--color-primary)] px-3 py-2 min-h-[44px] text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
-            >
-              {approvingId === l.id ? "מאשר…" : "אשר"}
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <button
+                type="button"
+                disabled={!!approvingId || !!rejectingId}
+                onClick={() => handleApprove(l.id)}
+                className="rounded-[var(--radius-input)] bg-[var(--color-primary)] px-3 py-2 min-h-[44px] text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+              >
+                {approvingId === l.id ? "מאשר…" : "אשר"}
+              </button>
+              <button
+                type="button"
+                disabled={!!approvingId || !!rejectingId}
+                onClick={() => handleReject(l.id)}
+                className="rounded-[var(--radius-input)] border border-amber-500 bg-amber-50 px-3 py-2 min-h-[44px] text-sm font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+              >
+                {rejectingId === l.id ? "דוחה…" : "לא לאשר"}
+              </button>
+            </div>
           </li>
         ))}
       </ul>

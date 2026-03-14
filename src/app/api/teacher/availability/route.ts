@@ -126,8 +126,18 @@ export async function DELETE(req: Request) {
   }
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
+  const dateStr = searchParams.get("date");
+  if (dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const date = new Date(dateStr + "T00:00:00.000Z");
+    if (!isNaN(date.getTime())) {
+      await prisma.availability.deleteMany({
+        where: { teacherId: user.id, date },
+      });
+      return NextResponse.json({ ok: true });
+    }
+  }
   if (!id) {
-    return NextResponse.json({ error: "id required" }, { status: 400 });
+    return NextResponse.json({ error: "id or date required" }, { status: 400 });
   }
   await prisma.availability.deleteMany({
     where: { id, teacherId: user.id },

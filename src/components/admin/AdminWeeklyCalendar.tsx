@@ -50,8 +50,9 @@ export function AdminWeeklyCalendar() {
   const [weekStart, setWeekStart] = useState(() => getWeekRange(new Date()));
   const [lessons, setLessons] = useState<WeeklyLesson[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cancelingId, setCancelingId] = useState<string | null>(null);
 
-  useEffect(() => {
+  function fetchLessons() {
     setLoading(true);
     fetch(`/api/admin/weekly-lessons?start=${weekStart.start}&end=${weekStart.end}`, {
       cache: "no-store",
@@ -61,7 +62,25 @@ export function AdminWeeklyCalendar() {
       .then(setLessons)
       .catch(() => setLessons([]))
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    fetchLessons();
   }, [weekStart.start, weekStart.end]);
+
+  async function handleCancel(lessonId: string) {
+    if (!confirm("האם לבטל את השיעור? המשבצת תחזור לזמינות.")) return;
+    setCancelingId(lessonId);
+    try {
+      const res = await fetch(`/api/lessons/${lessonId}/cancel`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (res.ok) fetchLessons();
+    } finally {
+      setCancelingId(null);
+    }
+  }
 
   const goPrev = () => {
     const d = new Date(weekStart.start + "T12:00:00");
@@ -151,21 +170,33 @@ export function AdminWeeklyCalendar() {
                       <div className="text-xs text-[var(--color-text-muted)] mt-0.5">
                         {l.teacher.name || l.teacher.email} ↔ {l.student.name || l.student.email}
                       </div>
-                      <span
-                        className={`inline-block mt-1 px-1.5 py-0.5 rounded text-[10px] ${
-                          l.status === "pending_approval"
-                            ? "bg-amber-100 text-amber-800"
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                        <span
+                          className={`inline-block px-1.5 py-0.5 rounded text-[10px] ${
+                            l.status === "pending_approval"
+                              ? "bg-amber-100 text-amber-800"
+                              : l.status === "completed"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-[var(--color-primary)]/15 text-[var(--color-primary)]"
+                          }`}
+                        >
+                          {l.status === "pending_approval"
+                            ? "ממתין"
                             : l.status === "completed"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-[var(--color-primary)]/15 text-[var(--color-primary)]"
-                        }`}
-                      >
-                        {l.status === "pending_approval"
-                          ? "ממתין"
-                          : l.status === "completed"
-                            ? "הושלם"
-                            : "מתוזמן"}
-                      </span>
+                              ? "הושלם"
+                              : "מתוזמן"}
+                        </span>
+                        {l.status === "scheduled" && (
+                          <button
+                            type="button"
+                            onClick={() => handleCancel(l.id)}
+                            disabled={!!cancelingId}
+                            className="text-[10px] text-amber-700 hover:underline disabled:opacity-50"
+                          >
+                            {cancelingId === l.id ? "מבטל…" : "בטל"}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -239,21 +270,33 @@ export function AdminWeeklyCalendar() {
                             {topLesson.teacher.name || topLesson.teacher.email} ↔{" "}
                             {topLesson.student.name || topLesson.student.email}
                           </div>
-                          <span
-                            className={`inline-block mt-1 px-1.5 py-0.5 rounded text-[10px] ${
-                              topLesson.status === "pending_approval"
-                                ? "bg-amber-100 text-amber-800"
+                          <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                            <span
+                              className={`inline-block px-1.5 py-0.5 rounded text-[10px] ${
+                                topLesson.status === "pending_approval"
+                                  ? "bg-amber-100 text-amber-800"
+                                  : topLesson.status === "completed"
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-[var(--color-primary)]/15 text-[var(--color-primary)]"
+                              }`}
+                            >
+                              {topLesson.status === "pending_approval"
+                                ? "ממתין"
                                 : topLesson.status === "completed"
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-[var(--color-primary)]/15 text-[var(--color-primary)]"
-                            }`}
-                          >
-                            {topLesson.status === "pending_approval"
-                              ? "ממתין"
-                              : topLesson.status === "completed"
-                                ? "הושלם"
-                                : "מתוזמן"}
-                          </span>
+                                  ? "הושלם"
+                                  : "מתוזמן"}
+                            </span>
+                            {topLesson.status === "scheduled" && (
+                              <button
+                                type="button"
+                                onClick={() => handleCancel(topLesson.id)}
+                                disabled={!!cancelingId}
+                                className="text-[10px] text-amber-700 hover:underline disabled:opacity-50"
+                              >
+                                {cancelingId === topLesson.id ? "מבטל…" : "בטל"}
+                              </button>
+                            )}
+                          </div>
                         </div>
                       )}
                     </td>
