@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getTopicsToMatch } from "@/lib/topics";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,14 @@ export async function GET(req: Request) {
       });
     }
     if (topic) {
-      andConditions.push({ teacherProfile: { specialties: { has: topic } } });
+      const topicsToMatch = getTopicsToMatch(topic);
+      if (topicsToMatch.length === 1) {
+        andConditions.push({ teacherProfile: { specialties: { has: topicsToMatch[0] } } });
+      } else {
+        andConditions.push({
+          OR: topicsToMatch.map((t) => ({ teacherProfile: { specialties: { has: t } } })),
+        });
+      }
     }
     const where = andConditions.length > 0
       ? { role: "teacher" as const, AND: andConditions }

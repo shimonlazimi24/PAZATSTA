@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getUserFromSession } from "@/lib/auth";
 import { sendApprovalRequest } from "@/lib/email";
+import { teacherMatchesTopic } from "@/lib/topics";
 import { formatDateInIsrael } from "@/lib/date-utils";
 import { ADMIN_TEACHER_EMAILS, ADMIN_NOTIFICATION_EMAILS } from "@/lib/admin";
 
@@ -62,7 +63,7 @@ export async function POST(req: Request) {
         if (!current) return null;
         if (selectedTopic) {
           const specialties = current.teacher.teacherProfile?.specialties ?? [];
-          if (!specialties.includes(selectedTopic)) {
+          if (!teacherMatchesTopic(specialties, selectedTopic)) {
             throw new Error("SPECIALIZATION_MISMATCH");
           }
         }
@@ -118,23 +119,19 @@ export async function POST(req: Request) {
       const toEmails = Array.from(
         new Set([lesson.teacher.email, ...adminEmails])
       ).filter(Boolean);
-      try {
-        await sendApprovalRequest({
-          to: toEmails,
-          studentName: studentNameFromForm || lesson.student.name || lesson.student.email || "תלמיד",
-          studentEmail: lesson.student.email,
-          studentPhone: (studentPhoneFromForm || (lesson.student as { phone?: string | null }).phone) ?? null,
-          parentName: parentNameFromForm || null,
-          parentPhone: parentPhoneFromForm || null,
-          parentEmail: parentEmailFromForm || null,
-          notes: notesFromForm || null,
-          teacherName: lesson.teacher.name || lesson.teacher.email || "מורה",
-          date: formatDateInIsrael(lesson.date),
-          timeRange: `${lesson.startTime}–${lesson.endTime}`,
-        });
-      } catch (err) {
-        console.error("[book/submit] Approval request email failed:", err);
-      }
+      sendApprovalRequest({
+        to: toEmails,
+        studentName: studentNameFromForm || lesson.student.name || lesson.student.email || "תלמיד",
+        studentEmail: lesson.student.email,
+        studentPhone: (studentPhoneFromForm || (lesson.student as { phone?: string | null }).phone) ?? null,
+        parentName: parentNameFromForm || null,
+        parentPhone: parentPhoneFromForm || null,
+        parentEmail: parentEmailFromForm || null,
+        notes: notesFromForm || null,
+        teacherName: lesson.teacher.name || lesson.teacher.email || "מורה",
+        date: formatDateInIsrael(lesson.date),
+        timeRange: `${lesson.startTime}–${lesson.endTime}`,
+      }).catch((err) => console.error("[book/submit] Approval request email failed:", err));
       return NextResponse.json({
         id: lesson.id,
         status: lesson.status,
@@ -163,7 +160,7 @@ export async function POST(req: Request) {
       }
       if (selectedTopic) {
         const specialties = teacher.teacherProfile?.specialties ?? [];
-        if (!specialties.includes(selectedTopic)) {
+        if (!teacherMatchesTopic(specialties, selectedTopic)) {
           return NextResponse.json(
             { error: "המורה אינו מתמחה במסלול שנבחר." },
             { status: 403 }
@@ -225,23 +222,19 @@ export async function POST(req: Request) {
     const toEmails = Array.from(
       new Set([lesson.teacher.email, ...adminEmails])
     ).filter(Boolean);
-    try {
-      await sendApprovalRequest({
-        to: toEmails,
-        studentName,
-        studentEmail: lesson.student.email,
-        studentPhone: (studentPhoneFromForm || (lesson.student as { phone?: string | null }).phone) ?? null,
-        parentName: parentNameFromForm || null,
-        parentPhone: parentPhoneFromForm || null,
-        parentEmail: parentEmailFromForm || null,
-        notes: notesFromForm || null,
-        teacherName,
-        date: formattedDate,
-        timeRange,
-      });
-    } catch (err) {
-      console.error("[book/submit] Approval request email failed:", err);
-    }
+    sendApprovalRequest({
+      to: toEmails,
+      studentName,
+      studentEmail: lesson.student.email,
+      studentPhone: (studentPhoneFromForm || (lesson.student as { phone?: string | null }).phone) ?? null,
+      parentName: parentNameFromForm || null,
+      parentPhone: parentPhoneFromForm || null,
+      parentEmail: parentEmailFromForm || null,
+      notes: notesFromForm || null,
+      teacherName,
+      date: formattedDate,
+      timeRange,
+    }).catch((err) => console.error("[book/submit] Approval request email failed:", err));
 
     return NextResponse.json({
       id: lesson.id,

@@ -45,6 +45,7 @@ const CATEGORIES: {
     subs: [
       { id: "tzav-dapar", label: "צו ראשון - מבחן דפר" },
       { id: "tzav-interview", label: "צו ראשון - ראיון אישי" },
+      { id: "tzav-chozer", label: "צו ראשון חוזר" },
     ],
   },
   {
@@ -53,6 +54,7 @@ const CATEGORIES: {
     subs: [
       { id: "yom100-stations", label: "יום המא״ה - תחנות קבוצתיות" },
       { id: "yom100-psycho", label: "יום המא״ה - מבחנים פסיכוטכניים" },
+      { id: "yom100-chozer", label: "יום המא״ה חוזר" },
     ],
   },
   {

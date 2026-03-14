@@ -14,7 +14,7 @@ import {
   buildTipsFromIds,
   getTipsDisplayText,
 } from "@/data/tips";
-import { isLessonEnded } from "@/lib/dates";
+import { isLessonStarted } from "@/lib/dates";
 
 type Lesson = {
   id: string;
@@ -153,8 +153,8 @@ export default function TeacherLessonReportPage() {
 
   const alreadyCompleted = !!lesson?.reportCompleted || !!lesson?.summary;
   const lessonDateDisplay = lesson?.date ? formatHebrewShortDate(lesson.date) : lesson?.date ?? "—";
-  const lessonEnded = lesson ? isLessonEnded(lesson.date, lesson.endTime) : false;
-  const canSubmitReport = lesson?.status === "scheduled" && lessonEnded && !alreadyCompleted;
+  const lessonStarted = lesson ? isLessonStarted(lesson.date, lesson.startTime) : false;
+  const canSubmitReport = lesson?.status === "scheduled" && lessonStarted && !alreadyCompleted;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -309,7 +309,7 @@ export default function TeacherLessonReportPage() {
             <p className="text-red-700 font-medium">
               {lesson?.status !== "scheduled"
                 ? "השיעור לא אושר"
-                : "אפשר למלא דוח רק אחרי השיעור"}
+                : "אפשר למלא דוח רק אחרי תחילת השיעור"}
             </p>
             <BackLink href="/teacher/dashboard" label="חזרה ללוח המורה" refreshOnNavigate className="text-[var(--color-primary)] hover:underline mt-2 inline-block" />
           </div>

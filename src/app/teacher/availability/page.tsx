@@ -9,11 +9,11 @@ import { formatIsraelYYYYMMDD, addDaysYYYYMMDD } from "@/lib/dates";
 
 type ApiSlot = { id: string; date: string; startTime: string; endTime: string };
 
-/** Israel-safe week: avoid toISOString().slice(0,10) which is UTC and can shift the day in Israel. */
+/** Israel-safe: 2 weeks of dates. Avoid toISOString().slice(0,10) which is UTC and can shift the day in Israel. */
 function buildWeekDatesIsrael(): string[] {
   const startStr = formatIsraelYYYYMMDD(new Date());
   const out: string[] = [startStr];
-  for (let i = 1; i < 7; i++) {
+  for (let i = 1; i < 14; i++) {
     out.push(addDaysYYYYMMDD(startStr, i));
   }
   return out;

@@ -70,7 +70,7 @@ export async function POST(
   const studentName = lesson.student.name || lesson.student.email;
   const dateStr = formatDateInIsrael(lesson.date);
 
-  const topic = studentProfile?.currentScreeningType ?? undefined;
+  const topic = lesson.topic ?? studentProfile?.currentScreeningType ?? undefined;
   const screeningDate = studentProfile?.currentScreeningDate
     ? formatDateInIsrael(studentProfile.currentScreeningDate)
     : undefined;

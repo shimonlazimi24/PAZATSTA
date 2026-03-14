@@ -4,7 +4,7 @@ import { getUserFromSession } from "@/lib/auth";
 import { generateAndStoreLessonPdf } from "@/lib/pdf/generateLessonSummaryPdf";
 import { sendLessonCompleted } from "@/lib/email";
 import { createLessonSummaryLink } from "@/lib/publicPdfLink";
-import { isLessonEnded } from "@/lib/dates";
+import { isLessonStarted } from "@/lib/dates";
 import { formatDateInIsrael } from "@/lib/date-utils";
 import { isValidEmail, isValidDeliveryEmail } from "@/lib/validation";
 import { ADMIN_NOTIFICATION_EMAILS } from "@/lib/admin";
@@ -76,9 +76,9 @@ export async function POST(
     }
 
     const dateStr = formatDateInIsrael(lesson.date);
-    if (!isLessonEnded(dateStr, lesson.endTime)) {
+    if (!isLessonStarted(dateStr, lesson.startTime)) {
       return NextResponse.json(
-        { error: "אפשר למלא דוח רק אחרי השיעור" },
+        { error: "אפשר למלא דוח רק אחרי תחילת השיעור" },
         { status: 403 }
       );
     }
