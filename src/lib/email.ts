@@ -148,7 +148,7 @@ export async function sendApprovalRequest(params: {
     return;
   }
   if (noRealKey()) {
-    console.log("[sendApprovalRequest] DEV: would send to", toEmails, subject);
+    console.warn("[sendApprovalRequest] Skipped: RESEND_API_KEY not set or placeholder. Would send to:", toEmails);
     return;
   }
   const fromAddr = from();

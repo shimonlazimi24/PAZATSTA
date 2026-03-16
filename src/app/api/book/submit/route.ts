@@ -158,15 +158,9 @@ export async function POST(req: Request) {
       admins = adminsPreload;
       const adminEmails = admins.map((a) => a.email).filter(Boolean);
       const toEmails = Array.from(
-        new Set([
-          lesson.teacher.email,
-          ...(lesson.student.email && isValidDeliveryEmail(lesson.student.email)
-            ? [lesson.student.email]
-            : []),
-          ...adminEmails,
-        ])
+        new Set([lesson.teacher.email, ...adminEmails])
       ).filter(Boolean);
-      sendApprovalRequest({
+      await sendApprovalRequest({
         to: toEmails,
         studentName: studentNameFromForm || lesson.student.name || lesson.student.email || "תלמיד",
         studentEmail: lesson.student.email,
@@ -267,15 +261,9 @@ export async function POST(req: Request) {
     const teacherName = lesson.teacher.name || lesson.teacher.email || "מורה";
     const adminEmails = admins.map((a) => a.email).filter(Boolean);
     const toEmails = Array.from(
-      new Set([
-        lesson.teacher.email,
-        ...(lesson.student.email && isValidDeliveryEmail(lesson.student.email)
-          ? [lesson.student.email]
-          : []),
-        ...adminEmails,
-      ])
+      new Set([lesson.teacher.email, ...adminEmails])
     ).filter(Boolean);
-    sendApprovalRequest({
+    await sendApprovalRequest({
       to: toEmails,
       studentName,
       studentEmail: lesson.student.email,
