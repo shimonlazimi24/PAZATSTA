@@ -8,7 +8,7 @@ import { formatDateInIsrael } from "@/lib/date-utils";
 import { ADMIN_TEACHER_EMAILS, ADMIN_NOTIFICATION_EMAILS } from "@/lib/admin";
 import { isValidDeliveryEmail } from "@/lib/validation";
 
-const APPROVAL_WINDOW_MS = 12 * 60 * 60 * 1000; // 12 hours
+const APPROVAL_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 const trimString = (s: unknown) => (typeof s === "string" ? s.trim() : "");
 
