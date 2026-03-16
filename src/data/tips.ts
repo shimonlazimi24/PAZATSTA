@@ -228,17 +228,22 @@ export const TIP_GROUPS: TipGroup[] = [
 /** Screening types that have predefined tips. Others get "אחר" (free text) only. */
 const PREDEFINED_TIP_PATTERNS: (RegExp | string)[] = [
   /דפ["״']?ר משטרה/,
+  /דפ["״']?ר חוזר/,
   /צו ראשון.*דפ["״']?ר|דפ["״']?ר.*צו ראשון/,
+  /יום המא["״']?ה חוזר/,
   /יום המא["״']?ה/,
   /כלל חמ["״']?ן|שחקים|חבצלות/,
   /סייבר|מיון ראשוני/,
   /ירפ["״']?א א["״']?|קורס טיס.*א["״']?/,
 ];
 
-/** Map screening type (partial match) to tip group labels. Only for types with predefined tips. */
+/** Map screening type (partial match) to tip group labels. Only for types with predefined tips.
+ * Order matters: more specific patterns (e.g. "חוזר") must come before generic ones. */
 const SCREENING_TO_TIP_LABELS: { pattern: RegExp | string; labels: string[] }[] = [
   { pattern: /דפ["״']?ר משטרה/, labels: ["צו ראשון - דפר", "כלליים"] },
+  { pattern: /דפ["״']?ר חוזר/, labels: ["צו ראשון - דפר", "כלליים"] },
   { pattern: /צו ראשון.*דפ["״']?ר|דפ["״']?ר.*צו ראשון/, labels: ["צו ראשון - דפר", "כלליים"] },
+  { pattern: /יום המא["״']?ה חוזר/, labels: ["יום המאה", "כלליים"] },
   { pattern: /יום המא["״']?ה/, labels: ["יום המאה", "כלליים"] },
   { pattern: /כלל חמ["״']?ן|שחקים|חבצלות/, labels: ["חיל המודיעין", "כלליים"] },
   { pattern: /סייבר|מיון ראשוני/, labels: ["חיל המודיעין", "כלליים"] },

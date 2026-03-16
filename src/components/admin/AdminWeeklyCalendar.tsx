@@ -51,6 +51,8 @@ export function AdminWeeklyCalendar() {
   const [lessons, setLessons] = useState<WeeklyLesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   function fetchLessons() {
     setLoading(true);
@@ -71,14 +73,44 @@ export function AdminWeeklyCalendar() {
   async function handleCancel(lessonId: string) {
     if (!confirm("האם לבטל את השיעור? המשבצת תחזור לזמינות.")) return;
     setCancelingId(lessonId);
+    setActionError(null);
     try {
       const res = await fetch(`/api/lessons/${lessonId}/cancel`, {
         method: "POST",
         credentials: "include",
       });
-      if (res.ok) fetchLessons();
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        fetchLessons();
+      } else {
+        setActionError((data as { error?: string }).error ?? "שגיאה בביטול השיעור");
+      }
+    } catch {
+      setActionError("שגיאה בביטול השיעור");
     } finally {
       setCancelingId(null);
+    }
+  }
+
+  async function handleReject(lessonId: string) {
+    if (!confirm("האם לדחות את הבקשה? השיעור יבוטל והמשבצת תחזור לזמינות.")) return;
+    setRejectingId(lessonId);
+    setActionError(null);
+    try {
+      const res = await fetch(`/api/lessons/${lessonId}/reject`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        fetchLessons();
+      } else {
+        setActionError((data as { error?: string }).error ?? "שגיאה בדחיית הבקשה");
+      }
+    } catch {
+      setActionError("שגיאה בדחיית הבקשה");
+    } finally {
+      setRejectingId(null);
     }
   }
 
@@ -126,6 +158,11 @@ export function AdminWeeklyCalendar() {
 
   return (
     <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white overflow-hidden shadow-sm" dir="rtl">
+      {actionError && (
+        <div className="mx-4 mt-4 p-3 rounded-[var(--radius-input)] bg-red-50 border border-red-200 text-red-700 text-sm text-right">
+          {actionError}
+        </div>
+      )}
       <div className="flex items-center justify-between gap-2 sm:gap-4 p-4 border-b border-[var(--color-border)]">
         <button
           type="button"
@@ -190,10 +227,20 @@ export function AdminWeeklyCalendar() {
                           <button
                             type="button"
                             onClick={() => handleCancel(l.id)}
-                            disabled={!!cancelingId}
+                            disabled={!!cancelingId || !!rejectingId}
                             className="text-[10px] text-amber-700 hover:underline disabled:opacity-50"
                           >
                             {cancelingId === l.id ? "מבטל…" : "בטל"}
+                          </button>
+                        )}
+                        {l.status === "pending_approval" && (
+                          <button
+                            type="button"
+                            onClick={() => handleReject(l.id)}
+                            disabled={!!cancelingId || !!rejectingId}
+                            className="text-[10px] text-amber-700 hover:underline disabled:opacity-50"
+                          >
+                            {rejectingId === l.id ? "דוחה…" : "לא לאשר"}
                           </button>
                         )}
                       </div>
@@ -291,10 +338,20 @@ export function AdminWeeklyCalendar() {
                                 <button
                                   type="button"
                                   onClick={() => handleCancel(lesson.id)}
-                                  disabled={!!cancelingId}
+                                  disabled={!!cancelingId || !!rejectingId}
                                   className="text-[10px] text-amber-700 hover:underline disabled:opacity-50"
                                 >
                                   {cancelingId === lesson.id ? "מבטל…" : "בטל"}
+                                </button>
+                              )}
+                              {lesson.status === "pending_approval" && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleReject(lesson.id)}
+                                  disabled={!!cancelingId || !!rejectingId}
+                                  className="text-[10px] text-amber-700 hover:underline disabled:opacity-50"
+                                >
+                                  {rejectingId === lesson.id ? "דוחה…" : "לא לאשר"}
                                 </button>
                               )}
                             </div>

@@ -84,6 +84,13 @@ export async function POST(req: Request) {
       endTime,
     } = parsed.data;
 
+    if (!notesFromForm?.trim()) {
+      return NextResponse.json(
+        { error: "נא לציין במה תרצו להתמקד בשיעור (איזה נושאים/מבחנים)" },
+        { status: 400 }
+      );
+    }
+
     let lesson: { id: string; status: string; date: Date; startTime: string; endTime: string; teacher: { email: string; name: string | null }; student: { email: string; name: string | null } };
     let admins: { email: string }[] = [];
 
@@ -151,7 +158,13 @@ export async function POST(req: Request) {
       admins = adminsPreload;
       const adminEmails = admins.map((a) => a.email).filter(Boolean);
       const toEmails = Array.from(
-        new Set([lesson.teacher.email, ...adminEmails])
+        new Set([
+          lesson.teacher.email,
+          ...(lesson.student.email && isValidDeliveryEmail(lesson.student.email)
+            ? [lesson.student.email]
+            : []),
+          ...adminEmails,
+        ])
       ).filter(Boolean);
       sendApprovalRequest({
         to: toEmails,
@@ -254,7 +267,13 @@ export async function POST(req: Request) {
     const teacherName = lesson.teacher.name || lesson.teacher.email || "מורה";
     const adminEmails = admins.map((a) => a.email).filter(Boolean);
     const toEmails = Array.from(
-      new Set([lesson.teacher.email, ...adminEmails])
+      new Set([
+        lesson.teacher.email,
+        ...(lesson.student.email && isValidDeliveryEmail(lesson.student.email)
+          ? [lesson.student.email]
+          : []),
+        ...adminEmails,
+      ])
     ).filter(Boolean);
     sendApprovalRequest({
       to: toEmails,

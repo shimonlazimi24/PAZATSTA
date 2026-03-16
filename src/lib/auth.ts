@@ -65,13 +65,16 @@ export async function getUserFromSession(): Promise<{
   };
 }
 
+const SESSION_MAX_AGE_SECONDS = SESSION_TTL_DAYS * 24 * 60 * 60;
+
 export function getSessionCookieConfig() {
   const base = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax" as const,
     path: "/",
-    maxAge: SESSION_TTL_DAYS * 24 * 60 * 60,
+    maxAge: SESSION_MAX_AGE_SECONDS,
+    expires: new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1000),
   };
   const domain = process.env.COOKIE_DOMAIN?.trim();
   return domain ? { ...base, domain } : base;

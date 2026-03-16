@@ -99,6 +99,13 @@ export function getApprovalRequestContent(params: {
   date: string;
   timeRange: string;
 }) {
+  const cancellationPolicy = [
+    "",
+    "מדיניות ביטולים:",
+    "- במידה ואתם רוצים לדחות את השיעור ניתן לעשות זאת עד 12 שעות לפני, ביצירת קשר עם המדריך או המנהל.",
+    "- במידה ואתם רוצים לדחות או לבטל את השיעור בפחות מ-12 שעות יהיו דמי ביטול של 50 ש״ח.",
+  ].join("\n");
+
   const lines = [
     "בקשה לאישור נשלחה — יש לאשר באפליקציה.",
     "",
@@ -113,6 +120,7 @@ export function getApprovalRequestContent(params: {
     `תאריך ושעה: ${params.date} ${params.timeRange}`,
     "",
     "היכנסו לאפליקציה ולחצו על 'לאשר' בסעיף 'שיעורים בהמתנה לאישור'.",
+    cancellationPolicy,
   ];
   return {
     subject: "בקשה לאישור שיעור – פזצט״א",
@@ -174,6 +182,13 @@ export function getBookingConfirmationContent(params: {
   topic?: string;
   screeningDate?: string;
 }) {
+  const cancellationPolicy = [
+    "",
+    "מדיניות ביטולים:",
+    "- במידה ואתם רוצים לדחות את השיעור ניתן לעשות זאת עד 12 שעות לפני, ביצירת קשר עם המדריך או המנהל.",
+    "- במידה ואתם רוצים לדחות או לבטל את השיעור בפחות מ-12 שעות יהיו דמי ביטול של 50 ש״ח.",
+  ].join("\n");
+
   let text = `שיעור נקבע: ${params.studentName} עם ${params.teacherName} בתאריך ${params.date} בשעה ${params.timeRange}.`;
   if (params.topic) text += `\nסוג המיון: ${params.topic}`;
   if (params.screeningDate) text += `\nתאריך המיון: ${params.screeningDate}`;
@@ -184,6 +199,7 @@ export function getBookingConfirmationContent(params: {
   if (params.parentEmail) text += `\nאימייל הורה: ${params.parentEmail}`;
   if (params.notes) text += `\nבמה תרצו להתמקד בשיעור: ${params.notes}`;
   text += "\nקישור ל-Google Meet יישלח בנפרד (או יופיע בהזמנת היומן).";
+  text += cancellationPolicy;
   return {
     subject: "סיכום הזמנה – פזצט״א",
     text,

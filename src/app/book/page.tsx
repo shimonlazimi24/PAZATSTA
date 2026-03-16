@@ -45,7 +45,7 @@ const CATEGORIES: {
     subs: [
       { id: "tzav-dapar", label: "צו ראשון - מבחן דפר" },
       { id: "tzav-interview", label: "צו ראשון - ראיון אישי" },
-      { id: "tzav-chozer", label: "צו ראשון חוזר" },
+      { id: "tzav-chozer", label: "מבחן דפ״ר חוזר" },
     ],
   },
   {
@@ -54,7 +54,7 @@ const CATEGORIES: {
     subs: [
       { id: "yom100-stations", label: "יום המא״ה - תחנות קבוצתיות" },
       { id: "yom100-psycho", label: "יום המא״ה - מבחנים פסיכוטכניים" },
-      { id: "yom100-chozer", label: "יום המא״ה חוזר" },
+      { id: "yom100-chozer", label: "יום המא״ה חוזר (תחנות קבוצתיות/מבחנים פסיכוטכניים)" },
     ],
   },
   {
@@ -284,6 +284,7 @@ export default function BookPage() {
     else if (!isValidPhone(parentPhone)) e.parentPhone = "נא להזין מספר טלפון תקין (9–11 ספרות)";
     if (!parentEmail.trim()) e.parentEmail = "נא להזין אימייל של אחד ההורים";
     else if (!isValidEmail(parentEmail)) e.parentEmail = "נא להזין כתובת אימייל תקינה";
+    if (!notes.trim()) e.notes = "נא לציין במה תרצו להתמקד בשיעור";
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -333,7 +334,7 @@ export default function BookPage() {
           if (parentName?.trim()) body.parentName = parentName.trim();
           if (parentPhone?.trim()) body.parentPhone = parentPhone.trim();
           if (parentEmail?.trim()) body.parentEmail = parentEmail.trim();
-          if (notes?.trim()) body.notes = notes.trim();
+          body.notes = notes.trim();
           const res = await fetch("/api/book/submit", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -571,7 +572,17 @@ export default function BookPage() {
                 required
                 error={errors.parentEmail}
               />
-              <FormField label="במה תרצו להתמקד בשיעור" name="notes" value={notes} onChange={setNotes} />
+              <FormField
+                label="במה תרצו להתמקד בשיעור (איזה נושאים/מבחנים)"
+                name="notes"
+                value={notes}
+                onChange={(v) => {
+                  setNotes(v);
+                  if (errors.notes) setErrors((e) => ({ ...e, notes: "" }));
+                }}
+                required
+                error={errors.notes}
+              />
             </div>
           </Card>
         )}
@@ -595,7 +606,7 @@ export default function BookPage() {
                 { label: "שם הורה", value: parentName },
                 { label: "טלפון הורה", value: parentPhone },
                 { label: "אימייל הורה", value: parentEmail },
-                ...(notes ? [{ label: "הערות", value: notes }] : []),
+                { label: "במה תרצו להתמקד בשיעור (איזה נושאים/מבחנים)", value: notes },
               ].filter((r): r is { label: string; value: string } => Boolean(r.value))}
             />
             {errors.submit && (
