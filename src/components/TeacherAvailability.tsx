@@ -68,9 +68,15 @@ const TIME_OPTIONS = generateTimeOptionsForDay();
 type TeacherAvailabilityProps = {
   weekDates?: string[];
   onSlotsChange?: (slots: ApiSlot[]) => void;
+  /** When set, uses admin API to edit another teacher's availability. */
+  teacherId?: string;
 };
 
-export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange }: TeacherAvailabilityProps = {}) {
+const getApiBase = (teacherId?: string) =>
+  teacherId ? `/api/admin/teachers/${teacherId}/availability` : "/api/teacher/availability";
+
+export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange, teacherId }: TeacherAvailabilityProps = {}) {
+  const apiBase = getApiBase(teacherId);
   const weekDates = useMemo(() => weekDatesProp ?? getWeekDatesIsrael(), [weekDatesProp]);
   const dateOptions = weekDates.map((date) => ({
     date,
@@ -91,7 +97,7 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange }:
     const end = weekDates[weekDates.length - 1];
     setLoading(true);
     setLoadError(null);
-    apiJson<ApiSlot[]>(`/api/teacher/availability?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`)
+    apiJson<ApiSlot[]>(`${apiBase}?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`)
       .then((r) => {
         if (r.ok) {
           setSlots(r.data);
@@ -102,7 +108,7 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange }:
         }
       })
       .finally(() => setLoading(false));
-  }, [selectedDate, weekDates, onSlotsChange]);
+  }, [selectedDate, weekDates, onSlotsChange, apiBase]);
 
   useEffect(() => {
     if (weekDates.length === 0) return;
@@ -110,7 +116,7 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange }:
     const end = weekDates[weekDates.length - 1];
     setLoading(true);
     setLoadError(null);
-    apiJson<ApiSlot[]>(`/api/teacher/availability?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`)
+    apiJson<ApiSlot[]>(`${apiBase}?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`)
       .then((r) => {
         if (r.ok) {
           setSlots(r.data);
@@ -121,7 +127,7 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange }:
         }
       })
       .finally(() => setLoading(false));
-  }, [weekDates]);
+  }, [weekDates, apiBase, onSlotsChange]);
 
   const existingForDate = selectedDate
     ? slots.filter((s) => s.date === selectedDate)
@@ -149,8 +155,8 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange }:
       setFullDayLoading(true);
       try {
         const res = await fetch(
-          `/api/teacher/availability?date=${encodeURIComponent(selectedDate)}`,
-          { method: "DELETE" }
+          `${apiBase}?date=${encodeURIComponent(selectedDate)}`,
+          { method: "DELETE", credentials: "include" }
         );
         if (res.ok) {
           setSlots((prev) => {
@@ -177,9 +183,10 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange }:
       startTime: o.startTime,
       endTime: o.endTime,
     }));
-    const res = await fetch("/api/teacher/availability/batch", {
+    const res = await fetch(teacherId ? `${apiBase}` : "/api/teacher/availability/batch", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({ slots: slotsPayload }),
     });
     if (!res.ok) {
@@ -197,7 +204,7 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange }:
       setSlots((prev) => prev.filter((s) => s.id !== opt.id));
       onSlotsChange?.(slots.filter((s) => s.id !== opt.id));
       setToggling(null);
-      const res = await fetch(`/api/teacher/availability?id=${opt.id}`, { method: "DELETE" });
+      const res = await fetch(`${apiBase}?id=${opt.id}`, { method: "DELETE", credentials: "include" });
       if (!res.ok) {
         load();
         setLoadError("שגיאה בהסרת המשבצת. נסו שוב.");
@@ -216,19 +223,24 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange }:
     onSlotsChange?.([...slots, newSlot]);
     setToggling(null);
 
-    const res = await fetch("/api/teacher/availability", {
+    const res = await fetch(apiBase, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        date: selectedDate,
-        startTime: opt.startTime,
-        endTime: opt.endTime,
-      }),
+      credentials: "include",
+      body: JSON.stringify(
+        teacherId
+          ? { slots: [{ date: selectedDate, startTime: opt.startTime, endTime: opt.endTime }] }
+          : { date: selectedDate, startTime: opt.startTime, endTime: opt.endTime }
+      ),
     });
     if (!res.ok) {
       setSlots((prev) => prev.filter((s) => s.id !== pendingId));
       onSlotsChange?.(slots);
       setLoadError("שגיאה בשמירת המשבצת. נסו שוב.");
+      return;
+    }
+    if (teacherId) {
+      load();
       return;
     }
     try {

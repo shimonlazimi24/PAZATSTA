@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { apiJson } from "@/lib/api";
 
 type Teacher = {
@@ -74,14 +75,22 @@ export function TeachersListBlock() {
                 {t.phone ? ` · ${t.phone}` : ""}
               </span>
             </div>
-            <button
-              type="button"
-              onClick={() => handleDelete(t)}
-              disabled={!!deletingId}
-              className="shrink-0 px-3 py-2 rounded-[var(--radius-input)] border border-red-300 text-red-600 text-sm font-medium hover:bg-red-50 disabled:opacity-50"
-            >
+            <div className="flex items-center gap-2 shrink-0">
+              <Link
+                href={`/admin?section=teacher-edit&id=${t.id}`}
+                className="px-3 py-2 rounded-[var(--radius-input)] border border-[var(--color-border)] text-[var(--color-text)] text-sm font-medium hover:bg-[var(--color-bg-muted)]"
+              >
+                ערוך
+              </Link>
+              <button
+                type="button"
+                onClick={() => handleDelete(t)}
+                disabled={!!deletingId}
+                className="shrink-0 px-3 py-2 rounded-[var(--radius-input)] border border-red-300 text-red-600 text-sm font-medium hover:bg-red-50 disabled:opacity-50"
+              >
               {deletingId === t.id ? "מוחק…" : "מחק"}
             </button>
+            </div>
           </li>
         ))}
       </ul>

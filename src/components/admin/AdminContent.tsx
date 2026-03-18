@@ -7,10 +7,12 @@ import { AdminWeeklyCalendar } from "./AdminWeeklyCalendar";
 import { DefineTeacherForm } from "./DefineTeacherForm";
 import { SendHoursSummaryButton } from "./SendHoursSummaryButton";
 import { TeachersListBlock } from "./TeachersListBlock";
+import { AdminTeacherEdit } from "./AdminTeacherEdit";
 
 function AdminContentInner() {
   const searchParams = useSearchParams();
   const section = searchParams.get("section") || "weekly";
+  const teacherEditId = searchParams.get("id") || "";
 
   if (section === "pending") {
     return (
@@ -47,6 +49,14 @@ function AdminContentInner() {
           כל המורים הרשומים במערכת.
         </p>
         <TeachersListBlock />
+      </div>
+    );
+  }
+
+  if (section === "teacher-edit" && teacherEditId) {
+    return (
+      <div>
+        <AdminTeacherEdit teacherId={teacherEditId} />
       </div>
     );
   }
