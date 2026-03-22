@@ -1,0 +1,64 @@
+# העתק ל-.github/workflows/ci.yml אחרי שיש לך PAT עם scope: workflow
+# Copy to .github/workflows/ci.yml once your token has the `workflow` scope.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      app_url:
+        description: "Production URL for health check (e.g. https://pazatsta.vercel.app)"
+        required: true
+        default: "https://pazatsta.vercel.app"
+
+env:
+  APP_URL: ${{ github.event.inputs.app_url || secrets.APP_URL || 'https://pazatsta.vercel.app' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Build
+        run: npm run build
+        env:
+          SKIP_ENV_VALIDATION: "1"
+
+  healthcheck:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install
+        run: npm ci
+
+      - name: Health check (production)
+        run: npm run healthcheck:prod
+        env:
+          APP_URL: ${{ github.event.inputs.app_url || secrets.APP_URL || 'https://pazatsta.vercel.app' }}
