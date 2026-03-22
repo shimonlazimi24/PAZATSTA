@@ -290,32 +290,39 @@ export function AdminStatisticsDashboard() {
             </button>
           ))}
         </div>
-        <div className="flex flex-wrap items-center gap-2 justify-end">
-          <span className="text-sm text-[var(--color-text-muted)]">טווח מותאם:</span>
-          <input
-            type="date"
-            value={customFrom}
-            onChange={(e) => {
-              setCustomFrom(e.target.value);
-              setPreset("custom");
-            }}
-            className="rounded-[var(--radius-input)] border border-[var(--color-border)] px-2 py-1.5 text-sm"
-          />
-          <span className="text-[var(--color-text-muted)]">–</span>
-          <input
-            type="date"
-            value={customTo}
-            onChange={(e) => {
-              setCustomTo(e.target.value);
-              setPreset("custom");
-            }}
-            className="rounded-[var(--radius-input)] border border-[var(--color-border)] px-2 py-1.5 text-sm"
-          />
+        <div className="w-full sm:w-auto flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-2">
+          <span className="text-sm text-[var(--color-text-muted)] text-right shrink-0">
+            טווח מותאם:
+          </span>
+          <div className="flex flex-col gap-2 w-full sm:flex-row sm:w-auto sm:items-center sm:gap-2">
+            <input
+              type="date"
+              value={customFrom}
+              onChange={(e) => {
+                setCustomFrom(e.target.value);
+                setPreset("custom");
+              }}
+              className="w-full sm:w-auto min-w-0 min-h-[44px] rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-text)] [color-scheme:light]"
+            />
+            <span className="hidden sm:inline text-[var(--color-text-muted)] shrink-0" aria-hidden>
+              –
+            </span>
+            <span className="sm:hidden text-center text-xs text-[var(--color-text-muted)]">עד</span>
+            <input
+              type="date"
+              value={customTo}
+              onChange={(e) => {
+                setCustomTo(e.target.value);
+                setPreset("custom");
+              }}
+              className="w-full sm:w-auto min-w-0 min-h-[44px] rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-text)] [color-scheme:light]"
+            />
+          </div>
           <button
             type="button"
             onClick={applyCustom}
             disabled={!customFrom || !customTo || customFrom > customTo}
-            className="rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium hover:bg-[var(--color-bg-muted)] disabled:opacity-50"
+            className="w-full sm:w-auto shrink-0 min-h-[44px] rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium hover:bg-[var(--color-bg-muted)] disabled:opacity-50"
           >
             החל
           </button>
