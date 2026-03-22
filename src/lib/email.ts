@@ -95,6 +95,7 @@ export function getApprovalRequestContent(params: {
   parentPhone?: string | null;
   parentEmail?: string | null;
   notes?: string | null;
+  topic?: string | null;
   teacherName: string;
   date: string;
   timeRange: string;
@@ -116,6 +117,7 @@ export function getApprovalRequestContent(params: {
     ...(params.parentPhone ? [`טלפון הורה: ${params.parentPhone}`] : []),
     ...(params.parentEmail ? [`אימייל הורה: ${params.parentEmail}`] : []),
     ...(params.notes ? [`במה תרצו להתמקד בשיעור: ${params.notes}`] : []),
+    ...(params.topic ? [`סוג המיון: ${params.topic}`] : []),
     `מורה: ${params.teacherName}`,
     `תאריך ושעה: ${params.date} ${params.timeRange}`,
     "",
@@ -137,6 +139,7 @@ export async function sendApprovalRequest(params: {
   parentPhone?: string | null;
   parentEmail?: string | null;
   notes?: string | null;
+  topic?: string | null;
   teacherName: string;
   date: string;
   timeRange: string;
@@ -190,7 +193,7 @@ export function getBookingConfirmationContent(params: {
   ].join("\n");
 
   let text = `שיעור נקבע: ${params.studentName} עם ${params.teacherName} בתאריך ${params.date} בשעה ${params.timeRange}.`;
-  if (params.topic) text += `\nסוג המיון: ${params.topic}`;
+  text += `\nסוג המיון: ${params.topic || "לא צוין"}`;
   if (params.screeningDate) text += `\nתאריך המיון: ${params.screeningDate}`;
   if (params.studentEmail) text += `\nאימייל תלמיד: ${params.studentEmail}`;
   if (params.studentPhone) text += `\nטלפון תלמיד: ${params.studentPhone}`;

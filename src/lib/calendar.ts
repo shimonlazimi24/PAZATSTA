@@ -1,6 +1,9 @@
 /**
  * Helpers for "Add to calendar" (ICS download + Google Calendar link).
+ * All times are in Israel timezone (Asia/Jerusalem) so teachers/students abroad see correct local time.
  */
+
+const TZ_ISRAEL = "Asia/Jerusalem";
 
 export type CalendarEvent = {
   date: string; // YYYY-MM-DD
@@ -71,8 +74,8 @@ export function buildIcsBlob(event: CalendarEvent): Blob {
     "BEGIN:VEVENT",
     `UID:${uid}`,
     `DTSTAMP:${dtstamp}`,
-    `DTSTART:${start}`,
-    `DTEND:${end}`,
+    `DTSTART;TZID=${TZ_ISRAEL}:${start}`,
+    `DTEND;TZID=${TZ_ISRAEL}:${end}`,
     foldLine("SUMMARY:" + summary),
     foldLine("DESCRIPTION:" + description),
   ];
@@ -96,6 +99,7 @@ export function buildGoogleCalendarUrl(event: CalendarEvent): string {
     action: "TEMPLATE",
     text: event.title,
     dates: `${start}/${end}`,
+    ctz: TZ_ISRAEL,
   });
   if (event.description) {
     params.set("details", event.description);

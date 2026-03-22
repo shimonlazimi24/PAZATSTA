@@ -91,7 +91,7 @@ export async function POST(req: Request) {
       );
     }
 
-    let lesson: { id: string; status: string; date: Date; startTime: string; endTime: string; teacher: { email: string; name: string | null }; student: { email: string; name: string | null } };
+    let lesson: { id: string; status: string; date: Date; startTime: string; endTime: string; topic?: string | null; teacher: { email: string; name: string | null }; student: { email: string; name: string | null } };
     let admins: { email: string }[] = [];
 
     if (availabilityId) {
@@ -169,6 +169,7 @@ export async function POST(req: Request) {
         parentPhone: parentPhoneFromForm || null,
         parentEmail: parentEmailFromForm || null,
         notes: notesFromForm || null,
+        topic: selectedTopic || lesson.topic || null,
         teacherName: lesson.teacher.name || lesson.teacher.email || "מורה",
         date: formatDateInIsrael(lesson.date),
         timeRange: `${lesson.startTime}–${lesson.endTime}`,
@@ -272,6 +273,7 @@ export async function POST(req: Request) {
       parentPhone: parentPhoneFromForm || null,
       parentEmail: parentEmailFromForm || null,
       notes: notesFromForm || null,
+      topic: selectedTopic || lesson.topic || null,
       teacherName,
       date: formattedDate,
       timeRange,

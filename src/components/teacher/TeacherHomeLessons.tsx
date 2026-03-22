@@ -7,6 +7,7 @@ import { CalendarDays, CalendarPlus } from "lucide-react";
 import { addToCalendar } from "@/lib/calendar";
 import { isLessonStarted } from "@/lib/dates";
 import { formatLessonDate, getStatusLabel } from "@/lib/lesson-utils";
+import { RescheduleLessonModal } from "./RescheduleLessonModal";
 import type { DisplayLesson } from "@/types";
 
 type Lesson = DisplayLesson & {
@@ -23,6 +24,7 @@ export function TeacherHomeLessons() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [followUpLoadingId, setFollowUpLoadingId] = useState<string | null>(null);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
+  const [rescheduleLesson, setRescheduleLesson] = useState<Lesson | null>(null);
   const retryingRef = useRef(false);
 
   function load(retryCount = 0) {
@@ -89,14 +91,31 @@ export function TeacherHomeLessons() {
     return () => window.removeEventListener("teacher-lessons-refresh", onRefresh);
   }, []);
 
-  async function handleFollowUpComplete(lessonId: string) {
-    setFollowUpLoadingId(lessonId);
+  async function handleFollowUpComplete(lesson: Lesson) {
+    setFollowUpLoadingId(lesson.id);
     try {
-      const res = await fetch(`/api/teacher/lessons/${lessonId}/follow-up-complete`, {
+      const res = await fetch(`/api/teacher/lessons/${lesson.id}/follow-up-complete`, {
         method: "POST",
         credentials: "include",
       });
-      if (res.ok) load();
+      if (res.ok) {
+        load();
+        const screeningDate = lesson.student.screeningDate;
+        const screeningType = (lesson.student.screeningType || "").trim();
+        const studentName = lesson.student.name || lesson.student.email || "תלמיד";
+        if (screeningDate) {
+          const title = screeningType
+            ? `פולואו אפ – ${screeningType} – ${studentName}`
+            : `פולואו אפ – ${studentName}`;
+          addToCalendar({
+            date: screeningDate,
+            startTime: "10:00",
+            endTime: "10:30",
+            title,
+            description: `תזכורת למעקב אחרי תלמיד: ${studentName}`,
+          });
+        }
+      }
     } finally {
       setFollowUpLoadingId(null);
     }
@@ -221,6 +240,15 @@ export function TeacherHomeLessons() {
                       {l.status === "scheduled" && !isLessonStarted(l.date, l.startTime) && (
                         <button
                           type="button"
+                          onClick={() => setRescheduleLesson(l)}
+                          className="inline-flex items-center gap-1.5 rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs font-medium text-[var(--color-text)] hover:bg-[var(--color-bg-muted)]"
+                        >
+                          שנה מועד
+                        </button>
+                      )}
+                      {l.status === "scheduled" && !isLessonStarted(l.date, l.startTime) && (
+                        <button
+                          type="button"
                           onClick={() =>
                             addToCalendar({
                               date: l.date,
@@ -265,6 +293,17 @@ export function TeacherHomeLessons() {
         </section>
       )}
 
+      {rescheduleLesson && (
+        <RescheduleLessonModal
+          lessonId={rescheduleLesson.id}
+          currentDate={rescheduleLesson.date}
+          currentStartTime={rescheduleLesson.startTime}
+          currentEndTime={rescheduleLesson.endTime}
+          onClose={() => setRescheduleLesson(null)}
+          onSuccess={() => load()}
+        />
+      )}
+
       {hasPast && (
         <section>
           <h3 className="text-lg font-semibold text-[var(--color-text)] mb-3">
@@ -306,7 +345,7 @@ export function TeacherHomeLessons() {
                               )}
                               <button
                                 type="button"
-                                onClick={() => handleFollowUpComplete(l.id)}
+                                onClick={() => handleFollowUpComplete(l)}
                                 disabled={followUpLoadingId === l.id}
                                 className="px-3 py-1.5 rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white text-sm font-medium text-[var(--color-text)] hover:bg-[var(--color-bg-muted)] disabled:opacity-50"
                               >
