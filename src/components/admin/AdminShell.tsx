@@ -15,6 +15,7 @@ const MENU_ITEMS = [
   { id: "teacher", label: "הגדרת מורה", href: "/admin?section=teacher" },
   { id: "teachers", label: "רשימת מורים", href: "/admin?section=teachers" },
   { id: "summary", label: "סיכום שעות לתשלום", href: "/admin?section=summary" },
+  { id: "statistics", label: "סטטיסטיקות", href: "/admin/statistics" },
 ] as const;
 
 interface AdminShellProps {
@@ -29,18 +30,21 @@ export function AdminShell({ email, children }: AdminShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
 
-  const isAdminPage = pathname === "/admin";
+  const showAdminNav = pathname === "/admin" || pathname.startsWith("/admin/");
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] flex" dir="rtl">
       {/* Desktop sidebar - hidden on mobile */}
-      {isAdminPage && (
+      {showAdminNav && (
         <aside className="hidden w-56 shrink-0 border-s border-[var(--color-border)] bg-white md:flex md:flex-col">
           <nav className="p-4 space-y-1">
             {MENU_ITEMS.map((item) => {
               const isActive =
-                (item.id === "weekly" && !searchParams.get("section")) ||
-                searchParams.get("section") === item.id;
+                item.href === "/admin/statistics"
+                  ? pathname === "/admin/statistics"
+                  : pathname === "/admin" &&
+                    ((item.id === "weekly" && !searchParams.get("section")) ||
+                      searchParams.get("section") === item.id);
               return (
                 <Link
                   key={item.id}
@@ -79,7 +83,7 @@ export function AdminShell({ email, children }: AdminShellProps) {
                 <span className="text-sm text-[var(--color-text-muted)] hidden sm:inline truncate max-w-[140px]">
                   {email}
                 </span>
-                {isAdminPage && (
+                {showAdminNav && (
                   <button
                     type="button"
                     onClick={() => setDrawerOpen(true)}
@@ -99,13 +103,16 @@ export function AdminShell({ email, children }: AdminShellProps) {
       </div>
 
       {/* Mobile drawer - admin nav */}
-      {isAdminPage && (
+      {showAdminNav && (
         <NavDrawer open={drawerOpen} onClose={closeDrawer} title="תפריט ניהול">
           <nav className="p-4 space-y-1">
             {MENU_ITEMS.map((item) => {
               const isActive =
-                (item.id === "weekly" && !searchParams.get("section")) ||
-                searchParams.get("section") === item.id;
+                item.href === "/admin/statistics"
+                  ? pathname === "/admin/statistics"
+                  : pathname === "/admin" &&
+                    ((item.id === "weekly" && !searchParams.get("section")) ||
+                      searchParams.get("section") === item.id);
               return (
                 <Link
                   key={item.id}
