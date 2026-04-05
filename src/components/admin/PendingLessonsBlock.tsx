@@ -10,6 +10,8 @@ type PendingLesson = {
   endTime: string;
   teacher: { id: string; email: string; name: string | null };
   student: { id: string; email: string; name: string | null };
+  workshopName?: string | null;
+  isWorkshop?: boolean;
 };
 
 export function PendingLessonsBlock() {
@@ -88,6 +90,11 @@ export function PendingLessonsBlock() {
             className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-2 rounded-[var(--radius-input)] border border-[var(--color-border)] p-3"
           >
             <span className="text-[var(--color-text)] text-sm sm:text-base min-w-0">
+              {l.isWorkshop && (
+                <span className="inline-block rounded bg-teal-100 text-teal-900 text-xs font-medium px-2 py-0.5 ml-2 mb-1">
+                  סדנה{l.workshopName ? `: ${l.workshopName}` : ""}
+                </span>
+              )}{" "}
               {l.teacher.name || l.teacher.email} ↔ {l.student.name || l.student.email} — {l.date} {l.startTime}–{l.endTime}
             </span>
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">

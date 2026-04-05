@@ -7,12 +7,14 @@ import { teacherMatchesTopic } from "@/lib/topics";
 import { formatDateInIsrael } from "@/lib/date-utils";
 import { ADMIN_TEACHER_EMAILS, ADMIN_NOTIFICATION_EMAILS } from "@/lib/admin";
 import { isValidDeliveryEmail } from "@/lib/validation";
+import { upsertStudentProfileFromBookingForm } from "@/lib/booking-student-profile";
 
 const APPROVAL_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 const trimString = (s: unknown) => (typeof s === "string" ? s.trim() : "");
 
 const BookSubmitSchema = z.object({
+  workshopId: z.unknown().optional().transform(trimString),
   availabilityId: z.unknown().optional().transform(trimString),
   teacherId: z.unknown().optional().transform(trimString),
   selectedTopic: z.unknown().optional().transform(trimString),
@@ -26,6 +28,7 @@ const BookSubmitSchema = z.object({
   startTime: z.unknown().optional().transform(trimString),
   endTime: z.unknown().optional().transform(trimString),
 }).transform((o) => ({
+  workshopId: o.workshopId || "",
   availabilityId: o.availabilityId || "",
   teacherId: o.teacherId || "",
   selectedTopic: o.selectedTopic || "",
@@ -70,6 +73,7 @@ export async function POST(req: Request) {
       );
     }
     const {
+      workshopId: workshopIdRaw,
       availabilityId,
       teacherId,
       selectedTopic,
@@ -83,8 +87,9 @@ export async function POST(req: Request) {
       startTime,
       endTime,
     } = parsed.data;
+    const workshopId = workshopIdRaw?.trim() || "";
 
-    if (!notesFromForm?.trim()) {
+    if (!workshopId && !notesFromForm?.trim()) {
       return NextResponse.json(
         { error: "נא לציין במה תרצו להתמקד בשיעור (איזה נושאים/מבחנים)" },
         { status: 400 }
@@ -93,6 +98,99 @@ export async function POST(req: Request) {
 
     let lesson: { id: string; status: string; date: Date; startTime: string; endTime: string; topic?: string | null; teacher: { email: string; name: string | null }; student: { email: string; name: string | null } };
     let admins: { email: string }[] = [];
+
+    if (workshopId) {
+      const w = await prisma.workshop.findUnique({
+        where: { id: workshopId },
+        include: { teacher: { include: { teacherProfile: true } } },
+      });
+      if (!w) {
+        return NextResponse.json({ error: "הסדנה לא נמצאה" }, { status: 404 });
+      }
+      const topicLabel = w.topicLabel;
+      if (selectedTopic && selectedTopic !== topicLabel) {
+        return NextResponse.json({ error: "סוג המיון לא תואם לסדנה" }, { status: 400 });
+      }
+      const specialties = w.teacher.teacherProfile?.specialties ?? [];
+      if (!teacherMatchesTopic(specialties, topicLabel)) {
+        return NextResponse.json(
+          { error: "המורה אינו משויך למסלול הסדנה. צרו קשר עם האדמין." },
+          { status: 403 }
+        );
+      }
+      const booked = await prisma.lesson.count({
+        where: { workshopId: w.id, status: { not: "canceled" } },
+      });
+      if (booked >= w.maxParticipants) {
+        return NextResponse.json(
+          { error: "אין מקומות פנויים בסדנה זו" },
+          { status: 409 }
+        );
+      }
+      const alreadyInWorkshop = await prisma.lesson.findFirst({
+        where: {
+          workshopId: w.id,
+          studentId: user.id,
+          status: { not: "canceled" },
+        },
+      });
+      if (alreadyInWorkshop) {
+        return NextResponse.json(
+          { error: "כבר נרשמת לסדנה זו" },
+          { status: 409 }
+        );
+      }
+
+      await upsertStudentProfileFromBookingForm(user.id, {
+        studentNameFromForm,
+        studentPhoneFromForm,
+        parentNameFromForm,
+        parentPhoneFromForm,
+        parentEmailFromForm,
+      });
+
+      lesson = await prisma.lesson.create({
+        data: {
+          teacherId: w.teacherId,
+          studentId: user.id,
+          date: w.date,
+          startTime: w.startTime,
+          endTime: w.endTime,
+          topic: topicLabel,
+          workshopId: w.id,
+          questionFromStudent: null,
+          status: "pending_approval",
+          approvalExpiresAt: new Date(Date.now() + APPROVAL_WINDOW_MS),
+        },
+        include: { teacher: true, student: true },
+      });
+
+      admins = adminsPreload;
+      const toEmails = admins.map((a) => a.email).filter(Boolean);
+      await sendApprovalRequest({
+        to: toEmails,
+        teacherEmail: lesson.teacher.email,
+        studentName: studentNameFromForm || lesson.student.name || lesson.student.email || "תלמיד",
+        studentEmail: lesson.student.email,
+        studentPhone: (studentPhoneFromForm || (lesson.student as { phone?: string | null }).phone) ?? null,
+        parentName: parentNameFromForm || null,
+        parentPhone: parentPhoneFromForm || null,
+        parentEmail: parentEmailFromForm || null,
+        notes: null,
+        topic: topicLabel,
+        teacherName: lesson.teacher.name || lesson.teacher.email || "מורה",
+        date: formatDateInIsrael(lesson.date),
+        timeRange: `${lesson.startTime}–${lesson.endTime}`,
+      }).catch((err) => console.error("[book/submit] Approval request email failed:", err));
+
+      return NextResponse.json({
+        id: lesson.id,
+        status: lesson.status,
+        date: lesson.date.toISOString().slice(0, 10),
+        startTime: lesson.startTime,
+        endTime: lesson.endTime,
+      });
+    }
 
     if (availabilityId) {
       const result = await prisma.$transaction(
@@ -134,27 +232,13 @@ export async function POST(req: Request) {
         );
       }
       lesson = result;
-      if (studentNameFromForm || studentPhoneFromForm || parentNameFromForm || parentPhoneFromForm || parentEmailFromForm) {
-        const userData: { name?: string; phone?: string } = {};
-        if (studentNameFromForm) userData.name = studentNameFromForm;
-        if (studentPhoneFromForm) userData.phone = studentPhoneFromForm;
-        if (Object.keys(userData).length > 0) {
-          await prisma.user.update({
-            where: { id: user.id },
-            data: userData,
-          });
-        }
-        const profileData: { studentFullName?: string; parentFullName?: string; parentPhone?: string; parentEmail?: string } = {};
-        if (studentNameFromForm) profileData.studentFullName = studentNameFromForm;
-        if (parentNameFromForm) profileData.parentFullName = parentNameFromForm;
-        if (parentPhoneFromForm) profileData.parentPhone = parentPhoneFromForm;
-        if (parentEmailFromForm) profileData.parentEmail = parentEmailFromForm;
-        await prisma.studentProfile.upsert({
-          where: { userId: user.id },
-          create: { userId: user.id, ...profileData },
-          update: profileData,
-        });
-      }
+      await upsertStudentProfileFromBookingForm(user.id, {
+        studentNameFromForm,
+        studentPhoneFromForm,
+        parentNameFromForm,
+        parentPhoneFromForm,
+        parentEmailFromForm,
+      });
       admins = adminsPreload;
       const adminEmails = admins.map((a) => a.email).filter(Boolean);
       const toEmails = Array.from(
@@ -162,6 +246,7 @@ export async function POST(req: Request) {
       ).filter(Boolean);
       await sendApprovalRequest({
         to: toEmails,
+        teacherEmail: lesson.teacher.email,
         studentName: studentNameFromForm || lesson.student.name || lesson.student.email || "תלמיד",
         studentEmail: lesson.student.email,
         studentPhone: (studentPhoneFromForm || (lesson.student as { phone?: string | null }).phone) ?? null,
@@ -210,7 +295,7 @@ export async function POST(req: Request) {
         }
       }
       const existing = await prisma.lesson.findFirst({
-        where: { teacherId, date, startTime },
+        where: { teacherId, date, startTime, workshopId: null },
       });
       if (existing) {
         return NextResponse.json(
@@ -218,27 +303,13 @@ export async function POST(req: Request) {
           { status: 409 }
         );
       }
-      if (studentNameFromForm || studentPhoneFromForm || parentNameFromForm || parentPhoneFromForm || parentEmailFromForm) {
-        const userData: { name?: string; phone?: string } = {};
-        if (studentNameFromForm) userData.name = studentNameFromForm;
-        if (studentPhoneFromForm) userData.phone = studentPhoneFromForm;
-        if (Object.keys(userData).length > 0) {
-          await prisma.user.update({
-            where: { id: user.id },
-            data: userData,
-          });
-        }
-        const profileData: { studentFullName?: string; parentFullName?: string; parentPhone?: string; parentEmail?: string } = {};
-        if (studentNameFromForm) profileData.studentFullName = studentNameFromForm;
-        if (parentNameFromForm) profileData.parentFullName = parentNameFromForm;
-        if (parentPhoneFromForm) profileData.parentPhone = parentPhoneFromForm;
-        if (parentEmailFromForm) profileData.parentEmail = parentEmailFromForm;
-        await prisma.studentProfile.upsert({
-          where: { userId: user.id },
-          create: { userId: user.id, ...profileData },
-          update: profileData,
-        });
-      }
+      await upsertStudentProfileFromBookingForm(user.id, {
+        studentNameFromForm,
+        studentPhoneFromForm,
+        parentNameFromForm,
+        parentPhoneFromForm,
+        parentEmailFromForm,
+      });
       lesson = await prisma.lesson.create({
         data: {
           teacherId: teacher.id,
@@ -266,6 +337,7 @@ export async function POST(req: Request) {
     ).filter(Boolean);
     await sendApprovalRequest({
       to: toEmails,
+      teacherEmail: lesson.teacher.email,
       studentName,
       studentEmail: lesson.student.email,
       studentPhone: (studentPhoneFromForm || (lesson.student as { phone?: string | null }).phone) ?? null,

@@ -34,6 +34,29 @@ const STEPS = [
   { label: "אישור" },
 ];
 
+const WORKSHOP_STEPS = [
+  { label: "מקצוע" },
+  { label: "פרטי סדנה" },
+  { label: "פרטים" },
+  { label: "אישור" },
+];
+
+type WorkshopListItem = {
+  id: string;
+  name: string;
+  date: string;
+  maxParticipants: number;
+  booked: number;
+  spotsLeft: number;
+  startTime: string;
+  endTime: string;
+  topicLabel: string;
+  teacherName: string;
+  generalDescription?: string | null;
+};
+
+type SubOption = { id: string; label: string; displayLabel?: string };
+
 const CATEGORIES: {
   id: string;
   title: string;
@@ -89,6 +112,11 @@ const CATEGORIES: {
       { id: "other-gadna", label: "גדנע חובלים" },
     ],
   },
+  {
+    id: "workshop",
+    title: "סדנאות",
+    subs: [],
+  },
 ];
 
 /** P2: topic group colors — צו ראשון green, יום המאה yellow, מודיעין purple, טייס blue, אחר gray */
@@ -98,6 +126,7 @@ const CATEGORY_COLORS: Record<string, { card: string; chip: string; ring: string
   tzav: { card: "border-green-300 bg-green-50", chip: "bg-green-600 text-white border-green-600", ring: "ring-green-500" },
   modiin: { card: "border-purple-300 bg-purple-50", chip: "bg-purple-600 text-white border-purple-600", ring: "ring-purple-500" },
   other: { card: "border-gray-300 bg-gray-50", chip: "bg-gray-600 text-white border-gray-600", ring: "ring-gray-500" },
+  workshop: { card: "border-teal-300 bg-teal-50", chip: "bg-teal-600 text-white border-teal-600", ring: "ring-teal-500" },
 };
 
 function formatDateLabel(dateStr: string): string {
@@ -152,7 +181,8 @@ export default function BookPage() {
   const [roleChecked, setRoleChecked] = useState(false);
   const [step, setStep] = useState(1);
   const [categoryId, setCategoryId] = useState<string | null>(null);
-  const [subOption, setSubOption] = useState<{ id: string; label: string } | null>(null);
+  const [subOption, setSubOption] = useState<SubOption | null>(null);
+  const [workshops, setWorkshops] = useState<WorkshopListItem[]>([]);
   const [teacher, setTeacher] = useState<MockTeacher | null>(null);
   const [apiTeachers, setApiTeachers] = useState<MockTeacher[]>([]);
   const [teachersLoading, setTeachersLoading] = useState(false);
@@ -169,6 +199,15 @@ export default function BookPage() {
   const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const subOptionsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetch("/api/workshops")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((list: WorkshopListItem[]) => {
+        if (Array.isArray(list)) setWorkshops(list);
+      })
+      .catch(() => setWorkshops([]));
+  }, []);
 
   useEffect(() => {
     fetch("/api/auth/me", { credentials: "include" })
@@ -195,6 +234,7 @@ export default function BookPage() {
 
   useEffect(() => {
     if (step !== 2) return;
+    if (categoryId === "workshop") return;
     const topic = subOption?.label ?? "";
     const url = topic ? `/api/teachers?topic=${encodeURIComponent(topic)}` : "/api/teachers";
     setTeachersLoading(true);
@@ -209,7 +249,7 @@ export default function BookPage() {
       })
       .catch(() => setApiTeachers([]))
       .finally(() => setTeachersLoading(false));
-  }, [step, subOption?.label]);
+  }, [step, subOption?.label, categoryId]);
 
   const isRealTeacher = Boolean(teacher?.id && teacher.id.length > 10 && !teacher.id.startsWith("t"));
 
@@ -268,6 +308,15 @@ export default function BookPage() {
   // Teachers are already filtered by API when subOption (topic) is selected
   const filteredTeachers = useMemo(() => apiTeachers, [apiTeachers]);
 
+  const isWorkshopFlow = categoryId === "workshop" && subOption !== null;
+  const maxStep = isWorkshopFlow ? 4 : 5;
+  const stepperSteps = isWorkshopFlow ? WORKSHOP_STEPS : STEPS;
+  const detailsStep = isWorkshopFlow ? 3 : 4;
+  const confirmStep = isWorkshopFlow ? 4 : 5;
+  const selectedWorkshop =
+    isWorkshopFlow && subOption ? workshops.find((w) => w.id === subOption.id) ?? null : null;
+  const canProceedWorkshop2 = Boolean(selectedWorkshop && selectedWorkshop.spotsLeft > 0);
+
   const canProceedStep1 = categoryId !== null && subOption !== null;
   const canProceedStep2 = teacher !== null;
   const canProceedStep3 = selectedDate !== null && selectedSlot !== null;
@@ -284,19 +333,86 @@ export default function BookPage() {
     else if (!isValidPhone(parentPhone)) e.parentPhone = "נא להזין מספר טלפון תקין (9–11 ספרות)";
     if (!parentEmail.trim()) e.parentEmail = "נא להזין אימייל של אחד ההורים";
     else if (!isValidEmail(parentEmail)) e.parentEmail = "נא להזין כתובת אימייל תקינה";
-    if (!notes.trim()) e.notes = "נא לציין במה תרצו להתמקד בשיעור";
+    if (!isWorkshopFlow && !notes.trim()) e.notes = "נא לציין במה תרצו להתמקד בשיעור";
     setErrors(e);
     return Object.keys(e).length === 0;
   }
 
   async function handleNext() {
     if (step === 1 && !canProceedStep1) return;
-    if (step === 2 && !canProceedStep2) return;
-    if (step === 3 && !canProceedStep3) return;
-    if (step === 4) {
+    if (step === 2 && isWorkshopFlow && !canProceedWorkshop2) return;
+    if (step === 2 && !isWorkshopFlow && !canProceedStep2) return;
+    if (step === 3 && !isWorkshopFlow && !canProceedStep3) return;
+    if (step === detailsStep) {
       if (!validateStep5()) return;
     }
-    if (step === 5) {
+    if (step === confirmStep) {
+      const subjectLabel = subOption?.displayLabel ?? subOption?.label ?? "";
+      if (isWorkshopFlow && !selectedWorkshop) {
+        setErrors({
+          submit:
+            "לא נמצאו פרטי הסדנה. רעננו את הדף או חזרו ובחרו סדנה מחדש.",
+        });
+        return;
+      }
+      if (isWorkshopFlow && selectedWorkshop) {
+        const payload = {
+          subjectTitle: subjectLabel,
+          categoryTitle: "סדנאות",
+          teacherName: selectedWorkshop.teacherName,
+          date: selectedWorkshop.date,
+          startTime: selectedWorkshop.startTime,
+          endTime: selectedWorkshop.endTime,
+          name,
+          phone,
+          email,
+          parentName,
+          parentPhone,
+          parentEmail,
+          notes: "",
+          status: "pending_approval" as const,
+        };
+        try {
+          sessionStorage.setItem("paza_last_booking", JSON.stringify(payload));
+        } catch (_) {}
+        try {
+          const body: {
+            workshopId: string;
+            selectedTopic: string;
+            studentName?: string;
+            phone?: string;
+            parentName?: string;
+            parentPhone?: string;
+            parentEmail?: string;
+            notes?: string;
+          } = {
+            workshopId: selectedWorkshop.id,
+            selectedTopic: selectedWorkshop.topicLabel,
+            notes: "",
+          };
+          if (name?.trim()) body.studentName = name.trim();
+          if (phone?.trim()) body.phone = phone.trim();
+          if (parentName?.trim()) body.parentName = parentName.trim();
+          if (parentPhone?.trim()) body.parentPhone = parentPhone.trim();
+          if (parentEmail?.trim()) body.parentEmail = parentEmail.trim();
+          const res = await fetch("/api/book/submit", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (res.ok) {
+            router.push("/book/success");
+            return;
+          }
+          setErrors({ submit: (data as { error?: string }).error ?? "שגיאה בקביעת השיעור" });
+          return;
+        } catch (_) {
+          setErrors({ submit: "שגיאה בקביעת השיעור" });
+          return;
+        }
+      }
+
       const isRealTeacherId = teacher?.id && teacher.id.length > 10 && !teacher.id.startsWith("t");
       const payload = {
         subjectTitle: subOption?.label ?? "",
@@ -362,7 +478,11 @@ export default function BookPage() {
     setStep((s) => Math.max(1, s - 1));
   }
 
-  const subjectTitle = subOption?.label ?? CATEGORIES.find((c) => c.id === categoryId)?.title ?? "";
+  const subjectTitle =
+    subOption?.displayLabel ??
+    subOption?.label ??
+    CATEGORIES.find((c) => c.id === categoryId)?.title ??
+    "";
 
   if (!roleChecked) {
     return (
@@ -381,7 +501,7 @@ export default function BookPage() {
           <div className="mx-auto max-w-3xl px-4 py-4 sm:px-6">
             <h1 className="text-2xl font-bold text-[var(--color-text)] text-right">קביעת שיעור</h1>
             <div className="mt-4">
-              <Stepper steps={STEPS} currentStep={step} />
+              <Stepper steps={stepperSteps} currentStep={step} />
             </div>
           </div>
         </header>
@@ -400,6 +520,11 @@ export default function BookPage() {
                     onClick={() => {
                       setCategoryId(cat.id);
                       setSubOption(null);
+                      // Avoid mixing 1:1 booking state with workshop flow (wrong API / slot conflict).
+                      setTeacher(null);
+                      setSelectedDate(null);
+                      setSelectedSlot(null);
+                      setTeacherSlots([]);
                     }}
                     className={`cursor-pointer rounded-[var(--radius-card)] ${isSelected && colors ? `ring-2 ring-offset-2 ${colors.ring}` : ""}`}
                   >
@@ -418,31 +543,132 @@ export default function BookPage() {
               <div ref={subOptionsRef} className="space-y-2 pt-4" dir="rtl">
                 <p className="text-[var(--color-text-muted)] text-right">בחרו סוג מיון</p>
                 <div className="flex flex-wrap gap-2 justify-start">
-                  {CATEGORIES.find((c) => c.id === categoryId)?.subs.map((s) => {
-                    const colors = CATEGORY_COLORS[categoryId];
-                    const isChipSelected = subOption?.id === s.id;
-                    return (
-                      <button
-                        key={s.id}
-                        type="button"
-                        onClick={() => setSubOption(s)}
-                        className={`px-4 py-2 rounded-[var(--radius-input)] border text-sm font-medium transition-colors ${
-                          isChipSelected && colors
-                            ? colors.chip
-                            : "bg-white border-[var(--color-border)] text-[var(--color-text)] hover:bg-[var(--color-bg-muted)]"
-                        }`}
-                      >
-                        {s.label}
-                      </button>
-                    );
-                  })}
+                  {categoryId === "workshop" ? (
+                    workshops.length === 0 ? (
+                      <p className="text-sm text-[var(--color-text-muted)] text-right w-full rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-bg-muted)] p-4">
+                        אין סדנאות פתוחות לזימון כרגע. נסו שוב מאוחר יותר או צרו קשר עם האדמין.
+                      </p>
+                    ) : (
+                      <>
+                      {workshops.map((w) => {
+                        const colors = CATEGORY_COLORS.workshop;
+                        const chipId = w.id;
+                        const displayLabel = `${w.name} · ${formatDateLabel(w.date)}`;
+                        const isChipSelected = subOption?.id === chipId;
+                        return (
+                          <button
+                            key={chipId}
+                            type="button"
+                            disabled={w.spotsLeft <= 0}
+                            onClick={() => {
+                              setSubOption({
+                                id: w.id,
+                                label: w.topicLabel,
+                                displayLabel,
+                              });
+                              setTeacher(null);
+                              setSelectedDate(null);
+                              setSelectedSlot(null);
+                              setTeacherSlots([]);
+                            }}
+                            className={`flex flex-col items-stretch gap-1 px-4 py-2 rounded-[var(--radius-input)] border text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                              isChipSelected && colors
+                                ? colors.chip
+                                : "bg-white border-[var(--color-border)] text-[var(--color-text)] hover:bg-[var(--color-bg-muted)]"
+                            }`}
+                          >
+                            <span>{displayLabel}</span>
+                            {w.spotsLeft <= 0 && (
+                              <span className="text-xs font-semibold opacity-90 border-t border-current/20 pt-1 mt-0.5">
+                                המלאי אזל
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                      </>
+                    )
+                  ) : (
+                    CATEGORIES.find((c) => c.id === categoryId)?.subs.map((s) => {
+                      const colors = CATEGORY_COLORS[categoryId];
+                      const isChipSelected = subOption?.id === s.id;
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => setSubOption(s)}
+                          className={`px-4 py-2 rounded-[var(--radius-input)] border text-sm font-medium transition-colors ${
+                            isChipSelected && colors
+                              ? colors.chip
+                              : "bg-white border-[var(--color-border)] text-[var(--color-text)] hover:bg-[var(--color-bg-muted)]"
+                          }`}
+                        >
+                          {s.label}
+                        </button>
+                      );
+                    })
+                  )}
                 </div>
               </div>
             )}
           </div>
         )}
 
-        {step === 2 && (
+        {step === 2 && isWorkshopFlow && !selectedWorkshop && (
+          <p className="text-sm text-[var(--color-text-muted)] text-right rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-bg-muted)] p-4">
+            לא נמצאו פרטי הסדנה. חזרו ובחרו שוב או רעננו את הדף.
+          </p>
+        )}
+
+        {step === 2 && isWorkshopFlow && selectedWorkshop && (
+          <div className="space-y-6">
+            <p className="text-[var(--color-text-muted)] text-right">פרטי הסדנה</p>
+            <Card>
+              <dl className="space-y-3 text-right text-[var(--color-text)]">
+                <div>
+                  <dt className="text-sm text-[var(--color-text-muted)]">שם הסדנה</dt>
+                  <dd className="font-medium">{selectedWorkshop.name}</dd>
+                </div>
+                <div>
+                  <dt className="text-sm text-[var(--color-text-muted)]">תאריך</dt>
+                  <dd className="font-medium">
+                    {formatDateLabel(selectedWorkshop.date)} ({formatWeekday(selectedWorkshop.date)})
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-sm text-[var(--color-text-muted)]">מורה</dt>
+                  <dd className="font-medium">{selectedWorkshop.teacherName}</dd>
+                </div>
+                <div>
+                  <dt className="text-sm text-[var(--color-text-muted)]">שעות</dt>
+                  <dd className="font-medium">
+                    {selectedWorkshop.startTime}–{selectedWorkshop.endTime}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-sm text-[var(--color-text-muted)]">משתתפים</dt>
+                  <dd className="font-medium">
+                    {selectedWorkshop.booked} / {selectedWorkshop.maxParticipants} · נותרו{" "}
+                    {selectedWorkshop.spotsLeft} מקומות
+                  </dd>
+                </div>
+                {selectedWorkshop.generalDescription?.trim() && (
+                  <div>
+                    <dt className="text-sm text-[var(--color-text-muted)]">הסבר כללי</dt>
+                    <dd className="text-sm text-[var(--color-text)] whitespace-pre-wrap leading-relaxed">
+                      {selectedWorkshop.generalDescription.trim()}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            </Card>
+            {selectedWorkshop.spotsLeft <= 0 && (
+              <p className="text-sm text-red-600 text-right">הסדנה מלאה. בחרו סדנה אחרת בשלב הקודם.</p>
+            )}
+          </div>
+        )}
+
+        {step === 2 && !isWorkshopFlow && (
           <div className="space-y-6">
             <p className="text-[var(--color-text-muted)] text-right">בחרו מורה</p>
             {teachersLoading ? (
@@ -470,7 +696,84 @@ export default function BookPage() {
           </div>
         )}
 
-        {step === 3 && (
+        {step === 3 && isWorkshopFlow && (
+          <Card>
+            <div className="space-y-4">
+              <FormField
+                label="שם מלא"
+                name="name"
+                value={name}
+                onChange={(v) => {
+                  setName(v);
+                  if (errors.name) setErrors((e) => ({ ...e, name: "" }));
+                }}
+                required
+                error={errors.name}
+              />
+              <FormField
+                label="טלפון"
+                name="phone"
+                type="tel"
+                value={phone}
+                onChange={(v) => {
+                  setPhone(v);
+                  if (errors.phone) setErrors((e) => ({ ...e, phone: "" }));
+                }}
+                required
+                error={errors.phone}
+              />
+              <FormField
+                label="אימייל תלמיד"
+                name="email"
+                type="email"
+                value={email}
+                onChange={(v) => {
+                  setEmail(v);
+                  if (errors.email) setErrors((e) => ({ ...e, email: "" }));
+                }}
+                required
+                error={errors.email}
+              />
+              <FormField
+                label="שם מלא של אחד ההורים"
+                name="parentName"
+                value={parentName}
+                onChange={(v) => {
+                  setParentName(v);
+                  if (errors.parentName) setErrors((e) => ({ ...e, parentName: "" }));
+                }}
+                required
+                error={errors.parentName}
+              />
+              <FormField
+                label="טלפון של אחד ההורים"
+                name="parentPhone"
+                type="tel"
+                value={parentPhone}
+                onChange={(v) => {
+                  setParentPhone(v);
+                  if (errors.parentPhone) setErrors((e) => ({ ...e, parentPhone: "" }));
+                }}
+                required
+                error={errors.parentPhone}
+              />
+              <FormField
+                label="אימייל של אחד ההורים"
+                name="parentEmail"
+                type="email"
+                value={parentEmail}
+                onChange={(v) => {
+                  setParentEmail(v);
+                  if (errors.parentEmail) setErrors((e) => ({ ...e, parentEmail: "" }));
+                }}
+                required
+                error={errors.parentEmail}
+              />
+            </div>
+          </Card>
+        )}
+
+        {step === 3 && !isWorkshopFlow && (
           <div className="space-y-6">
             <p className="text-[var(--color-text-muted)] text-right">בחרו תאריך</p>
             <DateSelector
@@ -499,7 +802,7 @@ export default function BookPage() {
           </div>
         )}
 
-        {step === 4 && (
+        {step === 4 && !isWorkshopFlow && (
           <Card>
             <div className="space-y-4">
               <FormField
@@ -587,7 +890,38 @@ export default function BookPage() {
           </Card>
         )}
 
-        {step === 5 && (
+        {step === 4 && isWorkshopFlow && selectedWorkshop && (
+          <div className="space-y-6">
+            <SummaryCard
+              title="סיכום הזמנה"
+              rows={[
+                { label: "מסלול/סוג מיון", value: subjectTitle },
+                { label: "מורה", value: selectedWorkshop.teacherName },
+                {
+                  label: "תאריך ושעה",
+                  value: `${formatDateLabel(selectedWorkshop.date)} ${selectedWorkshop.startTime}–${selectedWorkshop.endTime}`,
+                },
+                ...(selectedWorkshop.generalDescription?.trim()
+                  ? [{ label: "הסבר כללי", value: selectedWorkshop.generalDescription.trim() }]
+                  : []),
+                { label: "שם", value: name },
+                { label: "טלפון", value: phone },
+                { label: "אימייל תלמיד", value: email },
+                { label: "שם הורה", value: parentName },
+                { label: "טלפון הורה", value: parentPhone },
+                { label: "אימייל הורה", value: parentEmail },
+              ].filter((r): r is { label: string; value: string } => Boolean(r.value))}
+            />
+            {errors.submit && (
+              <p className="text-sm text-red-600 text-right">{errors.submit}</p>
+            )}
+            <Button onClick={handleNext} showArrow className="w-full justify-center">
+              אישור וקביעת שיעור
+            </Button>
+          </div>
+        )}
+
+        {step === 5 && !isWorkshopFlow && (
           <div className="space-y-6">
             <SummaryCard
               title="סיכום הזמנה"
@@ -618,27 +952,38 @@ export default function BookPage() {
           </div>
         )}
 
-        <div className="mt-10 flex justify-between gap-4">
-          {step > 1 ? (
-            <Button variant="secondary" onClick={handleBack}>
-              חזרה
-            </Button>
-          ) : (
-            <span />
-          )}
-          {step < 5 && (
-            <Button
-              onClick={handleNext}
-              showArrow
-              disabled={
-                (step === 1 && !canProceedStep1) ||
-                (step === 2 && !canProceedStep2) ||
-                (step === 3 && !canProceedStep3)
-              }
-            >
-              המשך
-            </Button>
-          )}
+        <div className="mt-10 space-y-3">
+          <div className="flex justify-between gap-4">
+            {step > 1 ? (
+              <Button variant="secondary" onClick={handleBack}>
+                חזרה
+              </Button>
+            ) : (
+              <span />
+            )}
+            {step < maxStep && !(step === confirmStep && isWorkshopFlow) && (
+              <Button
+                onClick={handleNext}
+                showArrow
+                disabled={
+                  (step === 1 && !canProceedStep1) ||
+                  (step === 2 && isWorkshopFlow && !canProceedWorkshop2) ||
+                  (step === 2 && !isWorkshopFlow && !canProceedStep2) ||
+                  (step === 3 && !isWorkshopFlow && !canProceedStep3)
+                }
+              >
+                המשך
+              </Button>
+            )}
+          </div>
+          {step === 2 &&
+            isWorkshopFlow &&
+            selectedWorkshop &&
+            selectedWorkshop.spotsLeft <= 0 && (
+              <p className="text-center text-sm font-semibold text-amber-900" dir="rtl">
+                המלאי אזל
+              </p>
+            )}
         </div>
         </main>
       </div>

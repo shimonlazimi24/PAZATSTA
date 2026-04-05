@@ -9,6 +9,8 @@ export type DisplayLesson = {
   endTime: string;
   status: string;
   topic?: string | null;
+  workshopId?: string | null;
+  workshopName?: string | null;
   questionFromStudent?: string | null;
   followUpCompletedAt?: string | null;
   teacher?: { id?: string; name: string | null; email: string };

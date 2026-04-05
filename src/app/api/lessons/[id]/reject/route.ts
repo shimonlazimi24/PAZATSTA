@@ -35,20 +35,28 @@ export async function POST(
   if (isTeacher && lesson.teacherId !== user.id) {
     return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
   }
+  if (lesson.workshopId && isTeacher) {
+    return NextResponse.json(
+      { error: "דחיית רישום לסדנה רק על ידי האדמין" },
+      { status: 403 }
+    );
+  }
 
   await prisma.$transaction(async (tx) => {
     await tx.lesson.update({
       where: { id: lessonId },
       data: { status: "canceled" },
     });
-    await tx.availability.create({
-      data: {
-        teacherId: lesson.teacherId,
-        date: lesson.date,
-        startTime: lesson.startTime,
-        endTime: lesson.endTime,
-      },
-    });
+    if (!lesson.workshopId) {
+      await tx.availability.create({
+        data: {
+          teacherId: lesson.teacherId,
+          date: lesson.date,
+          startTime: lesson.startTime,
+          endTime: lesson.endTime,
+        },
+      });
+    }
   });
 
   return NextResponse.json({ ok: true, status: "canceled" });

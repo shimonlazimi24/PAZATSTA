@@ -16,6 +16,7 @@ const MENU_ITEMS = [
   { id: "teachers", label: "רשימת מורים", href: "/admin?section=teachers" },
   { id: "summary", label: "סיכום שעות לתשלום", href: "/admin?section=summary" },
   { id: "statistics", label: "סטטיסטיקות", href: "/admin/statistics" },
+  { id: "workshop", label: "יצירת מפגש סדנה", href: "/admin/workshop" },
 ] as const;
 
 interface AdminShellProps {
@@ -42,9 +43,11 @@ export function AdminShell({ email, children }: AdminShellProps) {
               const isActive =
                 item.href === "/admin/statistics"
                   ? pathname === "/admin/statistics"
-                  : pathname === "/admin" &&
-                    ((item.id === "weekly" && !searchParams.get("section")) ||
-                      searchParams.get("section") === item.id);
+                  : item.href === "/admin/workshop"
+                    ? pathname === "/admin/workshop"
+                    : pathname === "/admin" &&
+                      ((item.id === "weekly" && !searchParams.get("section")) ||
+                        searchParams.get("section") === item.id);
               return (
                 <Link
                   key={item.id}
@@ -110,9 +113,11 @@ export function AdminShell({ email, children }: AdminShellProps) {
               const isActive =
                 item.href === "/admin/statistics"
                   ? pathname === "/admin/statistics"
-                  : pathname === "/admin" &&
-                    ((item.id === "weekly" && !searchParams.get("section")) ||
-                      searchParams.get("section") === item.id);
+                  : item.href === "/admin/workshop"
+                    ? pathname === "/admin/workshop"
+                    : pathname === "/admin" &&
+                      ((item.id === "weekly" && !searchParams.get("section")) ||
+                        searchParams.get("section") === item.id);
               return (
                 <Link
                   key={item.id}

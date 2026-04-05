@@ -33,6 +33,12 @@ export async function POST(
   if (!lesson) {
     return NextResponse.json({ error: "שיעור לא נמצא" }, { status: 404 });
   }
+  if (lesson.workshopId && isTeacher) {
+    return NextResponse.json(
+      { error: "רישום לסדנה מאושר רק על ידי האדמין" },
+      { status: 403 }
+    );
+  }
   if (lesson.status !== "pending_approval") {
     return NextResponse.json(
       { error: "השיעור לא ממתין לאישור" },

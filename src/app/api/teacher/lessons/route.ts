@@ -26,6 +26,7 @@ const includeStudentSummary = {
       },
     },
   },
+  workshop: { select: { id: true, name: true } },
   summary: true,
 } as const;
 
@@ -38,6 +39,8 @@ function mapLesson(l: {
   status: string;
   followUpCompletedAt: Date | null;
   questionFromStudent: string | null;
+  workshopId?: string | null;
+  workshop?: { id: string; name: string } | null;
   teacher?: { name: string | null; email: string } | null;
   student?: {
     id: string;
@@ -57,6 +60,8 @@ function mapLesson(l: {
     startTime: l.startTime,
     endTime: l.endTime,
     topic: l.topic ?? null,
+    workshopId: l.workshopId ?? null,
+    workshopName: l.workshop?.name ?? null,
     status: l.status,
     followUpCompletedAt: l.followUpCompletedAt?.toISOString() ?? null,
     questionFromStudent: l.questionFromStudent,
@@ -165,6 +170,7 @@ export async function GET(req: Request) {
   if (pending) {
     where.status = "pending_approval";
     where.approvalExpiresAt = { gt: now };
+    where.workshopId = null;
   } else if (month && year) {
     const y = parseInt(year, 10);
     const m = parseInt(month, 10);

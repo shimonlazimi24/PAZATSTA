@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CalendarDays, CalendarPlus } from "lucide-react";
@@ -91,6 +91,18 @@ export function TeacherHomeLessons() {
     return () => window.removeEventListener("teacher-lessons-refresh", onRefresh);
   }, []);
 
+  const sortedUpcoming = useMemo(() => {
+    return [...upcoming].sort((a, b) => {
+      const wa = a.workshopId ?? "";
+      const wb = b.workshopId ?? "";
+      if (wa !== wb) return wa.localeCompare(wb);
+      return (a.student.name || a.student.email || "").localeCompare(
+        b.student.name || b.student.email || "",
+        "he"
+      );
+    });
+  }, [upcoming]);
+
   async function handleFollowUpComplete(lesson: Lesson) {
     setFollowUpLoadingId(lesson.id);
     try {
@@ -160,6 +172,7 @@ export function TeacherHomeLessons() {
       </div>
     );
   }
+
   if (!hasUpcoming && !hasPast) {
     return (
       <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-8 sm:p-10 shadow-[var(--shadow-card)] text-center" dir="rtl">
@@ -184,7 +197,9 @@ export function TeacherHomeLessons() {
             השיעורים הקרובים
           </h3>
           <ul className="divide-y divide-[var(--color-border)] rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white overflow-hidden shadow-[var(--shadow-card)]">
-            {upcoming.map((l) => {
+            {sortedUpcoming.map((l, idx) => {
+              const prev = sortedUpcoming[idx - 1];
+              const showWorkshopHeader = Boolean(l.workshopId && l.workshopId !== prev?.workshopId);
               const studentLabel = l.student.name || l.student.email;
               const teacherLabel = l.teacher?.name || l.teacher?.email || "מורה";
               const topicLabel = l.topic?.trim() || "שיעור פזצט״א";
@@ -203,7 +218,14 @@ export function TeacherHomeLessons() {
                 .filter(Boolean)
                 .join("\n");
               return (
-                <li key={l.id} className="p-4 hover:bg-[var(--color-bg-muted)]/50 transition-colors">
+                <Fragment key={l.id}>
+                {showWorkshopHeader && (
+                  <li className="bg-teal-50/90 px-4 py-2.5 text-sm font-semibold text-teal-900 border-b border-teal-100">
+                    סדנה: {l.workshopName ?? l.topic ?? "—"}
+                    <span className="font-normal text-teal-800 mr-2"> — דוח נפרד לכל משתתף</span>
+                  </li>
+                )}
+                <li className="p-4 hover:bg-[var(--color-bg-muted)]/50 transition-colors">
                   <div className="flex flex-wrap justify-between items-start gap-2">
                     <div>
                       <p className="font-medium text-[var(--color-text)]">
@@ -287,6 +309,7 @@ export function TeacherHomeLessons() {
                     </div>
                   </div>
                 </li>
+                </Fragment>
               );
             })}
           </ul>

@@ -36,6 +36,7 @@ model User {
   lessonsAsTeacher   Lesson[] @relation("LessonTeacher")
   lessonsAsStudent   Lesson[] @relation("LessonStudent")
   availabilitySlots  Availability[]
+  workshopsLed       Workshop[]
 
   @@index([role])
 }
@@ -103,12 +104,16 @@ model Lesson {
   followUpCompletedAt   DateTime?
   questionFromStudent   String?
   createdAt             DateTime     @default(now())
+  /// Set when 24h-before reminder email was sent to student + parent (cron).
+  reminder24hSentAt     DateTime?
 
   teacher User @relation("LessonTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
   student User @relation("LessonStudent", fields: [studentId], references: [id], onDelete: Cascade)
   summary LessonSummary?
 
-  @@unique([teacherId, date, startTime])
+  workshopId String?
+  workshop   Workshop? @relation(fields: [workshopId], references: [id], onDelete: SetNull)
+
   @@index([teacherId, date])
   @@index([teacherId, status, date])
   @@index([studentId, date])
@@ -116,6 +121,28 @@ model Lesson {
   @@index([status, approvalExpiresAt])
   @@index([approvalExpiresAt])
   @@index([date, status])
+  @@index([workshopId])
+}
+
+/// Group workshop / סדנה — multiple students can share the same calendar slot (see partial unique on Lesson).
+model Workshop {
+  id              String   @id @default(cuid())
+  name            String
+  date            DateTime
+  teacherId       String
+  maxParticipants Int
+  startTime       String   @default("09:00")
+  endTime         String   @default("17:00")
+  /// Shown as סוג מיון; must match TeacherProfile.specialties entry
+  topicLabel      String   @unique
+  /// Optional admin-facing / public description (הסבר כללי)
+  generalDescription String?
+  createdAt       DateTime @default(now())
+
+  teacher User    @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  lessons Lesson[]
+
+  @@index([teacherId, date])
 }
 
 model LessonSummary {

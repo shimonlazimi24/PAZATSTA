@@ -41,15 +41,17 @@ export async function POST(
       where: { id: lessonId },
       data: { status: "canceled" },
     });
-    await tx.availability.createMany({
-      data: [{
-        teacherId: lesson.teacherId,
-        date: lesson.date,
-        startTime: lesson.startTime,
-        endTime: lesson.endTime,
-      }],
-      skipDuplicates: true,
-    });
+    if (!lesson.workshopId) {
+      await tx.availability.createMany({
+        data: [{
+          teacherId: lesson.teacherId,
+          date: lesson.date,
+          startTime: lesson.startTime,
+          endTime: lesson.endTime,
+        }],
+        skipDuplicates: true,
+      });
+    }
   });
 
   return NextResponse.json({ ok: true, status: "canceled" });

@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { isValidDeliveryEmail } from "@/lib/validation";
 
 const isDev = process.env.NODE_ENV !== "production";
 const noRealKey = () =>
@@ -132,6 +133,8 @@ export function getApprovalRequestContent(params: {
 
 export async function sendApprovalRequest(params: {
   to: string[];
+  /** For dev logs: same email as the lesson teacher (may or may not appear in `to`). */
+  teacherEmail?: string | null;
   studentName: string;
   studentEmail?: string | null;
   studentPhone?: string | null;
@@ -151,7 +154,36 @@ export async function sendApprovalRequest(params: {
     return;
   }
   if (noRealKey()) {
-    console.warn("[sendApprovalRequest] Skipped: RESEND_API_KEY not set or placeholder. Would send to:", toEmails);
+    const teacherAddr = params.teacherEmail?.trim();
+    const teacherLower = teacherAddr?.toLowerCase();
+    const adminOrOther = teacherLower
+      ? toEmails.filter((e) => e.toLowerCase() !== teacherLower)
+      : toEmails;
+    const teacherInTo = teacherLower
+      ? toEmails.some((e) => e.toLowerCase() === teacherLower)
+      : false;
+    if (teacherAddr && teacherInTo) {
+      console.warn(
+        "[sendApprovalRequest] Skipped: RESEND_API_KEY not set or placeholder. Would send one email to:",
+        toEmails,
+        "— מורה:",
+        teacherAddr,
+        "| אדמין/התראות:",
+        adminOrOther.length ? adminOrOther : "(אין נוספים)"
+      );
+    } else if (teacherAddr && !teacherInTo) {
+      console.warn(
+        "[sendApprovalRequest] Skipped: RESEND_API_KEY not set or placeholder. Would send to (אדמין בלבד — בסדנה המורה לא מקבל מייל אישור):",
+        toEmails,
+        "| מורה (לא בנמענים):",
+        teacherAddr
+      );
+    } else {
+      console.warn(
+        "[sendApprovalRequest] Skipped: RESEND_API_KEY not set or placeholder. Would send to:",
+        toEmails
+      );
+    }
     return;
   }
   const fromAddr = from();
@@ -514,4 +546,82 @@ export async function sendWeeklyHoursSummaryToAdmin(params: {
       throw new Error(result.error.message ?? "Failed to send weekly hours summary");
     }
   }
+}
+
+export function getLessonReminder24hContent(params: {
+  studentName: string;
+  teacherName: string;
+  dateLabel: string;
+  timeRange: string;
+  topic?: string | null;
+  isWorkshop: boolean;
+  workshopName?: string | null;
+}): { subject: string; text: string } {
+  const kind = params.isWorkshop ? "מפגש (סדנה)" : "שיעור";
+  const lines = [
+    "שלום,",
+    "",
+    `זוהי תזכורת: ${kind} מתקיים בערך בעוד 24 שעות.`,
+    "",
+    `תלמיד: ${params.studentName}`,
+    `מורה: ${params.teacherName}`,
+    `תאריך: ${params.dateLabel}`,
+    `שעה: ${params.timeRange}`,
+  ];
+  if (params.workshopName?.trim()) lines.push(`שם הסדנה: ${params.workshopName.trim()}`);
+  if (params.topic?.trim()) lines.push(`סוג מיון: ${params.topic.trim()}`);
+  const base = getAppBaseUrl();
+  if (base) lines.push("", `כניסה לאפליקציה: ${base}`);
+  lines.push("", "בברכה,", "פזצט״א");
+  return {
+    subject: `תזכורת: ${kind} מחר – פזצט״א`,
+    text: lines.join("\n"),
+  };
+}
+
+/** Reminder ~24h before lesson; sends to student + parent emails (deduped). Returns true if mail was sent. */
+export async function sendLessonReminder24h(params: {
+  to: string[];
+  studentName: string;
+  teacherName: string;
+  dateLabel: string;
+  timeRange: string;
+  topic?: string | null;
+  isWorkshop: boolean;
+  workshopName?: string | null;
+}): Promise<boolean> {
+  const { subject, text } = getLessonReminder24hContent(params);
+  const seen = new Set<string>();
+  const unique: string[] = [];
+  for (const e of params.to) {
+    const t = e.trim();
+    if (!t || !isValidDeliveryEmail(t)) continue;
+    const k = t.toLowerCase();
+    if (seen.has(k)) continue;
+    seen.add(k);
+    unique.push(t);
+  }
+  if (unique.length === 0) {
+    console.warn("[sendLessonReminder24h] No valid recipient emails");
+    return false;
+  }
+  if (isDev && noRealKey()) {
+    console.log("[DEV] Lesson 24h reminder to", unique, text.slice(0, 200));
+    return true;
+  }
+  const fromAddr = from();
+  const resend = getResend();
+  let result = await sendWith429Retry(() =>
+    resend.emails.send({ from: fromAddr, to: unique, subject, text })
+  );
+  if (result.error && fromAddr !== RESEND_DEV_FROM && isDomainNotVerifiedError(result.error)) {
+    result = await sendWith429Retry(() =>
+      resend.emails.send({ from: RESEND_DEV_FROM, to: unique, subject, text })
+    );
+  }
+  if (result.error) {
+    console.error("[sendLessonReminder24h] Failed for", unique, result.error);
+    throw new Error(result.error.message ?? "Failed to send reminder");
+  }
+  return true;
 }

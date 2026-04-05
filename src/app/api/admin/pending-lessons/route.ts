@@ -14,6 +14,7 @@ export async function GET() {
     include: {
       teacher: { select: { id: true, email: true, name: true } },
       student: { select: { id: true, email: true, name: true } },
+      workshop: { select: { id: true, name: true } },
     },
     orderBy: [{ approvalExpiresAt: "asc" }, { date: "asc" }, { startTime: "asc" }],
   });
@@ -26,6 +27,8 @@ export async function GET() {
       approvalExpiresAt: l.approvalExpiresAt?.toISOString() ?? null,
       teacher: l.teacher,
       student: l.student,
+      workshopName: l.workshop?.name ?? null,
+      isWorkshop: Boolean(l.workshopId),
     }))
   );
   res.headers.set("Cache-Control", "no-store, max-age=0");
