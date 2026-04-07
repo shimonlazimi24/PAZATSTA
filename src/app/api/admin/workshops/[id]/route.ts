@@ -56,15 +56,6 @@ export async function DELETE(
     const specialties = workshop.teacher.teacherProfile?.specialties ?? [];
 
     await prisma.$transaction(async (tx) => {
-      if (activeCount > 0 && force) {
-        await tx.lesson.updateMany({
-          where: {
-            workshopId: workshop.id,
-            status: { not: "canceled" },
-          },
-          data: { status: "canceled" },
-        });
-      }
       if (specialties.includes(topicLabel)) {
         await tx.teacherProfile.update({
           where: { userId: workshop.teacherId },
@@ -73,6 +64,14 @@ export async function DELETE(
           },
         });
       }
+      /**
+       * Must delete lesson rows before deleting the workshop. `ON DELETE SET NULL` on
+       * `Lesson.workshopId` would set null on every registration at once; several students
+       * share the same (teacherId, date, startTime), and the partial unique index
+       * `Lesson_teacher_date_start_when_no_workshop` only allows one row per slot when
+       * workshopId IS NULL — so SET NULL would violate the constraint (500).
+       */
+      await tx.lesson.deleteMany({ where: { workshopId: workshop.id } });
       await tx.workshop.delete({ where: { id: workshop.id } });
     });
 
