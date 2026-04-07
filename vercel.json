@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/cron/lesson-reminders-24h",
-      "schedule": "0 * * * *"
+      "schedule": "30 8 * * *"
     }
   ]
 }

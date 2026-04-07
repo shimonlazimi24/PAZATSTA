@@ -22,7 +22,7 @@ Use any long random string (e.g. 32+ characters). This stops strangers from call
 |--------------|----------|-----|
 | **Follow-up reminder** (teacher reminder on student screening date) | `https://YOUR-SITE.com/api/cron/follow-up` | **Once per day** |
 | **Weekly hours** (hours summary to admin for payment) | `https://YOUR-SITE.com/api/cron/weekly-hours` | **Once per week** |
-| **24h lesson reminder** (email to student + parent before scheduled lesson) | `https://YOUR-SITE.com/api/cron/lesson-reminders-24h` | **Every hour** (Vercel cron) or hourly on cron-job.org |
+| **24h lesson reminder** (email to student + parent before scheduled lesson) | `https://YOUR-SITE.com/api/cron/lesson-reminders-24h` | **Once per day** on Vercel Hobby (see `vercel.json`); for **hourly** reminders use [cron-job.org](https://cron-job.org) or upgrade to Vercel Pro ([cron limits](https://vercel.com/docs/cron-jobs/usage-and-pricing)) |
 
 Every request must send this header:
 

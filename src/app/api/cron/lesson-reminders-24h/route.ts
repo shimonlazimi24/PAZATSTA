@@ -6,12 +6,15 @@ import { lessonStartsAtUtc } from "@/lib/lesson-start";
 import { formatDateInIsrael } from "@/lib/date-utils";
 
 const MS_HOUR = 60 * 60 * 1000;
-/** Lesson starts between ~22h and ~26h from now (cron hourly tolerates delays). */
-const WINDOW_MIN_H = 22;
-const WINDOW_MAX_H = 26;
+/**
+ * Target ~24h before lesson start. On Vercel Hobby, cron may run only once per day
+ * (see vercel.json), so the window is wider than the old hourly 22–26h band.
+ */
+const WINDOW_MIN_H = 18;
+const WINDOW_MAX_H = 30;
 
 /**
- * Hourly: send one email to student + parent ~24h before scheduled lesson (Israel time).
+ * Send one email to student + parent ~24h before scheduled lesson (Israel time).
  * Sets Lesson.reminder24hSentAt to avoid duplicates.
  */
 export async function GET(req: Request) {
