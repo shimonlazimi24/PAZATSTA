@@ -137,7 +137,7 @@ export default function AdminWorkshopPage() {
   async function handleDelete(w: AdminWorkshopRow) {
     const hasActive = w.activeBookings > 0;
     const confirmMsg = hasActive
-      ? `למחוק את הסדנה «${w.name}» (${formatDateLabel(w.date)})?\n\nיש ${w.activeBookings} הרשמות פעילות (ממתינות לאישור, מתוזמנות או הושלמו). המחיקה תסמן את כל ההרשמות כמבוטלות ותסיר את הסדנה. פעולה זו לא ניתנת לביטול.`
+      ? `למחוק את הסדנה «${w.name}» (${formatDateLabel(w.date)})?\n\nיש ${w.activeBookings} הרשמות פעילות (ממתינות לאישור, מתוזמנות או הושלמו). המחיקה תמחק את רשומות ההרשמות ואת הסדנה. פעולה זו לא ניתנת לביטול.`
       : `למחוק את הסדנה «${w.name}» (${formatDateLabel(w.date)})? פעולה זו לא ניתנת לביטול.`;
     if (!confirm(confirmMsg)) {
       return;
