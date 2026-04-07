@@ -5,9 +5,12 @@ import { canAccessAdmin } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
 
-/** Delete a workshop only when there are no non-canceled lessons (no active registrations). */
+/**
+ * Delete a workshop when there are no non-canceled lessons, unless `?force=1`:
+ * admin-only — cancels all workshop lessons (pending, scheduled, completed) then deletes.
+ */
 export async function DELETE(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getUserFromSession();
@@ -29,17 +32,21 @@ export async function DELETE(
       return NextResponse.json({ error: "הסדנה לא נמצאה" }, { status: 404 });
     }
 
+    const { searchParams } = new URL(req.url);
+    const force =
+      searchParams.get("force") === "1" || searchParams.get("force") === "true";
+
     const activeCount = await prisma.lesson.count({
       where: {
         workshopId: workshop.id,
         status: { not: "canceled" },
       },
     });
-    if (activeCount > 0) {
+    if (activeCount > 0 && !force) {
       return NextResponse.json(
         {
           error:
-            "לא ניתן למחוק: יש הרשמות פעילות לסדנה (ממתינות לאישור, מתוזמנות או הושלמו). בטלו או טפלו בהן לפני המחיקה.",
+            "לא ניתן למחוק: יש הרשמות פעילות לסדנה (ממתינות לאישור, מתוזמנות או הושלמו). בטלו או טפלו בהן לפני המחיקה, או אשרו מחיקה עם ביטול כל ההרשמות מהממשק.",
         },
         { status: 409 }
       );
@@ -49,6 +56,15 @@ export async function DELETE(
     const specialties = workshop.teacher.teacherProfile?.specialties ?? [];
 
     await prisma.$transaction(async (tx) => {
+      if (activeCount > 0 && force) {
+        await tx.lesson.updateMany({
+          where: {
+            workshopId: workshop.id,
+            status: { not: "canceled" },
+          },
+          data: { status: "canceled" },
+        });
+      }
       if (specialties.includes(topicLabel)) {
         await tx.teacherProfile.update({
           where: { userId: workshop.teacherId },

@@ -135,17 +135,20 @@ export default function AdminWorkshopPage() {
   }
 
   async function handleDelete(w: AdminWorkshopRow) {
-    if (
-      !confirm(
-        `למחוק את הסדנה «${w.name}» (${formatDateLabel(w.date)})? פעולה זו לא ניתנת לביטול.`
-      )
-    ) {
+    const hasActive = w.activeBookings > 0;
+    const confirmMsg = hasActive
+      ? `למחוק את הסדנה «${w.name}» (${formatDateLabel(w.date)})?\n\nיש ${w.activeBookings} הרשמות פעילות (ממתינות לאישור, מתוזמנות או הושלמו). המחיקה תסמן את כל ההרשמות כמבוטלות ותסיר את הסדנה. פעולה זו לא ניתנת לביטול.`
+      : `למחוק את הסדנה «${w.name}» (${formatDateLabel(w.date)})? פעולה זו לא ניתנת לביטול.`;
+    if (!confirm(confirmMsg)) {
       return;
     }
     setDeletingId(w.id);
     setMessage(null);
     try {
-      const res = await fetch(`/api/admin/workshops/${encodeURIComponent(w.id)}`, {
+      const url = hasActive
+        ? `/api/admin/workshops/${encodeURIComponent(w.id)}?force=1`
+        : `/api/admin/workshops/${encodeURIComponent(w.id)}`;
+      const res = await fetch(url, {
         method: "DELETE",
         credentials: "include",
       });
