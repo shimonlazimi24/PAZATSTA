@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   getLoginCodeContent,
+  getApprovalRequestContent,
   getBookingConfirmationContent,
   getLessonCompletedContent,
   getScreeningFollowUpReminderContent,
@@ -11,6 +12,18 @@ const PREVIEWS = [
   {
     name: "קוד התחברות (OTP)",
     ...getLoginCodeContent("847291"),
+  },
+  {
+    name: "בקשה לאישור שיעור (ממתין לאישור מורה)",
+    ...getApprovalRequestContent({
+      studentName: "רוני ישראלי",
+      studentEmail: "roni@example.com",
+      teacherName: "מיכל לוי",
+      date: "2025-03-02",
+      timeRange: "10:00–10:45",
+      topic: "פסיכומטרי",
+      notes: "חשיבה כמותית",
+    }),
   },
   {
     name: "שיעור נקבע",

@@ -101,6 +101,7 @@ export function getApprovalRequestContent(params: {
   date: string;
   timeRange: string;
 }) {
+  const platformUrl = getAppBaseUrl();
   const cancellationPolicy = [
     "",
     "מדיניות ביטולים:",
@@ -108,9 +109,17 @@ export function getApprovalRequestContent(params: {
     "- במידה ואתם רוצים לדחות או לבטל את השיעור בפחות מ-12 שעות יהיו דמי ביטול של 50 ש״ח.",
   ].join("\n");
 
+  const platformLines = platformUrl
+    ? [
+        `קישור לפלטפורמה (מומלץ לשמור בסימניות): ${platformUrl}`,
+        "",
+      ]
+    : [];
+
   const lines = [
-    "בקשה לאישור נשלחה — יש לאשר באפליקציה.",
+    "בקשה לאישור נשלחה — יש לאשר בפלטפורמה.",
     "",
+    ...platformLines,
     `שם מלא של התלמיד: ${params.studentName}`,
     ...(params.studentEmail ? [`אימייל תלמיד: ${params.studentEmail}`] : []),
     ...(params.studentPhone ? [`טלפון תלמיד: ${params.studentPhone}`] : []),
@@ -122,13 +131,62 @@ export function getApprovalRequestContent(params: {
     `מורה: ${params.teacherName}`,
     `תאריך ושעה: ${params.date} ${params.timeRange}`,
     "",
-    "היכנסו לאפליקציה ולחצו על 'לאשר' בסעיף 'שיעורים בהמתנה לאישור'.",
+    "לאחר הכניסה לפלטפורמה: בסעיף «שיעורים בהמתנה לאישור» לחצו על «לאשר».",
     cancellationPolicy,
   ];
   return {
     subject: "בקשה לאישור שיעור – פזצט״א",
     text: lines.join("\n"),
   };
+}
+
+/** HTML body for approval-request email (platform CTA + details). */
+function getApprovalRequestHtml(params: {
+  studentName: string;
+  studentEmail?: string | null;
+  studentPhone?: string | null;
+  parentName?: string | null;
+  parentPhone?: string | null;
+  parentEmail?: string | null;
+  notes?: string | null;
+  topic?: string | null;
+  teacherName: string;
+  date: string;
+  timeRange: string;
+}): string {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const platformUrl = getAppBaseUrl();
+  const platformCta = platformUrl
+    ? `<p style="margin:16px 0"><a href="${esc(platformUrl)}" style="background:#4a7c59;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:600;display:inline-block">כניסה לפלטפורמה — לאשר שיעור</a></p>
+  <p style="font-size:14px;color:#444">או העתיקו את הקישור: <a href="${esc(platformUrl)}">${esc(platformUrl)}</a> (מומלץ לשמור בסימניות)</p>`
+    : `<p style="font-size:14px;color:#444">היכנסו לאתר/אפליקציה של פזצט״א — בסעיף «שיעורים בהמתנה לאישור» לחצו «לאשר».</p>`;
+
+  const detailRows: string[] = [
+    `<tr><td style="padding:4px 0;font-weight:600">שם מלא של התלמיד</td><td style="padding:4px 0">${esc(params.studentName)}</td></tr>`,
+  ];
+  if (params.studentEmail) detailRows.push(`<tr><td style="padding:4px 0;font-weight:600">אימייל תלמיד</td><td style="padding:4px 0">${esc(params.studentEmail)}</td></tr>`);
+  if (params.studentPhone) detailRows.push(`<tr><td style="padding:4px 0;font-weight:600">טלפון תלמיד</td><td style="padding:4px 0">${esc(params.studentPhone)}</td></tr>`);
+  if (params.parentName) detailRows.push(`<tr><td style="padding:4px 0;font-weight:600">שם מלא של אחד ההורים</td><td style="padding:4px 0">${esc(params.parentName)}</td></tr>`);
+  if (params.parentPhone) detailRows.push(`<tr><td style="padding:4px 0;font-weight:600">טלפון הורה</td><td style="padding:4px 0">${esc(params.parentPhone)}</td></tr>`);
+  if (params.parentEmail) detailRows.push(`<tr><td style="padding:4px 0;font-weight:600">אימייל הורה</td><td style="padding:4px 0">${esc(params.parentEmail)}</td></tr>`);
+  if (params.notes) detailRows.push(`<tr><td style="padding:4px 0;font-weight:600;vertical-align:top">במה תרצו להתמקד</td><td style="padding:4px 0">${esc(params.notes)}</td></tr>`);
+  if (params.topic) detailRows.push(`<tr><td style="padding:4px 0;font-weight:600">סוג המיון</td><td style="padding:4px 0">${esc(params.topic)}</td></tr>`);
+  detailRows.push(`<tr><td style="padding:4px 0;font-weight:600">מורה</td><td style="padding:4px 0">${esc(params.teacherName)}</td></tr>`);
+  detailRows.push(
+    `<tr><td style="padding:4px 0;font-weight:600">תאריך ושעה</td><td style="padding:4px 0">${esc(params.date)} ${esc(params.timeRange)}</td></tr>`
+  );
+
+  return `<div dir="rtl" style="font-family:Heebo,sans-serif;max-width:600px">
+  <h2 style="font-size:18px;margin:0 0 8px">בקשה לאישור שיעור</h2>
+  <p style="margin:0 0 8px">בקשה לאישור נשלחה — יש לאשר בפלטפורמה.</p>
+  ${platformCta}
+  <table style="border-collapse:collapse;width:100%;margin-top:16px;font-size:15px">${detailRows.join("")}</table>
+  <p style="margin-top:20px;font-size:13px;color:#555;font-weight:600">מדיניות ביטולים</p>
+  <ul style="margin:8px 0 0;padding-right:20px;font-size:13px;color:#555">
+    <li>במידה ואתם רוצים לדחות את השיעור ניתן לעשות זאת עד 12 שעות לפני, ביצירת קשר עם המדריך או המנהל.</li>
+    <li>במידה ואתם רוצים לדחות או לבטל את השיעור בפחות מ-12 שעות יהיו דמי ביטול של 50 ש״ח.</li>
+  </ul>
+</div>`;
 }
 
 export async function sendApprovalRequest(params: {
@@ -148,6 +206,7 @@ export async function sendApprovalRequest(params: {
   timeRange: string;
 }): Promise<void> {
   const { subject, text } = getApprovalRequestContent(params);
+  const html = getApprovalRequestHtml(params);
   const toEmails = params.to.filter(Boolean);
   if (toEmails.length === 0) {
     console.warn("[sendApprovalRequest] No recipients (teacher + admins)");
@@ -189,11 +248,11 @@ export async function sendApprovalRequest(params: {
   const fromAddr = from();
   const resend = getResend();
   let result = await sendWith429Retry(() =>
-    resend.emails.send({ from: fromAddr, to: toEmails, subject, text })
+    resend.emails.send({ from: fromAddr, to: toEmails, subject, text, html })
   );
   if (result.error && fromAddr !== RESEND_DEV_FROM && isDomainNotVerifiedError(result.error)) {
     result = await sendWith429Retry(() =>
-      resend.emails.send({ from: RESEND_DEV_FROM, to: toEmails, subject, text })
+      resend.emails.send({ from: RESEND_DEV_FROM, to: toEmails, subject, text, html })
     );
   }
   if (result.error) {
