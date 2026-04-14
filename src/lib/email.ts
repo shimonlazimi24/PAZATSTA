@@ -157,8 +157,7 @@ function getApprovalRequestHtml(params: {
   const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const platformUrl = getAppBaseUrl();
   const platformCta = platformUrl
-    ? `<p style="margin:16px 0"><a href="${esc(platformUrl)}" style="background:#4a7c59;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:600;display:inline-block">כניסה לפלטפורמה — לאשר שיעור</a></p>
-  <p style="font-size:14px;color:#444">או העתיקו את הקישור: <a href="${esc(platformUrl)}">${esc(platformUrl)}</a> (מומלץ לשמור בסימניות)</p>`
+    ? `<p style="margin:16px 0"><a href="${esc(platformUrl)}" style="background:#4a7c59;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:600;display:inline-block">כניסה לפלטפורמה — לאשר שיעור</a></p>`
     : `<p style="font-size:14px;color:#444">היכנסו לאתר/אפליקציה של פזצט״א — בסעיף «שיעורים בהמתנה לאישור» לחצו «לאשר».</p>`;
 
   const detailRows: string[] = [
