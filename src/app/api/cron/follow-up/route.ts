@@ -38,12 +38,14 @@ export async function GET(req: Request) {
     const screeningDateStr = profile.currentScreeningDate.toISOString().slice(0, 10);
     const lastLessonDate = lesson.date.toISOString().slice(0, 10);
     const studentName = lesson.student.name || lesson.student.email;
+    const studentPhone = lesson.student.phone ?? null;
     const screeningType = profile.currentScreeningType ?? "—";
 
     try {
       await sendScreeningFollowUpReminder({
         to: lesson.teacher.email,
         studentName,
+        studentPhone,
         screeningType,
         screeningDate: screeningDateStr,
         lastLessonDate,

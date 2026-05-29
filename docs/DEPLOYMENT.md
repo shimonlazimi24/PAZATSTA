@@ -35,57 +35,7 @@ npx prisma db seed
 
 ---
 
-## Option 2: Netlify
-
-Yes, **Netlify is fine** for this Next.js app. Use `@netlify/plugin-nextjs`.
-
-**Critical:** In Netlify UI, set **Publish directory** = Not set and **Functions directory** = Not set. Do **not** set `publish` in `netlify.toml`—the plugin manages output. Setting publish (or leaving it to default) causes `/_next/static/*` to return 404 with `text/html`.
-
-1. **Push your code to GitHub** (if not already).
-
-2. Go to [netlify.com](https://netlify.com) → **Add new site** → **Import an existing project** → connect your repo.
-
-3. **Build settings:**
-   - **Build command:** `npx prisma migrate deploy && npm run build` (or use `netlify.toml`)
-   - **Publish directory:** Not set (plugin manages output; do not set in netlify.toml either)
-   - **Base directory:** leave empty unless the app is in a subfolder
-
-4. **Environment variables** (Site → Site configuration → Environment variables). Add:
-
-   | Name | Value | Scopes |
-   |------|--------|--------|
-   | `DATABASE_URL` | Your Supabase Postgres URI | All |
-   | `COOKIE_SECRET` | Random string ≥ 32 chars | All |
-   | `RESEND_API_KEY` | Your Resend API key | All |
-   | `RESEND_FROM` | (optional) e.g. `onboarding@resend.dev` | All |
-   | `APP_URL` | e.g. `https://your-site.netlify.app` | Required for public PDF links in emails (no login) |
-
-5. **Deploy.** Netlify will run `npm install`, `prisma generate` (via postinstall), and `next build`. Your **public link** is: `https://<your-site-name>.netlify.app` (or your custom domain).
-
-**Note:** Netlify’s Next.js runtime supports App Router and API routes. Prisma works as long as `DATABASE_URL` is set; `postinstall` runs `prisma generate` so the client is available at build time.
-
-### Netlify static assets checklist (if `/_next/static/*` returns 404)
-
-- [ ] **Publish directory** in Netlify UI is **Not set** (and not set in netlify.toml)
-- [ ] **Functions directory** in Netlify UI is **Not set**
-- [ ] **`@netlify/plugin-nextjs`** is enabled (in `netlify.toml` via `[[plugins]]` and/or Netlify UI)
-- [ ] Redeploy with **"Clear cache and deploy site"** (Site → Deploys → Trigger deploy → Clear cache and deploy site)
-
-### Post-deploy verification
-
-After deploying, verify that Next.js static assets are served correctly:
-
-```bash
-# Replace <site> with your Netlify site name (e.g. pazatsta-schedule)
-# Get a real CSS hash from your built .next/static/css/ folder or from the page source
-curl -I https://<site>.netlify.app/_next/static/css/<hash>.css
-```
-
-Expected: `HTTP/2 200` and `Content-Type: text/css`. If you get 404 or `text/html`, the plugin is not running or redirects are catching the request.
-
----
-
-## Option 3: Other hosts (Railway, Render, etc.)
+## Option 2: Other hosts (Railway, Render, etc.)
 
 Same idea:
 

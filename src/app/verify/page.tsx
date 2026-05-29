@@ -105,7 +105,7 @@ function VerifyForm() {
   const hintNoEmailText =
     process.env.NODE_ENV === "production"
       ? "שליחת אימייל לא זמינה כרגע. פנו לתמיכה."
-      : "אימייל לא נשלח (RESEND לא מוגדר). הקוד מופיע בלוגים של השרת ב-Netlify.";
+      : "אימייל לא נשלח (RESEND לא מוגדר). הקוד מופיע בלוגים של השרת (מצב פיתוח).";
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">

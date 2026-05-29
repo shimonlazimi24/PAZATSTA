@@ -48,7 +48,7 @@ Authorization: Bearer YOUR_CRON_SECRET
 2. **Title:** e.g. `Paza follow-up`.
 3. **URL:**  
    `https://YOUR-DEPLOYED-SITE.com/api/cron/follow-up`  
-   (Replace with your real app URL, e.g. from Vercel/Netlify.)
+   (Replace with your real app URL, e.g. from Vercel.)
 4. **Schedule:**  
    - Choose “Every day” and set the time you want (e.g. 8:00).
 5. **Request headers** (important):  

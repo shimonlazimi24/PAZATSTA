@@ -29,15 +29,13 @@ export function middleware(req: NextRequest) {
       ? NextResponse.next()
       : NextResponse.redirect(new URL("/login", req.url));
 
-  // Prevent Netlify/CDN from caching HTML. Cached HTML has old /_next/static/* hashes
-  // → 404 after redeploy → ChunkLoadError + wrong MIME type on all pages.
+  // Avoid CDN/edge caching HTML with stale /_next/static/* hashes after redeploy.
   setNoStore(res);
   return res;
 }
 
 function setNoStore(res: NextResponse): void {
   res.headers.set("Cache-Control", "private, no-store, no-cache, must-revalidate, max-age=0");
-  res.headers.set("Netlify-CDN-Cache-Control", "no-store");
   res.headers.set("Pragma", "no-cache");
 }
 

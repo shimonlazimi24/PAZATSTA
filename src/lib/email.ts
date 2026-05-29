@@ -460,12 +460,14 @@ export async function sendLessonCompleted(params: {
 /** Build follow-up reminder email (teacher reminder on student's screening date). */
 export function getScreeningFollowUpReminderContent(params: {
   studentName: string;
+  studentPhone?: string | null;
   screeningType: string;
   screeningDate: string;
   lastLessonDate: string;
 }) {
   const text = [
     `תזכורת פולו-אפ: היום תאריך המיון של התלמיד/ה ${params.studentName}.`,
+    ...(params.studentPhone ? [`טלפון תלמיד: ${params.studentPhone}`] : []),
     `סוג המיון: ${params.screeningType}`,
     `תאריך המיון: ${params.screeningDate}`,
     `שיעור אחרון: ${params.lastLessonDate}`,
@@ -481,6 +483,7 @@ export function getScreeningFollowUpReminderContent(params: {
 export async function sendScreeningFollowUpReminder(params: {
   to: string;
   studentName: string;
+  studentPhone?: string | null;
   screeningType: string;
   screeningDate: string;
   lastLessonDate: string;

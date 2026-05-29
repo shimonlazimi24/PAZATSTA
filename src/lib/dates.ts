@@ -33,6 +33,19 @@ export function parseYYYYMMDD(value: string): Date | null {
   return isNaN(d.getTime()) ? null : d;
 }
 
+/** UTC day span for Prisma queries — matches T00 or T12 rows stored on the same YYYY-MM-DD. */
+export function utcDayBounds(dateStr: string): { gte: Date; lte: Date } {
+  return {
+    gte: new Date(dateStr + "T00:00:00.000Z"),
+    lte: new Date(dateStr + "T23:59:59.999Z"),
+  };
+}
+
+/** Availability rows are stored at T00:00:00.000Z for a YYYY-MM-DD calendar day. */
+export function availabilityDateFromYYYYMMDD(dateStr: string): Date {
+  return new Date(dateStr + "T00:00:00.000Z");
+}
+
 /** Add days to a YYYY-MM-DD string and return YYYY-MM-DD in Israel. */
 export function addDaysYYYYMMDD(dateStr: string, days: number): string {
   const d = parseYYYYMMDD(dateStr);

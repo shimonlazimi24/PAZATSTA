@@ -47,6 +47,7 @@ const PREVIEWS = [
     name: "תזכורת למעקב (Follow-up)",
     ...getScreeningFollowUpReminderContent({
       studentName: "רוני ישראלי",
+      studentPhone: "050-1234567",
       screeningType: "יום המא״ה - מבחנים פסיכוטכניים",
       screeningDate: "2025-03-01",
       lastLessonDate: "2025-02-10",

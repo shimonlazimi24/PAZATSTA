@@ -97,7 +97,7 @@ export async function POST(req: Request) {
   const dbTime = Date.now() - dbStart;
   console.log(`[request-code] DB write: ${dbTime}ms`);
 
-  // Must await in serverless (Netlify) - function exits when response returns,
+  // Must await in serverless — the function can exit when the response returns,
   // so fire-and-forget would kill the email send before it completes.
   const emailStart = Date.now();
   let sent = false;

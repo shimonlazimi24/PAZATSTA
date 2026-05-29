@@ -12,7 +12,7 @@ flowchart TB
     User[User]
   end
 
-  subgraph Host["Deployment (Netlify / Vercel)"]
+  subgraph Host["Deployment (Vercel)"]
     Next["Next.js 14 App"]
     API["API Routes"]
     MW["Middleware"]
@@ -244,7 +244,7 @@ flowchart LR
   App -->|DATABASE_URL| Supabase[(Supabase Postgres)]
   App -->|RESEND_API_KEY| Resend[Resend]
   App -->|COOKIE_SECRET| Cookie[Session cookie sign]
-  Cron[Netlify/Vercel Cron] -->|GET /api/cron/follow-up| App
+  Cron[Vercel Cron] -->|GET /api/cron/follow-up| App
   Cron --> App
 ```
 
@@ -259,5 +259,5 @@ flowchart LR
 | API         | Next.js Route Handlers under `/api` |
 | Database    | Supabase (Postgres), Prisma ORM |
 | Email       | Resend (OTP, booking, lesson summary, follow-up) |
-| Hosting     | Netlify or Vercel |
+| Hosting     | Vercel (recommended) |
 | Cron        | Follow-up reminders via host cron → `/api/cron/follow-up` |

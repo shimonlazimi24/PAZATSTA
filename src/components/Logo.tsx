@@ -4,7 +4,7 @@ import { LOGO_SVG } from "./logo-svg";
 
 /**
  * Logo as inline SVG so it always displays (no request to /logo.svg needed).
- * Works on all hosts including Netlify where static public files may not be served at root.
+ * Inline SVG avoids relying on a separate /logo.svg request.
  */
 type Props = {
   alt?: string;

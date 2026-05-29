@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getUserFromSession } from "@/lib/auth";
+import {
+  availabilityDateFromYYYYMMDD,
+  formatIsraelYYYYMMDD,
+  parseYYYYMMDD,
+  utcDayBounds,
+} from "@/lib/dates";
 
 /** Teacher reschedules a scheduled lesson to a new date/time. Returns old slot to availability. */
 export async function PATCH(
@@ -30,8 +36,8 @@ export async function PATCH(
       );
     }
 
-    const newDate = new Date(dateStr + "T12:00:00.000Z");
-    if (isNaN(newDate.getTime())) {
+    const newDate = parseYYYYMMDD(dateStr);
+    if (!newDate) {
       return NextResponse.json({ error: "תאריך לא תקין" }, { status: 400 });
     }
 
@@ -51,33 +57,47 @@ export async function PATCH(
       );
     }
 
-    const oldDateStr = lesson.date.toISOString().slice(0, 10);
-    if (oldDateStr === dateStr && lesson.startTime === startTime) {
+    const currentDateStr = formatIsraelYYYYMMDD(lesson.date);
+    if (currentDateStr === dateStr && lesson.startTime === startTime) {
       return NextResponse.json({ error: "לא בוצע שינוי במועד" }, { status: 400 });
     }
+
+    const targetDay = utcDayBounds(dateStr);
+    const oldDayStr = formatIsraelYYYYMMDD(lesson.date);
 
     await prisma.$transaction(async (tx) => {
       await tx.availability.createMany({
         data: [{
           teacherId: lesson.teacherId,
-          date: lesson.date,
+          date: availabilityDateFromYYYYMMDD(oldDayStr),
           startTime: lesson.startTime,
           endTime: lesson.endTime,
         }],
         skipDuplicates: true,
       });
-      const existingSlot = await tx.availability.findFirst({
+
+      const conflictingLesson = await tx.lesson.findFirst({
         where: {
+          id: { not: lessonId },
           teacherId: lesson.teacherId,
-          date: newDate,
+          workshopId: null,
           startTime,
+          status: { notIn: ["canceled"] },
+          date: targetDay,
         },
       });
-      if (existingSlot) {
-        await tx.availability.delete({
-          where: { id: existingSlot.id },
-        });
+      if (conflictingLesson) {
+        throw Object.assign(new Error("SLOT_TAKEN"), { code: "SLOT_TAKEN" });
       }
+
+      await tx.availability.deleteMany({
+        where: {
+          teacherId: lesson.teacherId,
+          startTime,
+          date: targetDay,
+        },
+      });
+
       await tx.lesson.update({
         where: { id: lessonId },
         data: {
@@ -90,8 +110,14 @@ export async function PATCH(
 
     return NextResponse.json({ ok: true });
   } catch (e) {
-    const prismaErr = e as { code?: string };
-    if (prismaErr?.code === "P2002") {
+    const err = e as { code?: string };
+    if (err?.code === "SLOT_TAKEN") {
+      return NextResponse.json(
+        { error: "המועד שבחרת תפוס (שיעור אחר או משבצת קיימת)" },
+        { status: 409 }
+      );
+    }
+    if (err?.code === "P2002") {
       return NextResponse.json(
         { error: "המועד שבחרת תפוס (שיעור אחר או משבצת קיימת)" },
         { status: 409 }

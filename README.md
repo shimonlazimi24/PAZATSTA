@@ -26,34 +26,6 @@ APP_URL=https://pazatsta.vercel.app npm run healthcheck:prod
 
 Or trigger via GitHub Actions: **Actions** → **CI** → **Run workflow** → enter `APP_URL`.
 
----
-
-## Netlify deploy (legacy)
-
-### Netlify deploy checklist
-
-The plugin must be loaded **only once** (in `netlify.toml`). Do **not** add it to `package.json`—double-loading breaks `/_next/static/*` (404 + wrong MIME).
-
-**Netlify UI** (Site → Site configuration → Build & deploy → Build settings → Edit settings):
-
-- [ ] **Publish directory** = **Not set** (clear any value; plugin manages output)
-- [ ] **Base directory** = empty
-- [ ] **Functions directory** = **Not set**
-- [ ] If deploy fails with "publish directory cannot be same as base", set Base directory to `./` in UI
-- [ ] No custom redirects that catch `/_next/*` and rewrite to HTML
-
-### Post-deploy verification
-
-After deploy, verify static assets return 200 with correct content-type:
-
-```bash
-# Replace <site> with your Netlify site (e.g. pazatsta-schedule)
-# Get a real path from your built .next/static/ or from the page source
-curl -I https://<site>.netlify.app/_next/static/css/<hash>.css
-```
-
-Expected: `HTTP/2 200` and `Content-Type: text/css`. If you get `text/html` or 404, the plugin is not running correctly or redirects are catching the request.
-
 ## Run locally
 
 1. **Install**
