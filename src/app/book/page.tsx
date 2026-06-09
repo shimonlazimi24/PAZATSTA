@@ -198,6 +198,7 @@ export default function BookPage() {
   const [parentEmail, setParentEmail] = useState("");
   const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const subOptionsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -339,6 +340,7 @@ export default function BookPage() {
   }
 
   async function handleNext() {
+    if (isSubmitting) return;
     if (step === 1 && !canProceedStep1) return;
     if (step === 2 && isWorkshopFlow && !canProceedWorkshop2) return;
     if (step === 2 && !isWorkshopFlow && !canProceedStep2) return;
@@ -347,8 +349,10 @@ export default function BookPage() {
       if (!validateStep5()) return;
     }
     if (step === confirmStep) {
+      setIsSubmitting(true);
       const subjectLabel = subOption?.displayLabel ?? subOption?.label ?? "";
       if (isWorkshopFlow && !selectedWorkshop) {
+        setIsSubmitting(false);
         setErrors({
           submit:
             "לא נמצאו פרטי הסדנה. רעננו את הדף או חזרו ובחרו סדנה מחדש.",
@@ -405,9 +409,11 @@ export default function BookPage() {
             router.push("/book/success");
             return;
           }
+          setIsSubmitting(false);
           setErrors({ submit: (data as { error?: string }).error ?? "שגיאה בקביעת השיעור" });
           return;
         } catch (_) {
+          setIsSubmitting(false);
           setErrors({ submit: "שגיאה בקביעת השיעור" });
           return;
         }
@@ -461,9 +467,11 @@ export default function BookPage() {
             router.push("/book/success");
             return;
           }
+          setIsSubmitting(false);
           setErrors({ submit: (data as { error?: string }).error ?? "שגיאה בקביעת השיעור" });
           return;
         } catch (_) {
+          setIsSubmitting(false);
           setErrors({ submit: "שגיאה בקביעת השיעור" });
           return;
         }
@@ -915,8 +923,8 @@ export default function BookPage() {
             {errors.submit && (
               <p className="text-sm text-red-600 text-right">{errors.submit}</p>
             )}
-            <Button onClick={handleNext} showArrow className="w-full justify-center">
-              אישור וקביעת שיעור
+            <Button onClick={handleNext} showArrow disabled={isSubmitting} className="w-full justify-center">
+              {isSubmitting ? "שולח…" : "אישור וקביעת שיעור"}
             </Button>
           </div>
         )}
@@ -946,8 +954,8 @@ export default function BookPage() {
             {errors.submit && (
               <p className="text-sm text-red-600 text-right">{errors.submit}</p>
             )}
-            <Button onClick={handleNext} showArrow className="w-full justify-center">
-              אישור וקביעת שיעור
+            <Button onClick={handleNext} showArrow disabled={isSubmitting} className="w-full justify-center">
+              {isSubmitting ? "שולח…" : "אישור וקביעת שיעור"}
             </Button>
           </div>
         )}
@@ -966,6 +974,7 @@ export default function BookPage() {
                 onClick={handleNext}
                 showArrow
                 disabled={
+                  isSubmitting ||
                   (step === 1 && !canProceedStep1) ||
                   (step === 2 && isWorkshopFlow && !canProceedWorkshop2) ||
                   (step === 2 && !isWorkshopFlow && !canProceedStep2) ||

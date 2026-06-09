@@ -295,7 +295,7 @@ export async function POST(req: Request) {
         }
       }
       const existing = await prisma.lesson.findFirst({
-        where: { teacherId, date, startTime, workshopId: null },
+        where: { teacherId, date, startTime, workshopId: null, status: { not: "canceled" } },
       });
       if (existing) {
         return NextResponse.json(
