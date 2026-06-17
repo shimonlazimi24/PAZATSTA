@@ -193,6 +193,9 @@ export async function POST(req: Request) {
     }
 
     if (availabilityId) {
+      // Log the exact ID being looked up so we can compare with DB state
+      const dbCheck = await prisma.availability.findFirst({ where: { id: availabilityId }, select: { id: true, teacherId: true, date: true, startTime: true } });
+      console.log(`[book/submit] pre-tx availability check: id=${availabilityId} found=${!!dbCheck} dbRecord=${JSON.stringify(dbCheck)}`);
       const result = await prisma.$transaction(
         async (tx) => {
           const current = await tx.availability.findFirst({
@@ -200,7 +203,7 @@ export async function POST(req: Request) {
             include: { teacher: { include: { teacherProfile: true } } },
           });
         if (!current) {
-          console.error(`[book/submit] availabilityId not found: ${availabilityId}`);
+          console.error(`[book/submit] availabilityId not found in tx: ${availabilityId}`);
           return null;
         }
         if (selectedTopic) {
