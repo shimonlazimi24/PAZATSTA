@@ -410,6 +410,12 @@ export default function BookPage() {
             return;
           }
           setIsSubmitting(false);
+          if (res.status === 409) {
+            setSubOption(null);
+            setStep(1);
+            setErrors({ submit: "הסדנה כבר אינה זמינה (מלאה או בוטלה). אנא בחרו סדנה אחרת." });
+            return;
+          }
           setErrors({ submit: (data as { error?: string }).error ?? "שגיאה בקביעת השיעור" });
           return;
         } catch (_) {
@@ -468,6 +474,14 @@ export default function BookPage() {
             return;
           }
           setIsSubmitting(false);
+          if (res.status === 409) {
+            // Slot was taken or disappeared — reset slot selection and go back
+            setSelectedSlot(null);
+            setTeacherSlots([]);
+            setStep(isWorkshopFlow ? 2 : 3);
+            setErrors({ submit: "השעה שבחרת כבר לא זמינה. אנא בחרו שעה אחרת." });
+            return;
+          }
           setErrors({ submit: (data as { error?: string }).error ?? "שגיאה בקביעת השיעור" });
           return;
         } catch (_) {
