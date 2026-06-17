@@ -20,6 +20,7 @@ export function PendingLessonsBlock() {
   const [loading, setLoading] = useState(true);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectingAll, setRejectingAll] = useState(false);
   const [rejectedMessage, setRejectedMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -61,6 +62,24 @@ export function PendingLessonsBlock() {
       .finally(() => setApprovingId(null));
   }
 
+  async function handleRejectAllExpired() {
+    const expired = lessons.filter(
+      (l) => l.approvalExpiresAt && new Date(l.approvalExpiresAt) < new Date()
+    );
+    if (expired.length === 0) return;
+    setRejectingAll(true);
+    setErrorMessage(null);
+    let rejected = 0;
+    for (const l of expired) {
+      const r = await apiJson(`/api/lessons/${l.id}/reject`, { method: "POST" });
+      if (r.ok) rejected++;
+    }
+    setRejectedMessage(`בוטלו ${rejected} שיעורים שפג תוקפם`);
+    setTimeout(() => setRejectedMessage(null), 5000);
+    fetchPending();
+    setRejectingAll(false);
+  }
+
   function handleReject(id: string) {
     setRejectingId(id);
     setRejectedMessage(null);
@@ -93,7 +112,19 @@ export function PendingLessonsBlock() {
 
   return (
     <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 shadow-sm" dir="rtl">
-      <h2 className="text-xl font-bold text-[var(--color-text)] mb-3">שיעורים בהמתנה לאישור</h2>
+      <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+        <h2 className="text-xl font-bold text-[var(--color-text)]">שיעורים בהמתנה לאישור</h2>
+        {lessons.some((l) => l.approvalExpiresAt && new Date(l.approvalExpiresAt) < new Date()) && (
+          <button
+            type="button"
+            disabled={rejectingAll || !!rejectingId || !!approvingId}
+            onClick={handleRejectAllExpired}
+            className="rounded-[var(--radius-input)] border border-red-400 bg-red-50 px-3 py-2 text-sm font-medium text-red-800 hover:bg-red-100 disabled:opacity-50"
+          >
+            {rejectingAll ? "מבטל…" : "בטל את כל שפג תוקפם"}
+          </button>
+        )}
+      </div>
       {rejectedMessage && (
         <p className="mb-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-[var(--radius-input)] px-3 py-2 text-right">
           {rejectedMessage}
