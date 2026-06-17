@@ -193,19 +193,32 @@ export async function POST(req: Request) {
     }
 
     if (availabilityId) {
-      // Log the exact ID being looked up so we can compare with DB state
-      const dbCheck = await prisma.availability.findFirst({ where: { id: availabilityId }, select: { id: true, teacherId: true, date: true, startTime: true } });
-      console.log(`[book/submit] pre-tx availability check: id=${availabilityId} found=${!!dbCheck} dbRecord=${JSON.stringify(dbCheck)}`);
       const result = await prisma.$transaction(
         async (tx) => {
-          const current = await tx.availability.findFirst({
+          // Look up by ID first; fall back to teacher+date+startTime if ID is stale.
+          let current = await tx.availability.findFirst({
             where: { id: availabilityId },
             include: { teacher: { include: { teacherProfile: true } } },
           });
-        if (!current) {
-          console.error(`[book/submit] availabilityId not found in tx: ${availabilityId}`);
-          return null;
-        }
+          if (!current && teacherId && dateStr && startTime) {
+            // ID may be stale (slot was deleted and re-created after a rejection).
+            // Try to find the slot by natural key instead.
+            const dateForLookup = new Date(dateStr + "T00:00:00.000Z");
+            const dateForLookupNoon = new Date(dateStr + "T12:00:00.000Z");
+            current = await tx.availability.findFirst({
+              where: {
+                teacherId,
+                startTime,
+                date: { in: [dateForLookup, dateForLookupNoon] },
+              },
+              include: { teacher: { include: { teacherProfile: true } } },
+            });
+            console.log(`[book/submit] stale-id fallback: sought teacherId=${teacherId} date=${dateStr} startTime=${startTime} found=${!!current}`);
+          }
+          if (!current) {
+            console.error(`[book/submit] availabilityId not found: ${availabilityId} teacherId=${teacherId} dateStr=${dateStr} startTime=${startTime}`);
+            return null;
+          }
         if (selectedTopic) {
           const specialties = current.teacher.teacherProfile?.specialties ?? [];
           if (!teacherMatchesTopic(specialties, selectedTopic)) {
