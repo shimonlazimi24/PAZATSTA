@@ -388,6 +388,7 @@ export async function POST(req: Request) {
     }
     const prismaErr = e as { code?: string };
     if (prismaErr?.code === "P2002") {
+      console.error(`[book/submit] P2002 unique constraint violation — availabilityId=${availabilityId} teacherId=${teacherId} dateStr=${dateStr} startTime=${startTime}`, e);
       return NextResponse.json(
         { error: "הזמן נתפס, בחר זמן אחר" },
         { status: 409 }
