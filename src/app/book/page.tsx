@@ -501,11 +501,22 @@ export default function BookPage() {
             return;
           }
           setIsSubmitting(false);
-          if (res.status === 409) {
+          if (res.status === 409 && teacher && selectedDate) {
             setSelectedSlot(null);
-            setTeacherSlots([]);
             setStep(3);
             setErrors({ submit: "השעה שבחרת כבר נתפסה. אנא בחרו שעה אחרת." });
+            const nextDay = new Date(selectedDate + "T12:00:00");
+            nextDay.setDate(nextDay.getDate() + 1);
+            const endDate = nextDay.toISOString().slice(0, 10);
+            fetch(`/api/teachers/${teacher.id}/availability?start=${selectedDate}&end=${endDate}`)
+              .then((r) => (r.ok ? r.json() : []))
+              .then((list: { id: string; date: string; startTime: string; endTime: string }[]) => {
+                const forDate = list.filter((s) => s.date === selectedDate).map((s) => ({
+                  id: s.id, date: s.date, startTime: s.startTime, endTime: s.endTime, available: true,
+                }));
+                setTeacherSlots(forDate);
+              })
+              .catch(() => setTeacherSlots([]));
             return;
           }
           setErrors({ submit: (data as { error?: string }).error ?? "שגיאה בקביעת השיעור" });
