@@ -286,6 +286,37 @@ export default function BookPage() {
       .finally(() => setSlotsLoading(false));
   }, [selectedDate, teacher?.id, isRealTeacher]);
 
+  // When reaching the confirmation step, re-fetch slots to verify the selected slot still exists.
+  // If it disappeared (booked by someone else), go back to slot selection automatically.
+  useEffect(() => {
+    const _isWorkshopFlow = categoryId === "workshop" && subOption !== null;
+    const _confirmStep = _isWorkshopFlow ? 4 : 5;
+    if (step !== _confirmStep) return;
+    if (_isWorkshopFlow || !teacher || !selectedDate || !selectedSlot || !isRealTeacher) return;
+    const nextDay = new Date(selectedDate + "T12:00:00");
+    nextDay.setDate(nextDay.getDate() + 1);
+    const endDate = nextDay.toISOString().slice(0, 10);
+    fetch(`/api/teachers/${teacher.id}/availability?start=${selectedDate}&end=${endDate}`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((list: { id: string; date: string; startTime: string; endTime: string }[]) => {
+        const forDate = list.filter((s) => s.date === selectedDate).map((s) => ({
+          id: s.id,
+          date: s.date,
+          startTime: s.startTime,
+          endTime: s.endTime,
+          available: true,
+        }));
+        setTeacherSlots(forDate);
+        const stillAvailable = forDate.some((s) => s.startTime === selectedSlot.startTime);
+        if (!stillAvailable) {
+          setSelectedSlot(null);
+          setStep(3);
+          setErrors({ submit: "השעה שבחרת כבר נתפסה. אנא בחרו שעה אחרת." });
+        }
+      })
+      .catch(() => {});
+  }, [step, categoryId, subOption, teacher?.id, selectedDate, selectedSlot?.startTime, isRealTeacher]);
+
   useEffect(() => {
     if (!selectedDate) setSelectedSlot(null);
   }, [selectedDate]);
@@ -410,12 +441,6 @@ export default function BookPage() {
             return;
           }
           setIsSubmitting(false);
-          if (res.status === 409) {
-            setSubOption(null);
-            setStep(1);
-            setErrors({ submit: "הסדנה כבר אינה זמינה (מלאה או בוטלה). אנא בחרו סדנה אחרת." });
-            return;
-          }
           setErrors({ submit: (data as { error?: string }).error ?? "שגיאה בקביעת השיעור" });
           return;
         } catch (_) {
@@ -475,11 +500,10 @@ export default function BookPage() {
           }
           setIsSubmitting(false);
           if (res.status === 409) {
-            // Slot was taken or disappeared — reset slot selection and go back
             setSelectedSlot(null);
             setTeacherSlots([]);
-            setStep(isWorkshopFlow ? 2 : 3);
-            setErrors({ submit: "השעה שבחרת כבר לא זמינה. אנא בחרו שעה אחרת." });
+            setStep(3);
+            setErrors({ submit: "השעה שבחרת כבר נתפסה. אנא בחרו שעה אחרת." });
             return;
           }
           setErrors({ submit: (data as { error?: string }).error ?? "שגיאה בקביעת השיעור" });
@@ -797,6 +821,11 @@ export default function BookPage() {
 
         {step === 3 && !isWorkshopFlow && (
           <div className="space-y-6">
+            {errors.submit && (
+              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-[var(--radius-input)] px-3 py-2 text-right">
+                {errors.submit}
+              </p>
+            )}
             <p className="text-[var(--color-text-muted)] text-right">בחרו תאריך</p>
             <DateSelector
               options={dateOptions}
@@ -816,7 +845,7 @@ export default function BookPage() {
                   <TimeSlots
                     slots={slots}
                     selectedSlotId={selectedSlot?.id ?? null}
-                    onSelect={(s) => setSelectedSlot(s as MockSlot)}
+                    onSelect={(s) => { setSelectedSlot(s as MockSlot); setErrors({}); }}
                   />
                 )}
               </>
