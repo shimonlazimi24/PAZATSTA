@@ -474,14 +474,43 @@ export default function BookPage() {
       } catch (_) {}
       if (isRealTeacherId && selectedDate && selectedSlot) {
         try {
+          // Re-fetch the slot right before submitting to ensure we have the latest ID.
+          // This prevents a race condition where the confirmation-step useEffect hasn't
+          // resolved yet and we'd submit a stale availabilityId that no longer exists in DB.
+          let freshSlotId = selectedSlot.id;
+          let freshEndTime = selectedSlot.endTime;
+          try {
+            const nextDay = new Date(selectedDate + "T12:00:00");
+            nextDay.setDate(nextDay.getDate() + 1);
+            const endDate = nextDay.toISOString().slice(0, 10);
+            const slotRes = await fetch(`/api/teachers/${teacher.id}/availability?start=${selectedDate}&end=${endDate}`);
+            if (slotRes.ok) {
+              const slotList: { id: string; date: string; startTime: string; endTime: string }[] = await slotRes.json();
+              const forDate = slotList.filter((s) => s.date === selectedDate);
+              const fresh = forDate.find((s) => s.startTime === selectedSlot.startTime);
+              if (!fresh) {
+                setIsSubmitting(false);
+                setSelectedSlot(null);
+                setStep(3);
+                setErrors({ submit: "השעה שבחרת כבר נתפסה. אנא בחרו שעה אחרת." });
+                setTeacherSlots(forDate);
+                return;
+              }
+              freshSlotId = fresh.id;
+              freshEndTime = fresh.endTime;
+              setSelectedSlot({ id: fresh.id, date: fresh.date, startTime: fresh.startTime, endTime: fresh.endTime, available: true });
+              setTeacherSlots(forDate);
+            }
+          } catch (_) {}
+
           const body: { teacherId: string; date: string; startTime: string; endTime: string; availabilityId?: string; selectedTopic?: string; studentName?: string; phone?: string; parentName?: string; parentPhone?: string; parentEmail?: string; notes?: string } = {
             teacherId: teacher.id,
             date: selectedDate,
             startTime: selectedSlot.startTime,
-            endTime: selectedSlot.endTime,
+            endTime: freshEndTime,
           };
-          if (selectedSlot.id && typeof selectedSlot.id === "string" && selectedSlot.id.length > 10 && !selectedSlot.id.startsWith("slot-")) {
-            body.availabilityId = selectedSlot.id;
+          if (freshSlotId && typeof freshSlotId === "string" && freshSlotId.length > 10 && !freshSlotId.startsWith("slot-")) {
+            body.availabilityId = freshSlotId;
           }
           if (subOption?.label) body.selectedTopic = subOption.label;
           if (name?.trim()) body.studentName = name.trim();
