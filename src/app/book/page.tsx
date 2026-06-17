@@ -307,11 +307,13 @@ export default function BookPage() {
           available: true,
         }));
         setTeacherSlots(forDate);
-        const stillAvailable = forDate.some((s) => s.startTime === selectedSlot.startTime);
-        if (!stillAvailable) {
+        const freshSlot = forDate.find((s) => s.startTime === selectedSlot.startTime);
+        if (!freshSlot) {
           setSelectedSlot(null);
           setStep(3);
           setErrors({ submit: "השעה שבחרת כבר נתפסה. אנא בחרו שעה אחרת." });
+        } else if (freshSlot.id !== selectedSlot.id) {
+          setSelectedSlot(freshSlot);
         }
       })
       .catch(() => {});
