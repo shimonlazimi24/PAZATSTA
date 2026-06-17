@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/expire-pending-lessons",
-      "schedule": "0 * * * *"
+      "schedule": "0 6 * * *"
     },
     {
       "path": "/api/cron/follow-up",
