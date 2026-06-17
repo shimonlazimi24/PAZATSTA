@@ -8,6 +8,7 @@ type PendingLesson = {
   date: string;
   startTime: string;
   endTime: string;
+  approvalExpiresAt: string | null;
   teacher: { id: string; email: string; name: string | null };
   student: { id: string; email: string; name: string | null };
   workshopName?: string | null;
@@ -113,6 +114,11 @@ export function PendingLessonsBlock() {
               {l.isWorkshop && (
                 <span className="inline-block rounded bg-teal-100 text-teal-900 text-xs font-medium px-2 py-0.5 ml-2 mb-1">
                   סדנה{l.workshopName ? `: ${l.workshopName}` : ""}
+                </span>
+              )}
+              {l.approvalExpiresAt && new Date(l.approvalExpiresAt) < new Date() && (
+                <span className="inline-block rounded bg-red-100 text-red-800 text-xs font-medium px-2 py-0.5 ml-2 mb-1">
+                  פג תוקף
                 </span>
               )}{" "}
               {l.teacher.name || l.teacher.email} ↔ {l.student.name || l.student.email} — {l.date} {l.startTime}–{l.endTime}
