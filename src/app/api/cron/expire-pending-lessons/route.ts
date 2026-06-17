@@ -24,13 +24,21 @@ export async function GET(req: Request) {
           where: { id: lesson.id },
           data: { status: "canceled" },
         });
-        await tx.availability.create({
-          data: {
+        await tx.availability.upsert({
+          where: {
+            teacherId_date_startTime: {
+              teacherId: lesson.teacherId,
+              date: lesson.date,
+              startTime: lesson.startTime,
+            },
+          },
+          create: {
             teacherId: lesson.teacherId,
             date: lesson.date,
             startTime: lesson.startTime,
             endTime: lesson.endTime,
           },
+          update: {},
         });
       });
       restored++;

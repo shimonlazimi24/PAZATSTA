@@ -20,6 +20,7 @@ export function PendingLessonsBlock() {
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectedMessage, setRejectedMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   function fetchPending(silent = false) {
     if (!silent) setLoading(true);
@@ -44,9 +45,17 @@ export function PendingLessonsBlock() {
 
   function handleApprove(id: string) {
     setApprovingId(id);
-    apiJson<{ ok?: boolean }>(`/api/lessons/${id}/approve`, { method: "POST" })
+    setErrorMessage(null);
+    apiJson<{ ok?: boolean; error?: string }>(`/api/lessons/${id}/approve`, { method: "POST" })
       .then((r) => {
-        if (r.ok) fetchPending();
+        if (r.ok) {
+          fetchPending();
+        } else {
+          const msg = r.error ?? "אישור נכשל";
+          setErrorMessage(msg);
+          setTimeout(() => setErrorMessage(null), 6000);
+          fetchPending();
+        }
       })
       .finally(() => setApprovingId(null));
   }
@@ -54,11 +63,17 @@ export function PendingLessonsBlock() {
   function handleReject(id: string) {
     setRejectingId(id);
     setRejectedMessage(null);
-    apiJson<{ ok?: boolean }>(`/api/lessons/${id}/reject`, { method: "POST" })
+    setErrorMessage(null);
+    apiJson<{ ok?: boolean; error?: string }>(`/api/lessons/${id}/reject`, { method: "POST" })
       .then((r) => {
         if (r.ok) {
           setRejectedMessage("השיעור לא אושר");
           setTimeout(() => setRejectedMessage(null), 4000);
+          fetchPending();
+        } else {
+          const msg = r.error ?? "דחייה נכשלה";
+          setErrorMessage(msg);
+          setTimeout(() => setErrorMessage(null), 6000);
           fetchPending();
         }
       })
@@ -81,6 +96,11 @@ export function PendingLessonsBlock() {
       {rejectedMessage && (
         <p className="mb-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-[var(--radius-input)] px-3 py-2 text-right">
           {rejectedMessage}
+        </p>
+      )}
+      {errorMessage && (
+        <p className="mb-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-[var(--radius-input)] px-3 py-2 text-right">
+          שגיאה: {errorMessage}
         </p>
       )}
       <ul className="space-y-3">
