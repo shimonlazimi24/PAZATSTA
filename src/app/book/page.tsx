@@ -486,7 +486,7 @@ export default function BookPage() {
             const slotRes = await fetch(`/api/teachers/${teacher.id}/availability?start=${selectedDate}&end=${endDate}`);
             if (slotRes.ok) {
               const slotList: { id: string; date: string; startTime: string; endTime: string }[] = await slotRes.json();
-              const forDate = slotList.filter((s) => s.date === selectedDate);
+              const forDate = slotList.filter((s) => s.date === selectedDate).map((s) => ({ ...s, available: true }));
               const fresh = forDate.find((s) => s.startTime === selectedSlot.startTime);
               if (!fresh) {
                 setIsSubmitting(false);
@@ -498,7 +498,7 @@ export default function BookPage() {
               }
               freshSlotId = fresh.id;
               freshEndTime = fresh.endTime;
-              setSelectedSlot({ id: fresh.id, date: fresh.date, startTime: fresh.startTime, endTime: fresh.endTime, available: true });
+              setSelectedSlot(fresh);
               setTeacherSlots(forDate);
             }
           } catch (_) {}
