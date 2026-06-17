@@ -199,7 +199,10 @@ export async function POST(req: Request) {
             where: { id: availabilityId },
             include: { teacher: { include: { teacherProfile: true } } },
           });
-        if (!current) return null;
+        if (!current) {
+          console.error(`[book/submit] availabilityId not found: ${availabilityId}`);
+          return null;
+        }
         if (selectedTopic) {
           const specialties = current.teacher.teacherProfile?.specialties ?? [];
           if (!teacherMatchesTopic(specialties, selectedTopic)) {
@@ -298,11 +301,13 @@ export async function POST(req: Request) {
         where: { teacherId, date, startTime, workshopId: null, status: { not: "canceled" } },
       });
       if (existing) {
+        console.error(`[book/submit] else-branch conflict: teacherId=${teacherId} date=${date.toISOString()} startTime=${startTime} existingLessonId=${existing.id} status=${existing.status}`);
         return NextResponse.json(
           { error: "הזמן נתפס, בחר זמן אחר" },
           { status: 409 }
         );
       }
+      console.log(`[book/submit] else-branch: no conflict found for teacherId=${teacherId} date=${date.toISOString()} startTime=${startTime} — no availabilityId in request`);
       await upsertStudentProfileFromBookingForm(user.id, {
         studentNameFromForm,
         studentPhoneFromForm,
