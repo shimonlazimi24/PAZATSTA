@@ -198,17 +198,23 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange, t
 
   async function toggleSlot(opt: (typeof slotOptions)[0]) {
     if (!selectedDate || toggling) return;
-    const isRemoving = opt.isAdded && opt.id && !opt.id.startsWith("opt-");
+    const isRemoving = opt.isAdded && opt.id && !opt.id.startsWith("opt-") && !opt.id.startsWith("pending-");
 
     if (isRemoving) {
-      setSlots((prev) => prev.filter((s) => s.id !== opt.id));
-      onSlotsChange?.(slots.filter((s) => s.id !== opt.id));
-      setToggling(null);
-      const res = await fetch(`${apiBase}?id=${opt.id}`, { method: "DELETE", credentials: "include" });
-      if (!res.ok) {
+      setToggling(opt.id);
+      setLoadError(null);
+      const res = await fetch(`${apiBase}?id=${encodeURIComponent(opt.id)}`, { method: "DELETE", credentials: "include" });
+      if (res.ok) {
+        setSlots((prev) => {
+          const next = prev.filter((s) => s.id !== opt.id);
+          onSlotsChange?.(next);
+          return next;
+        });
+      } else {
         load();
         setLoadError("שגיאה בהסרת המשבצת. נסו שוב.");
       }
+      setToggling(null);
       return;
     }
 
@@ -219,9 +225,9 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange, t
       startTime: opt.startTime,
       endTime: opt.endTime,
     };
+    setToggling(opt.id);
     setSlots((prev) => [...prev, newSlot]);
     onSlotsChange?.([...slots, newSlot]);
-    setToggling(null);
 
     const res = await fetch(apiBase, {
       method: "POST",
@@ -237,10 +243,12 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange, t
       setSlots((prev) => prev.filter((s) => s.id !== pendingId));
       onSlotsChange?.(slots);
       setLoadError("שגיאה בשמירת המשבצת. נסו שוב.");
+      setToggling(null);
       return;
     }
     if (teacherId) {
       load();
+      setToggling(null);
       return;
     }
     try {
@@ -257,6 +265,8 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange, t
     } catch {
       setSlots((prev) => prev.filter((s) => s.id !== pendingId));
       onSlotsChange?.(slots);
+    } finally {
+      setToggling(null);
     }
   }
 

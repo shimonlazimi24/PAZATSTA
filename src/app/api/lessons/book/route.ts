@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getUserFromSession } from "@/lib/auth";
+import { formatIsraelYYYYMMDD, utcDayBounds } from "@/lib/dates";
+import {
+  expireOverduePendingLessons,
+  expirePendingForSlotInTx,
+} from "@/lib/expire-pending-lessons";
 
 const SLOT_TAKEN_ERROR = "הזמן נתפס, בחר זמן אחר";
 const APPROVAL_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -11,6 +16,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   try {
+    await expireOverduePendingLessons(prisma);
     const body = await req.json();
     const availabilityId = typeof body.availabilityId === "string" ? body.availabilityId.trim() : "";
     if (!availabilityId) {
@@ -37,6 +43,23 @@ export async function POST(req: Request) {
         include: { teacher: true },
       });
       if (!current) return null;
+
+      const slotDateStr = formatIsraelYYYYMMDD(current.date);
+      await expirePendingForSlotInTx(tx, current.teacherId, slotDateStr, current.startTime);
+      const day = utcDayBounds(slotDateStr);
+      const blocking = await tx.lesson.findFirst({
+        where: {
+          teacherId: current.teacherId,
+          startTime: current.startTime,
+          date: { gte: day.gte, lte: day.lte },
+          workshopId: null,
+          status: { notIn: ["canceled"] },
+        },
+      });
+      if (blocking) {
+        throw Object.assign(new Error("SLOT_TAKEN"), { code: "SLOT_TAKEN" });
+      }
+
       const created = await tx.lesson.create({
         data: {
           teacherId: current.teacherId,
@@ -60,7 +83,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const dateStr = lesson.date.toISOString().slice(0, 10);
+    const dateStr = formatIsraelYYYYMMDD(lesson.date);
     const teacherName = lesson.teacher.name || lesson.teacher.email;
 
     return NextResponse.json({
@@ -72,8 +95,8 @@ export async function POST(req: Request) {
       teacher: { id: lesson.teacher.id, name: teacherName, email: lesson.teacher.email },
     });
   } catch (e) {
-    const prismaErr = e as { code?: string };
-    if (prismaErr?.code === "P2002") {
+    const err = e as { code?: string };
+    if (err?.code === "SLOT_TAKEN" || err?.code === "P2002") {
       return NextResponse.json(
         { error: SLOT_TAKEN_ERROR },
         { status: 409 }

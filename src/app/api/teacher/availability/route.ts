@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getUserFromSession } from "@/lib/auth";
+import {
+  availabilityDateFromYYYYMMDD,
+  formatIsraelYYYYMMDD,
+  utcDayBounds,
+} from "@/lib/dates";
 
 function isDbUnreachable(e: unknown): boolean {
   return typeof e === "object" && e !== null && (e as { code?: string }).code === "P1001";
@@ -21,8 +26,8 @@ export async function GET(req: Request) {
         ...(start && end
           ? {
               date: {
-                gte: new Date(start),
-                lte: new Date(end),
+                gte: utcDayBounds(start).gte,
+                lte: utcDayBounds(end).lte,
               },
             }
           : {}),
@@ -32,7 +37,7 @@ export async function GET(req: Request) {
     return NextResponse.json(
       slots.map((s) => ({
         id: s.id,
-        date: s.date.toISOString().slice(0, 10),
+        date: formatIsraelYYYYMMDD(s.date),
         startTime: s.startTime,
         endTime: s.endTime,
       }))
@@ -63,7 +68,7 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-    const date = new Date(dateStr + "T00:00:00.000Z");
+    const date = availabilityDateFromYYYYMMDD(dateStr);
     if (isNaN(date.getTime())) {
       return NextResponse.json(
         { error: "Invalid date" },
@@ -84,7 +89,7 @@ export async function POST(req: Request) {
     if (existing) {
       return NextResponse.json({
         id: existing.id,
-        date: existing.date.toISOString().slice(0, 10),
+        date: formatIsraelYYYYMMDD(existing.date),
         startTime: existing.startTime,
         endTime: existing.endTime,
       });
@@ -99,7 +104,7 @@ export async function POST(req: Request) {
     });
     return NextResponse.json({
       id: slot.id,
-      date: slot.date.toISOString().slice(0, 10),
+      date: formatIsraelYYYYMMDD(slot.date),
       startTime: slot.startTime,
       endTime: slot.endTime,
     });
@@ -128,13 +133,11 @@ export async function DELETE(req: Request) {
   const id = searchParams.get("id");
   const dateStr = searchParams.get("date");
   if (dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-    const date = new Date(dateStr + "T00:00:00.000Z");
-    if (!isNaN(date.getTime())) {
-      await prisma.availability.deleteMany({
-        where: { teacherId: user.id, date },
-      });
-      return NextResponse.json({ ok: true });
-    }
+    const day = utcDayBounds(dateStr);
+    await prisma.availability.deleteMany({
+      where: { teacherId: user.id, date: { gte: day.gte, lte: day.lte } },
+    });
+    return NextResponse.json({ ok: true });
   }
   if (!id) {
     return NextResponse.json({ error: "id or date required" }, { status: 400 });

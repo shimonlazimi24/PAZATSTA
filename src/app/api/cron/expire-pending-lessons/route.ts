@@ -1,51 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { validateCronAuth } from "@/lib/cron-auth";
+import { expireOverduePendingLessons } from "@/lib/expire-pending-lessons";
 
-/** Run every few minutes: cancel pending lessons past approvalExpiresAt and restore slots. */
+/** Cancel pending lessons past approvalExpiresAt and restore slots. */
 export async function GET(req: Request) {
   const authError = validateCronAuth(req);
   if (authError) return authError;
 
-  const now = new Date();
-  const expired = await prisma.lesson.findMany({
-    where: {
-      status: "pending_approval",
-      approvalExpiresAt: { lt: now },
-    },
-    select: { id: true, teacherId: true, date: true, startTime: true, endTime: true },
-  });
+  const { expired, restored } = await expireOverduePendingLessons(prisma);
 
-  let restored = 0;
-  for (const lesson of expired) {
-    try {
-      await prisma.$transaction(async (tx) => {
-        await tx.lesson.update({
-          where: { id: lesson.id },
-          data: { status: "canceled" },
-        });
-        await tx.availability.upsert({
-          where: {
-            teacherId_date_startTime: {
-              teacherId: lesson.teacherId,
-              date: lesson.date,
-              startTime: lesson.startTime,
-            },
-          },
-          create: {
-            teacherId: lesson.teacherId,
-            date: lesson.date,
-            startTime: lesson.startTime,
-            endTime: lesson.endTime,
-          },
-          update: {},
-        });
-      });
-      restored++;
-    } catch (e) {
-      console.error("[cron/expire-pending-lessons] Failed for lesson", lesson.id, e);
-    }
-  }
-
-  return NextResponse.json({ ok: true, expired: expired.length, restored });
+  return NextResponse.json({ ok: true, expired, restored });
 }

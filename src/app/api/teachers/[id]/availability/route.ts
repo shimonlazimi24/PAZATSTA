@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { parseDateParam } from "@/lib/date-utils";
+import { expireOverduePendingLessons } from "@/lib/expire-pending-lessons";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,8 @@ export async function GET(
     if (!teacher) {
       return NextResponse.json({ error: "Teacher not found" }, { status: 404 });
     }
+
+    await expireOverduePendingLessons(prisma);
 
     const now = new Date();
     let effectiveStart: Date = now;

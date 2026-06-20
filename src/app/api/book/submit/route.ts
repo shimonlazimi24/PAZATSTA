@@ -8,6 +8,15 @@ import { formatDateInIsrael } from "@/lib/date-utils";
 import { ADMIN_TEACHER_EMAILS, ADMIN_NOTIFICATION_EMAILS } from "@/lib/admin";
 import { isValidDeliveryEmail } from "@/lib/validation";
 import { upsertStudentProfileFromBookingForm } from "@/lib/booking-student-profile";
+import {
+  availabilityDateFromYYYYMMDD,
+  formatIsraelYYYYMMDD,
+  utcDayBounds,
+} from "@/lib/dates";
+import {
+  expireOverduePendingLessons,
+  expirePendingForSlotInTx,
+} from "@/lib/expire-pending-lessons";
 
 const APPROVAL_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -64,6 +73,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   try {
+    await expireOverduePendingLessons(prisma);
     const body = await req.json();
     const parsed = BookSubmitSchema.safeParse(body);
     if (!parsed.success) {
@@ -201,15 +211,12 @@ export async function POST(req: Request) {
             include: { teacher: { include: { teacherProfile: true } } },
           });
           if (!current && teacherId && dateStr && startTime) {
-            // ID may be stale (slot was deleted and re-created after a rejection).
-            // Try to find the slot by natural key instead.
-            const dateForLookup = new Date(dateStr + "T00:00:00.000Z");
-            const dateForLookupNoon = new Date(dateStr + "T12:00:00.000Z");
+            const day = utcDayBounds(dateStr);
             current = await tx.availability.findFirst({
               where: {
                 teacherId,
                 startTime,
-                date: { in: [dateForLookup, dateForLookupNoon] },
+                date: { gte: day.gte, lte: day.lte },
               },
               include: { teacher: { include: { teacherProfile: true } } },
             });
@@ -224,6 +231,21 @@ export async function POST(req: Request) {
           if (!teacherMatchesTopic(specialties, selectedTopic)) {
             throw new Error("SPECIALIZATION_MISMATCH");
           }
+        }
+        const slotDateStr = formatIsraelYYYYMMDD(current.date);
+        await expirePendingForSlotInTx(tx, current.teacherId, slotDateStr, current.startTime);
+        const day = utcDayBounds(slotDateStr);
+        const blocking = await tx.lesson.findFirst({
+          where: {
+            teacherId: current.teacherId,
+            startTime: current.startTime,
+            date: { gte: day.gte, lte: day.lte },
+            workshopId: null,
+            status: { notIn: ["canceled"] },
+          },
+        });
+        if (blocking) {
+          throw Object.assign(new Error("SLOT_TAKEN"), { code: "SLOT_TAKEN" });
         }
         const created = await tx.lesson.create({
           data: {
@@ -292,7 +314,7 @@ export async function POST(req: Request) {
           { status: 400 }
         );
       }
-      const date = new Date(dateStr + "T12:00:00");
+      const date = availabilityDateFromYYYYMMDD(dateStr);
       if (isNaN(date.getTime())) {
         return NextResponse.json({ error: "תאריך לא תקין" }, { status: 400 });
       }
@@ -313,37 +335,60 @@ export async function POST(req: Request) {
           );
         }
       }
-      const existing = await prisma.lesson.findFirst({
-        where: { teacherId, date, startTime, workshopId: null, status: { not: "canceled" } },
-      });
-      if (existing) {
-        console.error(`[book/submit] else-branch conflict: teacherId=${teacherId} date=${date.toISOString()} startTime=${startTime} existingLessonId=${existing.id} status=${existing.status}`);
-        return NextResponse.json(
-          { error: "הזמן נתפס, בחר זמן אחר" },
-          { status: 409 }
-        );
+      const day = utcDayBounds(dateStr);
+      try {
+        lesson = await prisma.$transaction(async (tx) => {
+          await expirePendingForSlotInTx(tx, teacherId, dateStr, startTime);
+          const existing = await tx.lesson.findFirst({
+            where: {
+              teacherId,
+              startTime,
+              date: { gte: day.gte, lte: day.lte },
+              workshopId: null,
+              status: { notIn: ["canceled"] },
+            },
+          });
+          if (existing) {
+            throw Object.assign(new Error("SLOT_TAKEN"), { code: "SLOT_TAKEN" });
+          }
+          await tx.availability.deleteMany({
+            where: {
+              teacherId,
+              startTime,
+              date: { gte: day.gte, lte: day.lte },
+            },
+          });
+          return tx.lesson.create({
+            data: {
+              teacherId: teacher.id,
+              studentId: user.id,
+              date,
+              startTime,
+              endTime,
+              topic: selectedTopic || null,
+              questionFromStudent: notesFromForm || null,
+              status: "pending_approval",
+              approvalExpiresAt: new Date(Date.now() + APPROVAL_WINDOW_MS),
+            },
+            include: { teacher: true, student: true },
+          });
+        });
+      } catch (e) {
+        const err = e as { code?: string };
+        if (err?.code === "SLOT_TAKEN") {
+          return NextResponse.json(
+            { error: "הזמן נתפס, בחר זמן אחר" },
+            { status: 409 }
+          );
+        }
+        throw e;
       }
-      console.log(`[book/submit] else-branch: no conflict found for teacherId=${teacherId} date=${date.toISOString()} startTime=${startTime} — no availabilityId in request`);
       await upsertStudentProfileFromBookingForm(user.id, {
         studentNameFromForm,
         studentPhoneFromForm,
         parentNameFromForm,
         parentPhoneFromForm,
         parentEmailFromForm,
-      });
-      lesson = await prisma.lesson.create({
-        data: {
-          teacherId: teacher.id,
-          studentId: user.id,
-          date,
-          startTime,
-          endTime,
-          topic: selectedTopic || null,
-          questionFromStudent: notesFromForm || null,
-          status: "pending_approval",
-          approvalExpiresAt: new Date(Date.now() + APPROVAL_WINDOW_MS),
-        },
-        include: { teacher: true, student: true },
       });
     }
 
@@ -384,6 +429,13 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "המורה אינו מתמחה במסלול שנבחר." },
         { status: 403 }
+      );
+    }
+    const err = e as { code?: string };
+    if (err?.code === "SLOT_TAKEN") {
+      return NextResponse.json(
+        { error: "הזמן נתפס, בחר זמן אחר" },
+        { status: 409 }
       );
     }
     const prismaErr = e as { code?: string };

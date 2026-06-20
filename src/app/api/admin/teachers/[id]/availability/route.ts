@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getUserFromSession } from "@/lib/auth";
 import { canAccessAdmin } from "@/lib/admin";
+import {
+  availabilityDateFromYYYYMMDD,
+  formatIsraelYYYYMMDD,
+  utcDayBounds,
+} from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -45,8 +50,8 @@ export async function GET(
       where: {
         teacherId,
         date: {
-          gte: new Date(start + "T00:00:00.000Z"),
-          lte: new Date(end + "T23:59:59.999Z"),
+          gte: utcDayBounds(start).gte,
+          lte: utcDayBounds(end).lte,
         },
       },
       orderBy: [{ date: "asc" }, { startTime: "asc" }],
@@ -54,7 +59,7 @@ export async function GET(
     return NextResponse.json(
       slots.map((s) => ({
         id: s.id,
-        date: s.date.toISOString().slice(0, 10),
+        date: formatIsraelYYYYMMDD(s.date),
         startTime: s.startTime,
         endTime: s.endTime,
       }))
@@ -93,7 +98,7 @@ export async function POST(
         const startTime = typeof (s as { startTime?: string }).startTime === "string" ? (s as { startTime: string }).startTime : "";
         const endTime = typeof (s as { endTime?: string }).endTime === "string" ? (s as { endTime: string }).endTime : "";
         if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr) || !startTime || !endTime) return null;
-        const date = new Date(dateStr + "T00:00:00.000Z");
+        const date = availabilityDateFromYYYYMMDD(dateStr);
         if (isNaN(date.getTime())) return null;
         return { teacherId, date, startTime, endTime };
       })
@@ -134,13 +139,11 @@ export async function DELETE(
   const dateStr = searchParams.get("date");
 
   if (dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-    const date = new Date(dateStr + "T00:00:00.000Z");
-    if (!isNaN(date.getTime())) {
-      await prisma.availability.deleteMany({
-        where: { teacherId, date },
-      });
-      return NextResponse.json({ ok: true });
-    }
+    const day = utcDayBounds(dateStr);
+    await prisma.availability.deleteMany({
+      where: { teacherId, date: { gte: day.gte, lte: day.lte } },
+    });
+    return NextResponse.json({ ok: true });
   }
   if (id) {
     await prisma.availability.deleteMany({
