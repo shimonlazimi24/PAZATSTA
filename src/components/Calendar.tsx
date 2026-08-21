@@ -101,6 +101,11 @@ export function Calendar({
                 key={dateStr}
                 type="button"
                 onClick={() => onSelectDate?.(dateStr)}
+                aria-label={
+                  count > 0
+                    ? `${dateStr} — ${count} שיעורים`
+                    : `${dateStr} — אין שיעורים`
+                }
                 className={`aspect-square flex flex-col items-center justify-center rounded text-sm ${
                   isToday
                     ? "bg-gray-900 text-white font-medium"

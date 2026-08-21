@@ -17,6 +17,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import type { TeacherView } from "@/types/teacher";
 import { formatIsraelYYYYMMDD, addDaysYYYYMMDD } from "@/lib/dates";
 import { isValidEmail, isValidPhone } from "@/lib/validation";
+import { apiJson } from "@/lib/api";
 import type { SlotView } from "@/types/slot";
 
 /** Week dates in Israel (YYYY-MM-DD) so student and teacher see the same calendar days. */
@@ -177,6 +178,8 @@ export default function BookPage() {
   const [teacher, setTeacher] = useState<TeacherView | null>(null);
   const [apiTeachers, setApiTeachers] = useState<TeacherView[]>([]);
   const [teachersLoading, setTeachersLoading] = useState(false);
+  /** Set when a list could not be loaded, so an outage is not shown as "no results". */
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<SlotView | null>(null);
   const [teacherSlots, setTeacherSlots] = useState<SlotView[]>([]);
@@ -260,14 +263,17 @@ export default function BookPage() {
     setTeachersLoading(true);
     setApiTeachers([]);
     setTeacher(null);
-    fetch(url)
-      .then((r) => (r.ok ? r.json() : []))
-      .then((list: ApiTeacher[]) => {
-        if (Array.isArray(list)) {
-          setApiTeachers(list.map(toTeacherView));
+    setLoadError(null);
+    apiJson<ApiTeacher[]>(url)
+      .then((res) => {
+        // A failed request used to render as "no teachers", which reads to the user
+        // as "nobody teaches this" rather than "we could not load the list".
+        if (!res.ok) {
+          setLoadError(res.error);
+          return;
         }
+        if (Array.isArray(res.data)) setApiTeachers(res.data.map(toTeacherView));
       })
-      .catch(() => setApiTeachers([]))
       .finally(() => setTeachersLoading(false));
   }, [step, subOption?.label, categoryId]);
 
@@ -284,24 +290,31 @@ export default function BookPage() {
     }
     setSlotsLoading(true);
     setSelectedSlot(null);
+    setLoadError(null);
     const nextDay = new Date(selectedDate + "T12:00:00");
     nextDay.setDate(nextDay.getDate() + 1);
     const endDate = nextDay.toISOString().slice(0, 10);
-    fetch(
+    apiJson<{ id: string; date: string; startTime: string; endTime: string }[]>(
       `/api/teachers/${teacher.id}/availability?start=${selectedDate}&end=${endDate}`
     )
-      .then((r) => (r.ok ? r.json() : []))
-      .then((list: { id: string; date: string; startTime: string; endTime: string }[]) => {
-        const forDate = list.filter((s) => s.date === selectedDate).map((s) => ({
-          id: s.id,
-          date: s.date,
-          startTime: s.startTime,
-          endTime: s.endTime,
-          available: true,
-        }));
-        setTeacherSlots(forDate);
+      .then((res) => {
+        if (!res.ok) {
+          setLoadError(res.error);
+          setTeacherSlots([]);
+          return;
+        }
+        setTeacherSlots(
+          res.data
+            .filter((s) => s.date === selectedDate)
+            .map((s) => ({
+              id: s.id,
+              date: s.date,
+              startTime: s.startTime,
+              endTime: s.endTime,
+              available: true,
+            }))
+        );
       })
-      .catch(() => setTeacherSlots([]))
       .finally(() => setSlotsLoading(false));
   }, [selectedDate, teacher?.id, hasTeacher]);
 
@@ -410,24 +423,13 @@ export default function BookPage() {
         return;
       }
       if (isWorkshopFlow && selectedWorkshop) {
-        const payload = {
-          subjectTitle: subjectLabel,
-          categoryTitle: "סדנאות",
-          teacherName: selectedWorkshop.teacherName,
-          date: selectedWorkshop.date,
-          startTime: selectedWorkshop.startTime,
-          endTime: selectedWorkshop.endTime,
-          name,
-          phone,
-          email,
-          parentName,
-          parentPhone,
-          parentEmail,
-          notes: "",
-          status: "pending_approval" as const,
-        };
+        // Only what /book/success actually renders. It used to hold the student's
+        // and parent's names, phones and emails, readable by any script on the page.
         try {
-          sessionStorage.setItem("paza_last_booking", JSON.stringify(payload));
+          sessionStorage.setItem(
+            "paza_last_booking",
+            JSON.stringify({ status: "pending_approval" })
+          );
         } catch (_) {}
         try {
           const body: {
@@ -470,24 +472,14 @@ export default function BookPage() {
       }
 
       const bookableTeacher = teacher?.id ? teacher : null;
-      const payload = {
-        subjectTitle: subOption?.label ?? "",
-        categoryTitle: CATEGORIES.find((c) => c.id === categoryId)?.title ?? "",
-        teacherName: teacher?.name ?? "",
-        date: selectedDate ?? "",
-        startTime: selectedSlot?.startTime ?? "",
-        endTime: selectedSlot?.endTime ?? "",
-        name,
-        phone,
-        email,
-        parentName,
-        parentPhone,
-        parentEmail,
-        notes,
-        status: bookableTeacher && selectedDate && selectedSlot ? "pending_approval" : undefined,
-      };
       try {
-        sessionStorage.setItem("paza_last_booking", JSON.stringify(payload));
+        sessionStorage.setItem(
+          "paza_last_booking",
+          JSON.stringify({
+            status:
+              bookableTeacher && selectedDate && selectedSlot ? "pending_approval" : undefined,
+          })
+        );
       } catch (_) {}
       if (bookableTeacher && selectedDate && selectedSlot) {
         try {
@@ -780,6 +772,13 @@ export default function BookPage() {
               <p className="text-sm text-[var(--color-text-muted)] text-right rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-bg-muted)] p-4">
                 טוען מורים…
               </p>
+            ) : loadError ? (
+              <p
+                role="alert"
+                className="text-sm text-red-700 text-right rounded-[var(--radius-input)] border border-red-200 bg-red-50 p-4"
+              >
+                לא הצלחנו לטעון את רשימת המורים. בדקו את החיבור ונסו שוב.
+              </p>
             ) : filteredTeachers.length === 0 ? (
               <p className="text-sm text-[var(--color-text-muted)] text-right rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-bg-muted)] p-4">
                 {subOption
@@ -893,6 +892,13 @@ export default function BookPage() {
                 <p className="text-[var(--color-text-muted)] text-right mt-6">בחרו שעה</p>
                 {slotsLoading ? (
                   <p className="text-sm text-[var(--color-text-muted)] text-right">טוען משבצות…</p>
+                ) : loadError ? (
+                  <p
+                    role="alert"
+                    className="text-sm text-red-700 text-right rounded-[var(--radius-input)] border border-red-200 bg-red-50 p-4"
+                  >
+                    לא הצלחנו לטעון את המשבצות. בדקו את החיבור ונסו שוב.
+                  </p>
                 ) : hasTeacher && slots.length === 0 ? (
                   <p className="text-sm text-[var(--color-text-muted)] text-right rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-bg-muted)] p-4">
                     אין משבצות פנויות בתאריך זה. הזמנים שמוצגים כאן הם אלה שהמורה הגדיר בדשבורד — נסו תאריך אחר או צרו קשר עם המורה.

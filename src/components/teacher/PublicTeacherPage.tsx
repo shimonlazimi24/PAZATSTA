@@ -117,6 +117,12 @@ export function PublicTeacherPage() {
                         key={`${dayIndex}-${hour}`}
                         type="button"
                         onClick={() => toggleCell(dayIndex, hour)}
+                        // Without this the whole grid reads as 168 identical
+                        // unnamed buttons; the title alone carries no position.
+                        aria-label={`יום ${WEEKDAYS[dayIndex]} בשעה ${hour
+                          .toString()
+                          .padStart(2, "0")}:00`}
+                        aria-pressed={state === "blocked"}
                         className={
                           state === "blocked"
                             ? "h-10 w-full bg-[var(--color-primary)] rounded transition-colors hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
