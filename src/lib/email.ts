@@ -39,45 +39,62 @@ function isDomainNotVerifiedError(error: { name?: string; message?: string } | n
 }
 
 type Message = { subject: string; text: string; html?: string };
+export type OutgoingEmail = Message & { to: string };
+
+/** Resend's batch endpoint accepts up to 100 messages per request. */
+const BATCH_LIMIT = 100;
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
+}
 
 /**
- * Send one message to each recipient as a separate email.
+ * Send many individually addressed emails.
  *
- * Uses Resend's batch endpoint: one HTTP request for up to 100 messages, instead
- * of a serial loop with a 600ms rate-limit delay between each. A five-recipient
- * send goes from ~3s of sleeping to a single round trip.
+ * One HTTP request per 100 messages via Resend's batch endpoint, instead of a
+ * serial loop with a 600ms rate-limit delay between each. Messages may differ in
+ * subject and body, so a cron can send an entire run in one or two calls.
  *
- * Each recipient gets their own email, so recipients never see each other's
- * addresses in the To header.
+ * Every recipient gets their own email; nobody appears in anyone else's To header.
  */
+export async function sendMessages(label: string, messages: OutgoingEmail[]): Promise<void> {
+  const valid = messages.filter((m) => isValidDeliveryEmail(m.to));
+  if (valid.length === 0) return;
+
+  const resend = getResend();
+  const build = (fromAddr: string, batch: OutgoingEmail[]) =>
+    batch.map((m) => ({
+      from: fromAddr,
+      to: m.to,
+      subject: m.subject,
+      ...(m.html ? { html: m.html } : {}),
+      text: m.text,
+    }));
+
+  const fromAddr = from();
+  for (const batch of chunk(valid, BATCH_LIMIT)) {
+    let result = await sendWith429Retry(() => resend.batch.send(build(fromAddr, batch)));
+
+    if (result.error && fromAddr !== RESEND_DEV_FROM && isDomainNotVerifiedError(result.error)) {
+      console.warn(`[${label}] Domain not verified for ${fromAddr}, retrying with ${RESEND_DEV_FROM}`);
+      result = await sendWith429Retry(() => resend.batch.send(build(RESEND_DEV_FROM, batch)));
+    }
+
+    if (result.error) {
+      console.error(`[${label}] Failed for ${batch.length} message(s):`, result.error);
+      throw new Error(result.error.message ?? `Failed to send ${label}`);
+    }
+  }
+}
+
+/** Send the same message to each recipient as a separate email. */
 async function sendToMany(label: string, to: string[], message: Message): Promise<void> {
   const recipients = Array.from(
     new Set(to.map((e) => e?.trim().toLowerCase()).filter((e): e is string => !!e))
   );
-  if (recipients.length === 0) return;
-
-  const resend = getResend();
-  const build = (fromAddr: string) =>
-    recipients.map((email) => ({
-      from: fromAddr,
-      to: email,
-      subject: message.subject,
-      ...(message.html ? { html: message.html } : {}),
-      text: message.text,
-    }));
-
-  const fromAddr = from();
-  let result = await sendWith429Retry(() => resend.batch.send(build(fromAddr)));
-
-  if (result.error && fromAddr !== RESEND_DEV_FROM && isDomainNotVerifiedError(result.error)) {
-    console.warn(`[${label}] Domain not verified for ${fromAddr}, retrying with ${RESEND_DEV_FROM}`);
-    result = await sendWith429Retry(() => resend.batch.send(build(RESEND_DEV_FROM)));
-  }
-
-  if (result.error) {
-    console.error(`[${label}] Failed for ${recipients.length} recipient(s):`, result.error);
-    throw new Error(result.error.message ?? `Failed to send ${label}`);
-  }
+  await sendMessages(label, recipients.map((addr) => ({ ...message, to: addr })));
 }
 
 /** Build login OTP email content (for preview or send). */
@@ -656,19 +673,6 @@ export async function sendLessonReminder24h(params: {
     console.log("[DEV] Lesson 24h reminder to", unique, text.slice(0, 200));
     return true;
   }
-  const fromAddr = from();
-  const resend = getResend();
-  let result = await sendWith429Retry(() =>
-    resend.emails.send({ from: fromAddr, to: unique, subject, text })
-  );
-  if (result.error && fromAddr !== RESEND_DEV_FROM && isDomainNotVerifiedError(result.error)) {
-    result = await sendWith429Retry(() =>
-      resend.emails.send({ from: RESEND_DEV_FROM, to: unique, subject, text })
-    );
-  }
-  if (result.error) {
-    console.error("[sendLessonReminder24h] Failed for", unique, result.error);
-    throw new Error(result.error.message ?? "Failed to send reminder");
-  }
+  await sendToMany("sendLessonReminder24h", unique, { subject, text });
   return true;
 }

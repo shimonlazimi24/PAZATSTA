@@ -59,7 +59,7 @@ export async function cancelExpiredPendingLesson(
   await restoreAvailabilityForLesson(tx, lesson);
 }
 
-/** Cancel all overdue pending_approval lessons (used by cron and availability reads). */
+/** Cancel all overdue pending_approval lessons. Called by the hourly cron. */
 export async function expireOverduePendingLessons(
   prisma: PrismaClient
 ): Promise<{ expired: number; restored: number }> {
@@ -79,19 +79,34 @@ export async function expireOverduePendingLessons(
     },
   });
 
-  let restored = 0;
-  for (const lesson of expired) {
-    try {
-      await prisma.$transaction(async (tx) => {
-        await cancelExpiredPendingLesson(tx, lesson);
-      });
-      restored++;
-    } catch (e) {
-      console.error("[expire-pending-lessons] Failed for lesson", lesson.id, e);
-    }
-  }
+  if (expired.length === 0) return { expired: 0, restored: 0 };
 
-  return { expired: expired.length, restored };
+  // One transaction for the whole sweep rather than one per lesson: the previous
+  // shape issued 2N queries in N transactions, which on a backlog was the slowest
+  // thing the cron did.
+  const slots = expired
+    .filter((l) => !l.workshopId)
+    .map((l) => ({
+      teacherId: l.teacherId,
+      date: availabilityDateFromYYYYMMDD(formatIsraelYYYYMMDD(l.date)),
+      startTime: l.startTime,
+      endTime: l.endTime,
+    }));
+
+  try {
+    const [, restoredResult] = await prisma.$transaction([
+      prisma.lesson.updateMany({
+        where: { id: { in: expired.map((l) => l.id) } },
+        data: { status: "canceled" },
+      }),
+      // skipDuplicates covers the slot already being back on the calendar.
+      prisma.availability.createMany({ data: slots, skipDuplicates: true }),
+    ]);
+    return { expired: expired.length, restored: restoredResult.count };
+  } catch (e) {
+    console.error("[expire-pending-lessons] Sweep failed:", e);
+    throw e;
+  }
 }
 
 /** Cancel expired pending lessons blocking a specific slot before a new booking. */

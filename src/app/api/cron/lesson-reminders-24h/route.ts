@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { sendLessonReminder24h } from "@/lib/email";
+import { getLessonReminder24hContent, sendMessages, type OutgoingEmail } from "@/lib/email";
 import { validateCronAuth } from "@/lib/cron-auth";
 import { lessonStartsAtUtc } from "@/lib/lesson-start";
 import { formatDateInIsrael } from "@/lib/date-utils";
+import { isValidDeliveryEmail } from "@/lib/validation";
 
 const MS_HOUR = 60 * 60 * 1000;
 /**
@@ -16,6 +17,11 @@ const WINDOW_MAX_H = 30;
 /**
  * Send one email to student + parent ~24h before scheduled lesson (Israel time).
  * Sets Lesson.reminder24hSentAt to avoid duplicates.
+ *
+ * Messages for the whole run are collected first and sent in batches, then the
+ * lessons are marked in one updateMany. Sending per lesson meant one HTTP round
+ * trip and one UPDATE each, which on a full run could outlast the cron timeout
+ * and leave the tail of the list silently un-reminded.
  */
 export async function GET(req: Request) {
   const authError = validateCronAuth(req);
@@ -41,7 +47,8 @@ export async function GET(req: Request) {
     take: 500,
   });
 
-  let sent = 0;
+  const messages: OutgoingEmail[] = [];
+  const remindedLessonIds: string[] = [];
   let skipped = 0;
 
   for (const lesson of lessons) {
@@ -54,46 +61,59 @@ export async function GET(req: Request) {
       continue;
     }
 
-    if (lessonStartMs < windowStart || lessonStartMs > windowEnd) {
+    if (lessonStartMs < windowStart || lessonStartMs > windowEnd) continue;
+
+    const parentEmail = lesson.student.studentProfile?.parentEmail?.trim() ?? null;
+    const recipients = Array.from(
+      new Set(
+        [lesson.student.email, parentEmail]
+          .filter((e): e is string => !!e && isValidDeliveryEmail(e))
+          .map((e) => e.trim().toLowerCase())
+      )
+    );
+    if (recipients.length === 0) {
+      skipped++;
       continue;
     }
 
-    const studentName = lesson.student.name?.trim() || lesson.student.email || "תלמיד";
-    const teacherName =
-      lesson.teacher.name?.trim() || lesson.teacher.email || "מורה";
-    const dateLabel = formatDateInIsrael(lesson.date);
-    const timeRange = `${lesson.startTime}–${lesson.endTime}`;
-    const profile = lesson.student.studentProfile;
-    const parentEmail = profile?.parentEmail?.trim() ?? null;
+    const { subject, text } = getLessonReminder24hContent({
+      studentName: lesson.student.name?.trim() || lesson.student.email || "תלמיד",
+      teacherName: lesson.teacher.name?.trim() || lesson.teacher.email || "מורה",
+      dateLabel: formatDateInIsrael(lesson.date),
+      timeRange: `${lesson.startTime}–${lesson.endTime}`,
+      topic: lesson.topic,
+      isWorkshop: Boolean(lesson.workshopId),
+      workshopName: lesson.workshop?.name ?? null,
+    });
 
-    const to = [lesson.student.email, parentEmail].filter(
-      (e): e is string => typeof e === "string" && e.length > 0
-    );
-
-    try {
-      const mailed = await sendLessonReminder24h({
-        to,
-        studentName,
-        teacherName,
-        dateLabel,
-        timeRange,
-        topic: lesson.topic,
-        isWorkshop: Boolean(lesson.workshopId),
-        workshopName: lesson.workshop?.name ?? null,
-      });
-      if (!mailed) {
-        skipped++;
-        continue;
-      }
-      await prisma.lesson.update({
-        where: { id: lesson.id },
-        data: { reminder24hSentAt: new Date() },
-      });
-      sent++;
-    } catch (e) {
-      console.error("[cron/lesson-reminders-24h] Failed lesson", lesson.id, e);
-    }
+    for (const to of recipients) messages.push({ to, subject, text });
+    remindedLessonIds.push(lesson.id);
   }
 
-  return NextResponse.json({ ok: true, remindersSent: sent, skipped });
+  if (messages.length === 0) {
+    return NextResponse.json({ ok: true, remindersSent: 0, skipped });
+  }
+
+  try {
+    await sendMessages("cron/lesson-reminders-24h", messages);
+  } catch (e) {
+    // Nothing is marked as sent, so the next run retries the whole window.
+    console.error("[cron/lesson-reminders-24h] Batch send failed:", e);
+    return NextResponse.json(
+      { ok: false, error: "Failed to send reminders", skipped },
+      { status: 502 }
+    );
+  }
+
+  await prisma.lesson.updateMany({
+    where: { id: { in: remindedLessonIds } },
+    data: { reminder24hSentAt: new Date() },
+  });
+
+  return NextResponse.json({
+    ok: true,
+    remindersSent: remindedLessonIds.length,
+    emailsSent: messages.length,
+    skipped,
+  });
 }
