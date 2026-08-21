@@ -36,12 +36,18 @@ export function PendingLessonsBlock() {
 
   useEffect(() => {
     fetchPending();
-    const interval = setInterval(() => fetchPending(true), 30_000);
-    const onFocus = () => fetchPending(true);
-    document.addEventListener("visibilitychange", onFocus);
+    // Poll only while the tab is visible. A dashboard left open overnight was
+    // issuing ~1,000 queries nobody was there to read.
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") fetchPending(true);
+    }, 30_000);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") fetchPending(true);
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
       clearInterval(interval);
-      document.removeEventListener("visibilitychange", onFocus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, []);
 
@@ -55,7 +61,6 @@ export function PendingLessonsBlock() {
         } else {
           const msg = r.error ?? "אישור נכשל";
           setErrorMessage(msg);
-          setTimeout(() => setErrorMessage(null), 6000);
           fetchPending();
         }
       })
@@ -93,7 +98,6 @@ export function PendingLessonsBlock() {
         } else {
           const msg = r.error ?? "דחייה נכשלה";
           setErrorMessage(msg);
-          setTimeout(() => setErrorMessage(null), 6000);
           fetchPending();
         }
       })
@@ -126,12 +130,18 @@ export function PendingLessonsBlock() {
         )}
       </div>
       {rejectedMessage && (
-        <p className="mb-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-[var(--radius-input)] px-3 py-2 text-right">
+        <p
+          role="status"
+          className="mb-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-[var(--radius-input)] px-3 py-2 text-right"
+        >
           {rejectedMessage}
         </p>
       )}
       {errorMessage && (
-        <p className="mb-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-[var(--radius-input)] px-3 py-2 text-right">
+        <p
+          role="alert"
+          className="mb-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-[var(--radius-input)] px-3 py-2 text-right"
+        >
           שגיאה: {errorMessage}
         </p>
       )}

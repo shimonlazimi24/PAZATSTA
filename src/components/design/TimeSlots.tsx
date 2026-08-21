@@ -29,7 +29,7 @@ export function TimeSlots({ slots, selectedSlotId, onSelect }: TimeSlotsProps) {
             disabled={disabled}
             onClick={() => slot.available && onSelect(slot)}
             className={cn(
-              "rounded-[var(--radius-input)] border px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2",
+              "rounded-[var(--radius-input)] border px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2",
               isSelected &&
                 "border-[var(--color-primary)] bg-[var(--color-primary)] text-white",
               !isSelected &&

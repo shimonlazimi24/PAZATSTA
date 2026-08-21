@@ -2,7 +2,6 @@ import path from "path";
 import fs from "fs/promises";
 import { prisma } from "@/lib/db";
 import { renderToBuffer } from "@react-pdf/renderer";
-import React from "react";
 import { createLessonSummaryDocument } from "./LessonSummaryPDF";
 import { getTipsDisplayText } from "@/data/tips";
 

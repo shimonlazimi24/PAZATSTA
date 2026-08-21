@@ -16,6 +16,9 @@ import {
 } from "@/data/tips";
 import { isLessonStarted } from "@/lib/dates";
 
+/** Mirrors the cap enforced by /api/teacher/lessons/[id]/complete. */
+const MAX_FIELD_LENGTH = 5000;
+
 type Lesson = {
   id: string;
   date: string;
@@ -366,6 +369,7 @@ export default function TeacherLessonReportPage() {
             <div>
               <label className={labelClass}>סיכום כללי <span className="text-red-600" aria-hidden>*</span></label>
               <textarea
+                maxLength={MAX_FIELD_LENGTH}
                 value={summaryText}
                 onChange={(e) => setSummaryText(e.target.value)}
                 rows={3}
@@ -378,6 +382,7 @@ export default function TeacherLessonReportPage() {
             <div>
               <label className={labelClass}>נקודות לשימור <span className="text-red-600" aria-hidden>*</span></label>
               <textarea
+                maxLength={MAX_FIELD_LENGTH}
                 value={pointsToKeep}
                 onChange={(e) => setPointsToKeep(e.target.value)}
                 rows={2}
@@ -390,6 +395,7 @@ export default function TeacherLessonReportPage() {
             <div>
               <label className={labelClass}>נקודות לשיפור <span className="text-red-600" aria-hidden>*</span></label>
               <textarea
+                maxLength={MAX_FIELD_LENGTH}
                 value={pointsToImprove}
                 onChange={(e) => setPointsToImprove(e.target.value)}
                 rows={2}
@@ -433,6 +439,7 @@ export default function TeacherLessonReportPage() {
                 <div className="mt-2">
                   <p className="text-sm text-[var(--color-text-muted)] mb-2">אחר — מלל חופשי</p>
                   <textarea
+                    maxLength={MAX_FIELD_LENGTH}
                     value={tips}
                     onChange={(e) => setTips(e.target.value)}
                     rows={4}
@@ -446,6 +453,7 @@ export default function TeacherLessonReportPage() {
             <div>
               <label className={labelClass}>המלצות להמשך <span className="text-red-600" aria-hidden>*</span></label>
               <textarea
+                maxLength={MAX_FIELD_LENGTH}
                 value={recommendations}
                 onChange={(e) => setRecommendations(e.target.value)}
                 rows={2}
@@ -458,6 +466,7 @@ export default function TeacherLessonReportPage() {
             <div>
               <label className={labelClass}>משימות לתרגול (אופציונלי)</label>
               <textarea
+                maxLength={MAX_FIELD_LENGTH}
                 value={homeworkText}
                 onChange={(e) => setHomeworkText(e.target.value)}
                 rows={2}

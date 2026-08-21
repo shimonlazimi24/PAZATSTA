@@ -119,8 +119,8 @@ export function PublicTeacherPage() {
                         onClick={() => toggleCell(dayIndex, hour)}
                         className={
                           state === "blocked"
-                            ? "h-10 w-full bg-[var(--color-primary)] rounded transition-colors hover:bg-[var(--color-primary-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-                            : "h-10 w-full bg-white rounded transition-colors hover:bg-[var(--color-bg-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                            ? "h-10 w-full bg-[var(--color-primary)] rounded transition-colors hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+                            : "h-10 w-full bg-white rounded transition-colors hover:bg-[var(--color-bg-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
                         }
                         title={state === "blocked" ? "פנוי — לחצו להסרה" : "לא פנוי — לחצו להוספה"}
                       />

@@ -14,10 +14,10 @@ import { TimeSlots } from "@/components/design/TimeSlots";
 import { FormField } from "@/components/design/FormField";
 import { SummaryCard } from "@/components/design/SummaryCard";
 import { AppShell } from "@/components/layout/AppShell";
-import type { MockTeacher } from "@/data/mockTeachers";
+import type { TeacherView } from "@/types/teacher";
 import { formatIsraelYYYYMMDD, addDaysYYYYMMDD } from "@/lib/dates";
 import { isValidEmail, isValidPhone } from "@/lib/validation";
-import type { MockSlot } from "@/data/mockSlots";
+import type { SlotView } from "@/types/slot";
 
 /** Week dates in Israel (YYYY-MM-DD) so student and teacher see the same calendar days. */
 function getBookPageWeekDates(): string[] {
@@ -151,7 +151,7 @@ type ApiTeacher = {
   specialties?: string[];
 };
 
-function toMockTeacher(t: ApiTeacher): MockTeacher {
+function toTeacherView(t: ApiTeacher): TeacherView {
   return {
     id: t.id,
     name: t.name || "",
@@ -174,12 +174,12 @@ export default function BookPage() {
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [subOption, setSubOption] = useState<SubOption | null>(null);
   const [workshops, setWorkshops] = useState<WorkshopListItem[]>([]);
-  const [teacher, setTeacher] = useState<MockTeacher | null>(null);
-  const [apiTeachers, setApiTeachers] = useState<MockTeacher[]>([]);
+  const [teacher, setTeacher] = useState<TeacherView | null>(null);
+  const [apiTeachers, setApiTeachers] = useState<TeacherView[]>([]);
   const [teachersLoading, setTeachersLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [selectedSlot, setSelectedSlot] = useState<MockSlot | null>(null);
-  const [teacherSlots, setTeacherSlots] = useState<MockSlot[]>([]);
+  const [selectedSlot, setSelectedSlot] = useState<SlotView | null>(null);
+  const [teacherSlots, setTeacherSlots] = useState<SlotView[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -244,7 +244,11 @@ export default function BookPage() {
 
   useEffect(() => {
     if (categoryId && subOptionsRef.current) {
-      subOptionsRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      subOptionsRef.current.scrollIntoView({
+        behavior: reduceMotion ? "auto" : "smooth",
+        block: "start",
+      });
     }
   }, [categoryId]);
 
@@ -260,21 +264,21 @@ export default function BookPage() {
       .then((r) => (r.ok ? r.json() : []))
       .then((list: ApiTeacher[]) => {
         if (Array.isArray(list)) {
-          setApiTeachers(list.map(toMockTeacher));
+          setApiTeachers(list.map(toTeacherView));
         }
       })
       .catch(() => setApiTeachers([]))
       .finally(() => setTeachersLoading(false));
   }, [step, subOption?.label, categoryId]);
 
-  const isRealTeacher = Boolean(teacher?.id && teacher.id.length > 10 && !teacher.id.startsWith("t"));
+  const hasTeacher = Boolean(teacher?.id);
 
   useEffect(() => {
     if (!selectedDate || !teacher) {
       setTeacherSlots([]);
       return;
     }
-    if (!isRealTeacher) {
+    if (!hasTeacher) {
       setTeacherSlots([]);
       return;
     }
@@ -299,7 +303,7 @@ export default function BookPage() {
       })
       .catch(() => setTeacherSlots([]))
       .finally(() => setSlotsLoading(false));
-  }, [selectedDate, teacher?.id, isRealTeacher]);
+  }, [selectedDate, teacher?.id, hasTeacher]);
 
   // When reaching the confirmation step, re-fetch slots to verify the selected slot still exists.
   // If it disappeared (booked by someone else), go back to slot selection automatically.
@@ -307,7 +311,7 @@ export default function BookPage() {
     const _isWorkshopFlow = categoryId === "workshop" && subOption !== null;
     const _confirmStep = _isWorkshopFlow ? 4 : 5;
     if (step !== _confirmStep) return;
-    if (_isWorkshopFlow || !teacher || !selectedDate || !selectedSlot || !isRealTeacher) return;
+    if (_isWorkshopFlow || !teacher || !selectedDate || !selectedSlot || !hasTeacher) return;
     const nextDay = new Date(selectedDate + "T12:00:00");
     nextDay.setDate(nextDay.getDate() + 1);
     const endDate = nextDay.toISOString().slice(0, 10);
@@ -332,7 +336,7 @@ export default function BookPage() {
         }
       })
       .catch(() => {});
-  }, [step, categoryId, subOption, teacher?.id, selectedDate, selectedSlot?.startTime, isRealTeacher]);
+  }, [step, categoryId, subOption, teacher?.id, selectedDate, selectedSlot?.startTime, hasTeacher]);
 
   useEffect(() => {
     if (!selectedDate) setSelectedSlot(null);
@@ -350,9 +354,9 @@ export default function BookPage() {
 
   const slots = useMemo(() => {
     if (!selectedDate) return [];
-    if (isRealTeacher && teacher) return teacherSlots;
+    if (hasTeacher && teacher) return teacherSlots;
     return [];
-  }, [selectedDate, isRealTeacher, teacher, teacherSlots]);
+  }, [selectedDate, hasTeacher, teacher, teacherSlots]);
 
   // Teachers are already filtered by API when subOption (topic) is selected
   const filteredTeachers = useMemo(() => apiTeachers, [apiTeachers]);
@@ -465,7 +469,7 @@ export default function BookPage() {
         }
       }
 
-      const isRealTeacherId = teacher?.id && teacher.id.length > 10 && !teacher.id.startsWith("t");
+      const bookableTeacher = teacher?.id ? teacher : null;
       const payload = {
         subjectTitle: subOption?.label ?? "",
         categoryTitle: CATEGORIES.find((c) => c.id === categoryId)?.title ?? "",
@@ -480,12 +484,12 @@ export default function BookPage() {
         parentPhone,
         parentEmail,
         notes,
-        status: isRealTeacherId && selectedDate && selectedSlot ? "pending_approval" : undefined,
+        status: bookableTeacher && selectedDate && selectedSlot ? "pending_approval" : undefined,
       };
       try {
         sessionStorage.setItem("paza_last_booking", JSON.stringify(payload));
       } catch (_) {}
-      if (isRealTeacherId && selectedDate && selectedSlot) {
+      if (bookableTeacher && selectedDate && selectedSlot) {
         try {
           // Re-fetch the slot right before submitting to ensure we have the latest ID.
           // This prevents a race condition where the confirmation-step useEffect hasn't
@@ -496,7 +500,7 @@ export default function BookPage() {
             const nextDay = new Date(selectedDate + "T12:00:00");
             nextDay.setDate(nextDay.getDate() + 1);
             const endDate = nextDay.toISOString().slice(0, 10);
-            const slotRes = await fetch(`/api/teachers/${teacher.id}/availability?start=${selectedDate}&end=${endDate}`);
+            const slotRes = await fetch(`/api/teachers/${bookableTeacher.id}/availability?start=${selectedDate}&end=${endDate}`);
             if (slotRes.ok) {
               const slotList: { id: string; date: string; startTime: string; endTime: string }[] = await slotRes.json();
               const forDate = slotList.filter((s) => s.date === selectedDate).map((s) => ({ ...s, available: true }));
@@ -517,12 +521,12 @@ export default function BookPage() {
           } catch (_) {}
 
           const body: { teacherId: string; date: string; startTime: string; endTime: string; availabilityId?: string; selectedTopic?: string; studentName?: string; phone?: string; parentName?: string; parentPhone?: string; parentEmail?: string; notes?: string } = {
-            teacherId: teacher.id,
+            teacherId: bookableTeacher.id,
             date: selectedDate,
             startTime: selectedSlot.startTime,
             endTime: freshEndTime,
           };
-          if (freshSlotId && typeof freshSlotId === "string" && freshSlotId.length > 10 && !freshSlotId.startsWith("slot-")) {
+          if (freshSlotId) {
             body.availabilityId = freshSlotId;
           }
           if (subOption?.label) body.selectedTopic = subOption.label;
@@ -889,7 +893,7 @@ export default function BookPage() {
                 <p className="text-[var(--color-text-muted)] text-right mt-6">בחרו שעה</p>
                 {slotsLoading ? (
                   <p className="text-sm text-[var(--color-text-muted)] text-right">טוען משבצות…</p>
-                ) : isRealTeacher && slots.length === 0 ? (
+                ) : hasTeacher && slots.length === 0 ? (
                   <p className="text-sm text-[var(--color-text-muted)] text-right rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-bg-muted)] p-4">
                     אין משבצות פנויות בתאריך זה. הזמנים שמוצגים כאן הם אלה שהמורה הגדיר בדשבורד — נסו תאריך אחר או צרו קשר עם המורה.
                   </p>
@@ -897,7 +901,7 @@ export default function BookPage() {
                   <TimeSlots
                     slots={slots}
                     selectedSlotId={selectedSlot?.id ?? null}
-                    onSelect={(s) => { setSelectedSlot(s as MockSlot); setErrors({}); }}
+                    onSelect={(s) => { setSelectedSlot(s as SlotView); setErrors({}); }}
                   />
                 )}
               </>

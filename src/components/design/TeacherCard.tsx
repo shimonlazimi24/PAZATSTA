@@ -2,10 +2,10 @@
 
 import { cn } from "@/lib/utils";
 import { TeacherAvatar } from "@/components/TeacherAvatar";
-import type { MockTeacher } from "@/data/mockTeachers";
+import type { TeacherView } from "@/types/teacher";
 
 interface TeacherCardProps {
-  teacher: MockTeacher;
+  teacher: TeacherView;
   selected?: boolean;
   onSelect?: () => void;
 }
@@ -16,7 +16,7 @@ export function TeacherCard({ teacher, selected, onSelect }: TeacherCardProps) {
       type="button"
       onClick={onSelect}
       className={cn(
-        "w-full rounded-[var(--radius-card)] border bg-white p-4 text-right shadow-[var(--shadow-card)] transition-all hover:shadow-[var(--shadow-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2",
+        "w-full rounded-[var(--radius-card)] border bg-white p-4 text-right shadow-[var(--shadow-card)] transition-all hover:shadow-[var(--shadow-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2",
         selected ? "border-[var(--color-primary)] ring-2 ring-[var(--color-primary)] ring-offset-2" : "border-[var(--color-border)]"
       )}
     >

@@ -1,3 +1,7 @@
+/* eslint-disable react/button-has-type --
+ * `type` is a prop defaulted to "button" and forwarded; react/button-has-type only
+ * recognises string literals, so it cannot see that every render has a valid type.
+ */
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
@@ -35,8 +39,11 @@ export interface ButtonProps
     VariantProps<typeof buttonVariants> {}
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, ...props }, ref) => (
+  // Default to "button": a shared component that lands inside a form should not
+  // submit it unless the caller asks for that explicitly.
+  ({ className, variant, size, type = "button", ...props }, ref) => (
     <button
+      type={type}
       className={cn(buttonVariants({ variant, size, className }))}
       ref={ref}
       {...props}

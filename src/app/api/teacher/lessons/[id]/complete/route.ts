@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getUserFromSession } from "@/lib/auth";
 import { sendLessonCompleted } from "@/lib/email";
@@ -9,6 +10,24 @@ import { isValidEmail, isValidDeliveryEmail } from "@/lib/validation";
 import { resolveAdminRecipients } from "@/lib/admin";
 
 export const runtime = "nodejs";
+
+/** Report fields are free text; bound them so a single request cannot store megabytes. */
+const MAX_FIELD_LENGTH = 5000;
+
+const text = () =>
+  z.unknown().transform((v) => (typeof v === "string" ? v.trim() : "")).pipe(z.string().max(MAX_FIELD_LENGTH));
+
+const ReportSchema = z.object({
+  summaryText: text(),
+  homeworkText: text(),
+  pointsToKeep: text(),
+  pointsToImprove: text(),
+  tips: text(),
+  recommendations: text(),
+  screeningType: text().transform((v) => v || null),
+  parentEmail: text().transform((v) => v || null),
+  screeningDate: text().transform((v) => (/^\d{4}-\d{2}-\d{2}$/.test(v) ? v : "")),
+});
 
 export async function POST(
   req: Request,
@@ -32,17 +51,26 @@ export async function POST(
     console.log("[complete] user.id=", user.id, "role=", user.role, "lessonId=", lessonId);
   }
   try {
-    const body = await req.json();
-    const summaryText = typeof body.summaryText === "string" ? body.summaryText.trim() : "";
-    const homeworkText = typeof body.homeworkText === "string" ? body.homeworkText.trim() : "";
-    const pointsToKeep = typeof body.pointsToKeep === "string" ? body.pointsToKeep.trim() : "";
-    const pointsToImprove = typeof body.pointsToImprove === "string" ? body.pointsToImprove.trim() : "";
-    const tips = typeof body.tips === "string" ? body.tips.trim() : "";
-    const recommendations = typeof body.recommendations === "string" ? body.recommendations.trim() : "";
-    const screeningType = typeof body.screeningType === "string" ? body.screeningType.trim() || null : null;
-    const parentEmailFromBody = typeof body.parentEmail === "string" ? body.parentEmail.trim() || null : null;
-    const screeningDateStr = typeof body.screeningDate === "string" ? body.screeningDate.trim() : "";
-    const screeningDate = screeningDateStr && /^\d{4}-\d{2}-\d{2}$/.test(screeningDateStr)
+    const body = await req.json().catch(() => null);
+    const parsed = ReportSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: `כל שדה מוגבל ל-${MAX_FIELD_LENGTH} תווים` },
+        { status: 400 }
+      );
+    }
+    const {
+      summaryText,
+      homeworkText,
+      pointsToKeep,
+      pointsToImprove,
+      tips,
+      recommendations,
+      screeningType,
+      parentEmail: parentEmailFromBody,
+      screeningDate: screeningDateStr,
+    } = parsed.data;
+    const screeningDate = screeningDateStr
       ? new Date(screeningDateStr + "T12:00:00")
       : null;
     const missing: string[] = [];

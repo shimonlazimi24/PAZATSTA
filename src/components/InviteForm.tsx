@@ -71,7 +71,7 @@ export function InviteForm() {
             id="invite-role"
             value={role}
             onChange={(e) => setRole(e.target.value as typeof role)}
-            className="w-full rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-4 py-3 text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+            className="w-full rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-4 py-3 text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
             disabled={status === "loading"}
           >
             {ROLES.map((r) => (

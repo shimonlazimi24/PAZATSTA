@@ -87,7 +87,7 @@ export function ScheduleLessonForm({ onScheduled }: ScheduleLessonFormProps) {
           value={studentId}
           onChange={(e) => setStudentId(e.target.value)}
           required
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:border-gray-900"
           disabled={status === "loading"}
         >
           <option value="">Select student</option>
@@ -112,7 +112,7 @@ export function ScheduleLessonForm({ onScheduled }: ScheduleLessonFormProps) {
             min={today}
             onChange={(e) => setDate(e.target.value)}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:border-gray-900"
             disabled={status === "loading"}
           />
         </div>
@@ -124,7 +124,7 @@ export function ScheduleLessonForm({ onScheduled }: ScheduleLessonFormProps) {
             type="time"
             value={time}
             onChange={(e) => setTime(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:border-gray-900"
             disabled={status === "loading"}
           />
         </div>
@@ -136,7 +136,7 @@ export function ScheduleLessonForm({ onScheduled }: ScheduleLessonFormProps) {
         <select
           value={durationMinutes}
           onChange={(e) => setDurationMinutes(Number(e.target.value))}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:border-gray-900"
           disabled={status === "loading"}
         >
           <option value={30}>30</option>
@@ -154,7 +154,7 @@ export function ScheduleLessonForm({ onScheduled }: ScheduleLessonFormProps) {
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="e.g. Topic: chords"
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:border-gray-900"
           disabled={status === "loading"}
         />
       </div>
