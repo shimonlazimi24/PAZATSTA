@@ -14,8 +14,6 @@
     "healthcheck:prod": "tsx scripts/healthcheck-prod.ts"
   },
   "dependencies": {
-    "@fontsource/heebo": "^5.2.8",
-    "@fontsource/noto-sans-hebrew": "^5.2.8",
     "@prisma/client": "^5.22.0",
     "@react-pdf/renderer": "^4.3.2",
     "class-variance-authority": "^0.7.0",

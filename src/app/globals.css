@@ -57,7 +57,7 @@
     --destructive: 0 84% 60%;
   }
   [dir="rtl"] {
-    font-family: "Heebo", "Assistant", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--font-heebo), "Heebo", "Assistant", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   }
   body {
     @apply antialiased;

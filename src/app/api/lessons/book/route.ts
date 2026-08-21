@@ -2,10 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getUserFromSession } from "@/lib/auth";
 import { formatIsraelYYYYMMDD, utcDayBounds } from "@/lib/dates";
-import {
-  expireOverduePendingLessons,
-  expirePendingForSlotInTx,
-} from "@/lib/expire-pending-lessons";
+import { expirePendingForSlotInTx } from "@/lib/expire-pending-lessons";
 
 const SLOT_TAKEN_ERROR = "הזמן נתפס, בחר זמן אחר";
 const APPROVAL_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -16,7 +13,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   try {
-    await expireOverduePendingLessons(prisma);
     const body = await req.json();
     const availabilityId = typeof body.availabilityId === "string" ? body.availabilityId.trim() : "";
     if (!availabilityId) {

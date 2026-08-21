@@ -16,6 +16,37 @@ type ExpirableLesson = {
   workshopId: string | null;
 };
 
+/**
+ * Put a lesson's slot back on the teacher's availability.
+ *
+ * Availability rows are keyed on a date normalized to midnight UTC for the Israel
+ * calendar day. Writing lesson.date straight through would miss the unique index
+ * and create a duplicate or invisible slot, so every caller goes through here.
+ */
+export async function restoreAvailabilityForLesson(
+  tx: Tx,
+  lesson: ExpirableLesson
+): Promise<void> {
+  if (lesson.workshopId) return; // workshop seats are not slot-based
+  const slotDate = availabilityDateFromYYYYMMDD(formatIsraelYYYYMMDD(lesson.date));
+  await tx.availability.upsert({
+    where: {
+      teacherId_date_startTime: {
+        teacherId: lesson.teacherId,
+        date: slotDate,
+        startTime: lesson.startTime,
+      },
+    },
+    create: {
+      teacherId: lesson.teacherId,
+      date: slotDate,
+      startTime: lesson.startTime,
+      endTime: lesson.endTime,
+    },
+    update: {},
+  });
+}
+
 /** Cancel one expired pending lesson and restore its availability slot (non-workshop). */
 export async function cancelExpiredPendingLesson(
   tx: Tx,
@@ -25,25 +56,7 @@ export async function cancelExpiredPendingLesson(
     where: { id: lesson.id },
     data: { status: "canceled" },
   });
-  if (!lesson.workshopId) {
-    const slotDate = availabilityDateFromYYYYMMDD(formatIsraelYYYYMMDD(lesson.date));
-    await tx.availability.upsert({
-      where: {
-        teacherId_date_startTime: {
-          teacherId: lesson.teacherId,
-          date: slotDate,
-          startTime: lesson.startTime,
-        },
-      },
-      create: {
-        teacherId: lesson.teacherId,
-        date: slotDate,
-        startTime: lesson.startTime,
-        endTime: lesson.endTime,
-      },
-      update: {},
-    });
-  }
+  await restoreAvailabilityForLesson(tx, lesson);
 }
 
 /** Cancel all overdue pending_approval lessons (used by cron and availability reads). */

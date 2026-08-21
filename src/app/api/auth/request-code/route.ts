@@ -2,14 +2,12 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createOTP, hashOTP } from "@/lib/otp";
 import { sendLoginCode } from "@/lib/email";
+import { EMAIL_REGEX } from "@/lib/validation";
 
 const OTP_TTL_MINUTES = 10;
-const MAX_ATTEMPTS = 5;
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const MAX_REQUESTS_PER_EMAIL = 5;
 const MAX_REQUESTS_PER_IP = 10;
-
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function getClientIp(req: Request): string | null {
   const forwarded = req.headers.get("x-forwarded-for");
@@ -68,7 +66,6 @@ export async function POST(req: Request) {
   const codeHash = hashOTP(code);
   const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
 
-  const dbStart = Date.now();
   try {
     if (useOtpRateLimit) {
       await prisma.$transaction([
@@ -94,24 +91,15 @@ export async function POST(req: Request) {
       { status: 503 }
     );
   }
-  const dbTime = Date.now() - dbStart;
-  console.log(`[request-code] DB write: ${dbTime}ms`);
 
   // Must await in serverless — the function can exit when the response returns,
   // so fire-and-forget would kill the email send before it completes.
-  const emailStart = Date.now();
-  let sent = false;
   try {
-    sent = await sendLoginCode(email, code);
-    const emailTime = Date.now() - emailStart;
-    console.log(`[request-code] Email send: ${emailTime}ms, sent=${sent}`);
+    await sendLoginCode(email, code);
   } catch (e) {
-    const emailTime = Date.now() - emailStart;
-    console.error(`[request-code] Email failed after ${emailTime}ms:`, (e as Error)?.message ?? e);
+    console.error("[request-code] Email send failed:", (e as Error)?.message ?? e);
   }
 
-  const totalTime = Date.now() - handlerStart;
-  console.log(`[request-code] Total handler: ${totalTime}ms`);
-
+  console.log(`[request-code] handled in ${Date.now() - handlerStart}ms`);
   return NextResponse.json({ ok: true, message: "Code sent" });
 }

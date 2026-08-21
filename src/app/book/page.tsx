@@ -16,6 +16,7 @@ import { SummaryCard } from "@/components/design/SummaryCard";
 import { AppShell } from "@/components/layout/AppShell";
 import type { MockTeacher } from "@/data/mockTeachers";
 import { formatIsraelYYYYMMDD, addDaysYYYYMMDD } from "@/lib/dates";
+import { isValidEmail, isValidPhone } from "@/lib/validation";
 import type { MockSlot } from "@/data/mockSlots";
 
 /** Week dates in Israel (YYYY-MM-DD) so student and teacher see the same calendar days. */
@@ -139,16 +140,6 @@ function formatWeekday(dateStr: string): string {
   return d.toLocaleDateString("he-IL", { weekday: "short" });
 }
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-function isValidEmail(value: string): boolean {
-  return EMAIL_REGEX.test(value.trim());
-}
-
-function isValidPhone(value: string): boolean {
-  const digits = value.replace(/\D/g, "");
-  return digits.length >= 9 && digits.length <= 11;
-}
-
 // Public API does not return email/phone for privacy.
 type ApiTeacher = {
   id: string;
@@ -222,10 +213,34 @@ export default function BookPage() {
           router.replace("/admin");
           return;
         }
+        // The booking is always made for the signed-in account, so the address is
+        // shown rather than asked for.
+        if (typeof data?.email === "string") setEmail(data.email);
         setRoleChecked(true);
       })
       .catch(() => setRoleChecked(true));
   }, [router]);
+
+  // Prefill from the saved profile: a returning student should not retype details
+  // the system already has.
+  useEffect(() => {
+    if (!roleChecked) return;
+    fetch("/api/student/profile", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((p: {
+        studentFullName?: string | null;
+        parentFullName?: string | null;
+        parentPhone?: string | null;
+        parentEmail?: string | null;
+      } | null) => {
+        if (!p) return;
+        if (p.studentFullName) setName((v) => v || p.studentFullName!);
+        if (p.parentFullName) setParentName((v) => v || p.parentFullName!);
+        if (p.parentPhone) setParentPhone((v) => v || p.parentPhone!);
+        if (p.parentEmail) setParentEmail((v) => v || p.parentEmail!);
+      })
+      .catch(() => {});
+  }, [roleChecked]);
 
   useEffect(() => {
     if (categoryId && subOptionsRef.current) {
@@ -360,8 +375,6 @@ export default function BookPage() {
     if (!name.trim()) e.name = "נא להזין שם מלא";
     if (!phone.trim()) e.phone = "נא להזין טלפון";
     else if (!isValidPhone(phone)) e.phone = "נא להזין מספר טלפון תקין (9–11 ספרות)";
-    if (!email.trim()) e.email = "נא להזין אימייל";
-    else if (!isValidEmail(email)) e.email = "נא להזין כתובת אימייל תקינה";
     if (!parentName.trim()) e.parentName = "נא להזין שם מלא של אחד ההורים";
     if (!parentPhone.trim()) e.parentPhone = "נא להזין טלפון של אחד ההורים";
     else if (!isValidPhone(parentPhone)) e.parentPhone = "נא להזין מספר טלפון תקין (9–11 ספרות)";
@@ -815,12 +828,9 @@ export default function BookPage() {
                 name="email"
                 type="email"
                 value={email}
-                onChange={(v) => {
-                  setEmail(v);
-                  if (errors.email) setErrors((e) => ({ ...e, email: "" }));
-                }}
-                required
-                error={errors.email}
+                onChange={() => {}}
+                readOnly
+                hint="האישור והסיכום יישלחו לכתובת שאיתה התחברת."
               />
               <FormField
                 label="שם מלא של אחד ההורים"
@@ -926,12 +936,9 @@ export default function BookPage() {
                 name="email"
                 type="email"
                 value={email}
-                onChange={(v) => {
-                  setEmail(v);
-                  if (errors.email) setErrors((e) => ({ ...e, email: "" }));
-                }}
-                required
-                error={errors.email}
+                onChange={() => {}}
+                readOnly
+                hint="האישור והסיכום יישלחו לכתובת שאיתה התחברת."
               />
               <FormField
                 label="שם מלא של אחד ההורים"

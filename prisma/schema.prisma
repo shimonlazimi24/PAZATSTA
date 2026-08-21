@@ -114,6 +114,11 @@ model Lesson {
   workshopId String?
   workshop   Workshop? @relation(fields: [workshopId], references: [id], onDelete: SetNull)
 
+  // Partial unique indexes live in SQL migrations (Prisma cannot express a WHERE
+  // clause on @@unique):
+  //   Lesson_teacher_date_start_when_no_workshop — one private lesson per slot
+  //   Lesson_workshop_student_when_live          — one live signup per workshop
+
   @@index([teacherId, date])
   @@index([teacherId, status, date])
   @@index([studentId, date])
@@ -167,12 +172,15 @@ model PublicPdfLink {
   pdfId          String?
   recipientEmail String?
   isRevoked      Boolean   @default(false)
+  /// Links carry a minor's lesson report; they must not stay valid forever.
+  expiresAt      DateTime
   createdAt      DateTime  @default(now())
   lastAccessedAt DateTime?
   accessCount    Int       @default(0)
 
   @@index([tokenHash])
   @@index([lessonId, recipientEmail])
+  @@index([expiresAt])
 }
 
 model Invite {
@@ -211,6 +219,8 @@ model OtpRequest {
 
 model Session {
   id        String   @id @default(cuid())
+  /// Random 32-byte secret carried in the cookie. Never the row id.
+  token     String   @unique
   userId    String
   expiresAt DateTime
   createdAt DateTime @default(now())

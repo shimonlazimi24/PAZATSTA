@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getUserFromSession } from "@/lib/auth";
 import { canAccessAdmin } from "@/lib/admin";
+import { restoreAvailabilityForLesson } from "@/lib/expire-pending-lessons";
 
 /** Teacher or admin cancels a scheduled lesson; restores the slot to availability. */
 export async function POST(
@@ -32,7 +33,7 @@ export async function POST(
       { status: 400 }
     );
   }
-  if (isTeacher && lesson.teacherId !== user.id) {
+  if (!isAdmin && lesson.teacherId !== user.id) {
     return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
   }
 
@@ -41,17 +42,7 @@ export async function POST(
       where: { id: lessonId },
       data: { status: "canceled" },
     });
-    if (!lesson.workshopId) {
-      await tx.availability.createMany({
-        data: [{
-          teacherId: lesson.teacherId,
-          date: lesson.date,
-          startTime: lesson.startTime,
-          endTime: lesson.endTime,
-        }],
-        skipDuplicates: true,
-      });
-    }
+    await restoreAvailabilityForLesson(tx, lesson);
   });
 
   return NextResponse.json({ ok: true, status: "canceled" });

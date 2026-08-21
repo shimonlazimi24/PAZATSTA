@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import path from "path";
-import fs from "fs";
+import { readFile } from "fs/promises";
 import { prisma } from "@/lib/db";
 import { hashToken } from "@/lib/publicPdfLink";
 import { generateLessonPdfBuffer } from "@/lib/pdf/generateLessonSummaryPdf";
@@ -55,6 +55,13 @@ export async function GET(
     );
   }
 
+  if (link.expiresAt < new Date()) {
+    return new NextResponse(
+      errorPageHtml("פג תוקף הקישור", "הקישור הזה כבר לא בתוקף. נא לפנות למורה או לאדמין לקבלת קישור חדש."),
+      { status: 410, headers: { "Content-Type": "text/html; charset=utf-8" } }
+    );
+  }
+
   const lessonId = link.lessonId;
   if (!lessonId) {
     return new NextResponse(
@@ -76,9 +83,10 @@ export async function GET(
   const fullPath = path.join(STORAGE_DIR, relativePath);
 
   let buffer: Buffer;
-  if (fs.existsSync(fullPath) && fs.statSync(fullPath).isFile()) {
-    buffer = fs.readFileSync(fullPath);
-  } else {
+  try {
+    buffer = await readFile(fullPath);
+  } catch {
+    // Not cached on disk (expected on ephemeral filesystems) — render on demand.
     const result = await generateLessonPdfBuffer(lessonId);
     if (!result.ok) {
       return new NextResponse(

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import {
   getLoginCodeContent,
   getApprovalRequestContent,
@@ -83,6 +84,9 @@ const PREVIEWS = [
 ];
 
 export default function DevEmailsPage() {
+  // Internal email template preview. Never reachable in production.
+  if (process.env.NODE_ENV === "production") notFound();
+
   return (
     <div className="min-h-screen bg-[var(--color-bg-muted)] p-6" dir="rtl">
       <div className="max-w-2xl mx-auto space-y-6">

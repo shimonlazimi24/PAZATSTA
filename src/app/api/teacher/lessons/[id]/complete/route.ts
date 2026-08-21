@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getUserFromSession } from "@/lib/auth";
-import { generateAndStoreLessonPdf } from "@/lib/pdf/generateLessonSummaryPdf";
 import { sendLessonCompleted } from "@/lib/email";
 import { createLessonSummaryLink } from "@/lib/publicPdfLink";
 import { isLessonStarted } from "@/lib/dates";
 import { formatDateInIsrael } from "@/lib/date-utils";
 import { isValidEmail, isValidDeliveryEmail } from "@/lib/validation";
-import { ADMIN_NOTIFICATION_EMAILS } from "@/lib/admin";
+import { resolveAdminRecipients } from "@/lib/admin";
 
 export const runtime = "nodejs";
 
@@ -127,43 +126,17 @@ export async function POST(
       });
     }
 
-    const fallbackPdfUrl = `/api/pdf/lesson-summaries/lesson-${lessonId}.pdf`;
-    let pdfUrl: string | null = null;
-    try {
-      const pdfResult = await generateAndStoreLessonPdf(lessonId);
-      pdfUrl = pdfResult.pdfUrl ?? fallbackPdfUrl;
-      if (pdfResult.pdfUrl) {
-        console.log("[complete] PDF stored, pdfUrl:", pdfResult.pdfUrl);
-      } else {
-        console.log("[complete] PDF storage failed, using on-demand URL:", pdfUrl);
-      }
-    } catch (pdfErr) {
-      console.error("[complete] PDF generation failed (lesson still completed):", pdfErr instanceof Error ? pdfErr.message : pdfErr);
-      pdfUrl = fallbackPdfUrl;
-    }
-
-    // Always persist pdfUrl so the UI shows "צפייה ב-PDF" for completed reports
-    if (pdfUrl) {
-      await prisma.lessonSummary.update({
-        where: { lessonId },
-        data: { pdfUrl },
-      });
-    }
-
-    const adminUsers = await prisma.user.findMany({
-      where: { role: "admin" },
-      select: { email: true },
+    // The PDF is rendered on first view, not here. Rendering inline added seconds
+    // of CPU to a request that already sends several emails, and the write it did
+    // afterwards is lost anyway on an ephemeral filesystem. Both PDF routes render
+    // on demand when the file is not cached.
+    const pdfUrl = `/api/pdf/lesson-summaries/lesson-${lessonId}.pdf`;
+    await prisma.lessonSummary.update({
+      where: { lessonId },
+      data: { pdfUrl },
     });
-    const adminEmailsSet = new Set<string>();
-    for (const a of adminUsers) if (a.email && isValidDeliveryEmail(a.email)) adminEmailsSet.add(a.email.toLowerCase());
-    for (const e of ADMIN_NOTIFICATION_EMAILS) if (isValidDeliveryEmail(e)) adminEmailsSet.add(e.toLowerCase());
-    // Runtime fallback: env may not be loaded at module init in serverless
-    const envAdmin = process.env.ADMIN_NOTIFICATION_EMAILS ?? "";
-    const envAdminList = envAdmin ? envAdmin.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean) : [];
-    for (const e of envAdminList) if (isValidDeliveryEmail(e)) adminEmailsSet.add(e);
-    if (adminEmailsSet.size === 0) {
-      for (const e of ["shachar.cygler@gmail.com", "admin@pazatsta.co.il"]) adminEmailsSet.add(e);
-    }
+
+    const allAdminEmails = await resolveAdminRecipients();
 
     const profile = lesson.student.studentProfile as { parentEmail?: string | null } | null;
     const parentEmailFromProfile = profile?.parentEmail?.trim();
@@ -171,10 +144,6 @@ export async function POST(
     const parentEmails = parentEmail && isValidEmail(parentEmail) && isValidDeliveryEmail(parentEmail)
       ? [parentEmail]
       : [];
-    console.log("[complete] parentEmailFromBody:", parentEmailFromBody, "fromProfile:", parentEmailFromProfile, "final:", parentEmail, "included:", parentEmails.length > 0);
-    const adminEmailsList = Array.from(adminEmailsSet);
-    const DEFAULT_ADMIN_EMAILS = ["shachar.cygler@gmail.com", "admin@pazatsta.co.il"];
-    const allAdminEmails = adminEmailsList.length > 0 ? adminEmailsList : DEFAULT_ADMIN_EMAILS;
 
     const toEmails = [
       lesson.teacher.email,
@@ -183,7 +152,7 @@ export async function POST(
       ...allAdminEmails,
     ];
     const toEmailsDeduped = Array.from(new Set(toEmails.map((e) => e.toLowerCase())));
-    console.log("[complete] toEmails:", toEmailsDeduped, "count:", toEmailsDeduped.length);
+    console.log("[complete] notifying", toEmailsDeduped.length, "recipient(s)");
 
     const baseUrl = (process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
     let publicPdfUrl: string | undefined;
