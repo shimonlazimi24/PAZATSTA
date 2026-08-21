@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getUserFromSession } from "@/lib/auth";
 import {
@@ -54,34 +55,34 @@ export async function GET(req: Request) {
   }
 }
 
+/** Times are free text on the wire; constrain them the same way the batch route does. */
+const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+const SlotSchema = z
+  .object({
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD"),
+    startTime: z.string().regex(TIME, "startTime must be HH:MM"),
+    endTime: z.string().regex(TIME, "endTime must be HH:MM"),
+  })
+  .refine((v) => v.endTime > v.startTime, { message: "endTime must be after startTime" });
+
 export async function POST(req: Request) {
   const user = await getUserFromSession();
   if (!user || user.role !== "teacher") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   try {
-    const body = await req.json();
-    const dateStr = typeof body.date === "string" ? body.date.trim() : "";
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const parsed = SlotSchema.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "date (YYYY-MM-DD), startTime, endTime required" },
+        { error: "משבצת לא תקינה (תאריך YYYY-MM-DD, שעות HH:MM, סיום אחרי התחלה)" },
         { status: 400 }
       );
     }
+    const { date: dateStr, startTime, endTime } = parsed.data;
     const date = availabilityDateFromYYYYMMDD(dateStr);
     if (isNaN(date.getTime())) {
-      return NextResponse.json(
-        { error: "Invalid date" },
-        { status: 400 }
-      );
-    }
-    const startTime = typeof body.startTime === "string" ? body.startTime : "";
-    const endTime = typeof body.endTime === "string" ? body.endTime : "";
-    if (!startTime || !endTime) {
-      return NextResponse.json(
-        { error: "date (YYYY-MM-DD), startTime, endTime required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid date" }, { status: 400 });
     }
     const existing = await prisma.availability.findFirst({
       where: { teacherId: user.id, date, startTime },
