@@ -12,8 +12,14 @@ import {
 
 export const dynamic = "force-dynamic";
 
-/** Longest range the dashboard will aggregate in one request. */
-const MAX_RANGE_DAYS = 366;
+/**
+ * Longest range the dashboard will aggregate in one request.
+ *
+ * Generous on purpose: the row ceiling below is the real protection, and it
+ * degrades by reporting truncation rather than by refusing the request. A tight
+ * day limit would only turn a working custom range into an error.
+ */
+const MAX_RANGE_DAYS = 1100;
 /** Row ceiling per period; beyond this the aggregation belongs in SQL. */
 const MAX_LESSON_ROWS = 20_000;
 

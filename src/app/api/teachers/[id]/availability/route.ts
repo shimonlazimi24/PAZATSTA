@@ -81,12 +81,27 @@ export async function GET(
           date: dateWhere,
           status: { notIn: ["canceled"] },
         },
-        select: { date: true, startTime: true },
+        select: { date: true, startTime: true, status: true, approvalExpiresAt: true },
       }),
     ]);
 
+    // A pending_approval lesson past its window is going to be canceled by the
+    // hourly cron, so it must not hide the slot in the meantime. Treating it as
+    // free here — rather than repairing it on a GET — keeps this route read-only
+    // and keeps the calendar correct even if the cron is not running. The booking
+    // transaction still calls expirePendingForSlotInTx before it inserts, so a
+    // slot shown as free cannot be double-booked.
+    const blocking = takenLessons.filter(
+      (l) =>
+        !(
+          l.status === "pending_approval" &&
+          l.approvalExpiresAt !== null &&
+          l.approvalExpiresAt < now
+        )
+    );
+
     const takenSet = new Set(
-      takenLessons.map((l) => `${toDateStr(l.date)}_${l.startTime}`)
+      blocking.map((l) => `${toDateStr(l.date)}_${l.startTime}`)
     );
 
     const available = slots.filter(
