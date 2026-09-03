@@ -676,3 +676,55 @@ export async function sendLessonReminder24h(params: {
   await sendToMany("sendLessonReminder24h", unique, { subject, text });
   return true;
 }
+
+/** Build the "lesson moved" email (sent to student, parent, teacher and admins). */
+export function getLessonRescheduledContent(params: {
+  studentName: string;
+  teacherName: string;
+  oldDateLabel: string;
+  oldTimeRange: string;
+  newDateLabel: string;
+  newTimeRange: string;
+  topic?: string | null;
+}): { subject: string; text: string } {
+  const lines = [
+    "שלום,",
+    "",
+    `מועד השיעור של ${params.studentName} עם ${params.teacherName} עודכן.`,
+    "",
+    `המועד הקודם: ${params.oldDateLabel}, ${params.oldTimeRange}`,
+    `המועד החדש: ${params.newDateLabel}, ${params.newTimeRange}`,
+  ];
+  if (params.topic?.trim()) lines.push(`סוג מיון: ${params.topic.trim()}`);
+  const base = getAppBaseUrl();
+  if (base) lines.push("", `כניסה לאפליקציה: ${base}`);
+  lines.push(
+    "",
+    "אם המועד החדש לא מתאים, נא ליצור קשר עם המדריך או המנהל.",
+    "",
+    "בברכה,",
+    "פזצט״א"
+  );
+  return {
+    subject: `עדכון מועד שיעור – ${params.newDateLabel}`,
+    text: lines.join("\n"),
+  };
+}
+
+export async function sendLessonRescheduled(params: {
+  to: string[];
+  studentName: string;
+  teacherName: string;
+  oldDateLabel: string;
+  oldTimeRange: string;
+  newDateLabel: string;
+  newTimeRange: string;
+  topic?: string | null;
+}): Promise<void> {
+  const { subject, text } = getLessonRescheduledContent(params);
+  if (isDev && noRealKey()) {
+    console.log("[DEV] Lesson rescheduled email to", params.to.length, "recipient(s)");
+    return;
+  }
+  await sendToMany("sendLessonRescheduled", params.to, { subject, text });
+}
