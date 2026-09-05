@@ -31,10 +31,17 @@ export async function GET(req: Request) {
   });
 
   let sent = 0;
+  // followUpReminderSentAt is read from rows loaded before the loop, so updating it
+  // mid-loop does not stop a second lesson for the same student from sending again.
+  // Track what this run has already handled.
+  const handledProfileIds = new Set<string>();
+
   for (const lesson of lessons) {
     const profile = lesson.student.studentProfile;
     if (!profile?.currentScreeningDate) continue;
+    if (handledProfileIds.has(profile.id)) continue;
     if (profile.followUpReminderSentAt && profile.followUpReminderSentAt >= startOfToday) continue;
+    handledProfileIds.add(profile.id);
     const screeningDateStr = profile.currentScreeningDate.toISOString().slice(0, 10);
     const lastLessonDate = lesson.date.toISOString().slice(0, 10);
     const studentName = lesson.student.name || lesson.student.email;

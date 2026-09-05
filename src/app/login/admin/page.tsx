@@ -111,7 +111,7 @@ export default function AdminLoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-input)] focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
+                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-input)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:border-[var(--color-primary)]"
                 />
               </div>
               <div className="flex gap-2">
@@ -148,7 +148,7 @@ export default function AdminLoginPage() {
                   value={code}
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                   maxLength={6}
-                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-input)] text-center text-lg tracking-widest focus:ring-2 focus:ring-[var(--color-primary)]"
+                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-input)] text-center text-lg tracking-widest focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
                   disabled={verifyStatus === "loading"}
                 />
               </div>

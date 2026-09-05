@@ -9,14 +9,8 @@ import { BackLink } from "@/components/design/BackLink";
 
 const STORAGE_KEY = "paza_last_booking";
 
-type BookingInfo = {
-  subjectTitle?: string;
-  teacherName?: string;
-  date?: string;
-  startTime?: string;
-  endTime?: string;
-  status?: string;
-};
+/** Only the approval status is kept client-side; booking details live server-side. */
+type BookingInfo = { status?: string };
 
 function CheckCircleIcon() {
   return (

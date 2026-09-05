@@ -25,7 +25,7 @@ export function DateSelector({ options, selectedDate, onSelect }: DateSelectorPr
             type="button"
             onClick={() => onSelect(opt.date)}
             className={cn(
-              "rounded-[var(--radius-input)] border px-4 py-3 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2",
+              "rounded-[var(--radius-input)] border px-4 py-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2",
               isSelected
                 ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
                 : "border-[var(--color-border)] bg-white text-[var(--color-text)] hover:border-[var(--color-primary)]"

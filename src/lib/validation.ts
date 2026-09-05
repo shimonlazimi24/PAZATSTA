@@ -18,9 +18,22 @@ export function isValidDeliveryEmail(value: string): boolean {
   return true;
 }
 
-/** Phone: 9–11 digits (after stripping non-digits). */
-export function isValidPhone(value: string): boolean {
+/**
+ * Reduce a phone number to digits, converting the international Israeli form to
+ * the local one: +972-50-2632320 and 050-2632320 are the same number, and users
+ * type both.
+ */
+export function normalizePhoneDigits(value: string): string {
   const digits = value.replace(/\D/g, "");
+  if (!digits.startsWith("0") && digits.startsWith("972")) {
+    return `0${digits.slice(3)}`;
+  }
+  return digits;
+}
+
+/** Phone: 9–11 digits once normalized. */
+export function isValidPhone(value: string): boolean {
+  const digits = normalizePhoneDigits(value);
   return digits.length >= 9 && digits.length <= 11;
 }
 

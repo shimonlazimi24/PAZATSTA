@@ -339,6 +339,15 @@ export function AdminStatisticsDashboard() {
         </div>
       ) : null}
 
+      {data?.truncated ? (
+        <div
+          role="status"
+          className="rounded-[var(--radius-input)] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 text-right"
+        >
+          הטווח שנבחר גדול מדי והנתונים חלקיים. בחרו טווח קצר יותר לקבלת מספרים מלאים.
+        </div>
+      ) : null}
+
       {loading ? (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {Array.from({ length: 9 }).map((_, i) => (

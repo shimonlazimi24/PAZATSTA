@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getUserFromSession } from "@/lib/auth";
+import { getUserFromSession, revokeSessionsForUser } from "@/lib/auth";
 import { canAccessAdmin } from "@/lib/admin";
 
 export async function POST(req: Request) {
@@ -29,6 +29,10 @@ export async function POST(req: Request) {
         create: { userId: existing.id },
         update: {},
       });
+      // A live session still carries the old role for up to 14 days. Force re-login.
+      if (existing.role !== "teacher") {
+        await revokeSessionsForUser(existing.id);
+      }
     } else {
       const newUser = await prisma.user.create({
         data: { email, role: "teacher" },
@@ -39,6 +43,7 @@ export async function POST(req: Request) {
     }
     return NextResponse.json({ ok: true });
   } catch (e) {
+    console.error("[admin/define-teacher] Failed:", e);
     return NextResponse.json(
       { error: "שגיאה בשמירה" },
       { status: 500 }

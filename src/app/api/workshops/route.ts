@@ -20,11 +20,11 @@ export async function GET() {
       endTime: true,
       topicLabel: true,
       generalDescription: true,
+      // Public endpoint: never select teacher.email here.
       teacher: {
         select: {
           id: true,
           name: true,
-          email: true,
           teacherProfile: { select: { displayName: true } },
         },
       },
@@ -64,7 +64,6 @@ export async function GET() {
       teacherName:
         w.teacher.teacherProfile?.displayName?.trim() ||
         w.teacher.name?.trim() ||
-        w.teacher.email ||
         "מורה",
     };
   });

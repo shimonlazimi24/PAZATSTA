@@ -7,9 +7,9 @@ export async function POST() {
   const cookieStore = await cookies();
   const raw = cookieStore.get(SESSION_COOKIE)?.value;
   if (raw) {
-    const sessionId = unsign(raw);
-    if (sessionId) {
-      await prisma.session.deleteMany({ where: { id: sessionId } });
+    const token = unsign(raw);
+    if (token) {
+      await prisma.session.deleteMany({ where: { token } });
     }
   }
   const res = NextResponse.json({ ok: true });

@@ -46,13 +46,16 @@ async function main() {
 
   // 1. /api/health
   try {
-    const res = await fetch(`${base}/api/health`);
+    const cronSecret = process.env.CRON_SECRET;
+    const res = await fetch(`${base}/api/health`, {
+      headers: cronSecret ? { authorization: `Bearer ${cronSecret}` } : {},
+    });
     const ct = res.headers.get("content-type") ?? "";
     const isJson = ct.includes("application/json");
-    let body: { ok?: boolean; version?: string } = {};
+    let body: { ok?: boolean; version?: string; configOk?: boolean; missingConfig?: string[] } = {};
     if (isJson) {
       try {
-        body = (await res.json()) as { ok?: boolean; version?: string };
+        body = (await res.json()) as typeof body;
       } catch {
         body = {};
       }
@@ -67,6 +70,21 @@ async function main() {
           ? `status=${res.status}, got ${ct || "non-JSON"} (deploy may not include /api/health yet)`
           : `status=${res.status}, body.ok=${body?.ok}`,
     });
+
+    // A deployment can serve every page correctly and still have no admin
+    // notification recipient or a dead cron. Ask it.
+    if (isJson && body.configOk !== undefined) {
+      const named = body.missingConfig?.length
+        ? `: ${body.missingConfig.join(", ")}`
+        : " (set CRON_SECRET locally and re-run to see which)";
+      checks.push({
+        name: "env config",
+        pass: body.configOk === true,
+        message: body.configOk
+          ? "all required variables set"
+          : `missing or placeholder${named}`,
+      });
+    }
   } catch (e) {
     checks.push({
       name: "/api/health",

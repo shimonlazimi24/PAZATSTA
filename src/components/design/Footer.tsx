@@ -3,6 +3,12 @@
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
 
+// .env.example has always documented these as configuring the footer, but the
+// values were hardcoded, so setting them did nothing. The defaults keep the
+// current output identical when the variables are unset.
+const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL || "info@pazatsta.co.il";
+const CONTACT_PHONE = process.env.NEXT_PUBLIC_CONTACT_PHONE || "050-2632320";
+
 export function Footer() {
   return (
     <footer className="border-t border-[var(--color-border)] bg-[var(--color-bg-muted)]">
@@ -30,19 +36,19 @@ export function Footer() {
             <p className="mt-2 text-sm text-[var(--color-text-muted)]">
               אימייל:{" "}
               <a
-                href="mailto:info@pazatsta.co.il"
+                href={`mailto:${CONTACT_EMAIL}`}
                 className="text-[var(--color-primary)] hover:underline"
               >
-                info@pazatsta.co.il
+                {CONTACT_EMAIL}
               </a>
             </p>
             <p className="mt-1 text-sm text-[var(--color-text-muted)]">
               טלפון:{" "}
               <a
-                href="tel:050-2632320"
+                href={`tel:${CONTACT_PHONE}`}
                 className="text-[var(--color-primary)] hover:underline"
               >
-                050-2632320
+                {CONTACT_PHONE}
               </a>
             </p>
           </div>

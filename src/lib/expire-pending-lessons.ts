@@ -16,6 +16,37 @@ type ExpirableLesson = {
   workshopId: string | null;
 };
 
+/**
+ * Put a lesson's slot back on the teacher's availability.
+ *
+ * Availability rows are keyed on a date normalized to midnight UTC for the Israel
+ * calendar day. Writing lesson.date straight through would miss the unique index
+ * and create a duplicate or invisible slot, so every caller goes through here.
+ */
+export async function restoreAvailabilityForLesson(
+  tx: Tx,
+  lesson: ExpirableLesson
+): Promise<void> {
+  if (lesson.workshopId) return; // workshop seats are not slot-based
+  const slotDate = availabilityDateFromYYYYMMDD(formatIsraelYYYYMMDD(lesson.date));
+  await tx.availability.upsert({
+    where: {
+      teacherId_date_startTime: {
+        teacherId: lesson.teacherId,
+        date: slotDate,
+        startTime: lesson.startTime,
+      },
+    },
+    create: {
+      teacherId: lesson.teacherId,
+      date: slotDate,
+      startTime: lesson.startTime,
+      endTime: lesson.endTime,
+    },
+    update: {},
+  });
+}
+
 /** Cancel one expired pending lesson and restore its availability slot (non-workshop). */
 export async function cancelExpiredPendingLesson(
   tx: Tx,
@@ -25,28 +56,10 @@ export async function cancelExpiredPendingLesson(
     where: { id: lesson.id },
     data: { status: "canceled" },
   });
-  if (!lesson.workshopId) {
-    const slotDate = availabilityDateFromYYYYMMDD(formatIsraelYYYYMMDD(lesson.date));
-    await tx.availability.upsert({
-      where: {
-        teacherId_date_startTime: {
-          teacherId: lesson.teacherId,
-          date: slotDate,
-          startTime: lesson.startTime,
-        },
-      },
-      create: {
-        teacherId: lesson.teacherId,
-        date: slotDate,
-        startTime: lesson.startTime,
-        endTime: lesson.endTime,
-      },
-      update: {},
-    });
-  }
+  await restoreAvailabilityForLesson(tx, lesson);
 }
 
-/** Cancel all overdue pending_approval lessons (used by cron and availability reads). */
+/** Cancel all overdue pending_approval lessons. Called by the hourly cron. */
 export async function expireOverduePendingLessons(
   prisma: PrismaClient
 ): Promise<{ expired: number; restored: number }> {
@@ -66,19 +79,34 @@ export async function expireOverduePendingLessons(
     },
   });
 
-  let restored = 0;
-  for (const lesson of expired) {
-    try {
-      await prisma.$transaction(async (tx) => {
-        await cancelExpiredPendingLesson(tx, lesson);
-      });
-      restored++;
-    } catch (e) {
-      console.error("[expire-pending-lessons] Failed for lesson", lesson.id, e);
-    }
-  }
+  if (expired.length === 0) return { expired: 0, restored: 0 };
 
-  return { expired: expired.length, restored };
+  // One transaction for the whole sweep rather than one per lesson: the previous
+  // shape issued 2N queries in N transactions, which on a backlog was the slowest
+  // thing the cron did.
+  const slots = expired
+    .filter((l) => !l.workshopId)
+    .map((l) => ({
+      teacherId: l.teacherId,
+      date: availabilityDateFromYYYYMMDD(formatIsraelYYYYMMDD(l.date)),
+      startTime: l.startTime,
+      endTime: l.endTime,
+    }));
+
+  try {
+    const [, restoredResult] = await prisma.$transaction([
+      prisma.lesson.updateMany({
+        where: { id: { in: expired.map((l) => l.id) } },
+        data: { status: "canceled" },
+      }),
+      // skipDuplicates covers the slot already being back on the calendar.
+      prisma.availability.createMany({ data: slots, skipDuplicates: true }),
+    ]);
+    return { expired: expired.length, restored: restoredResult.count };
+  } catch (e) {
+    console.error("[expire-pending-lessons] Sweep failed:", e);
+    throw e;
+  }
 }
 
 /** Cancel expired pending lessons blocking a specific slot before a new booking. */

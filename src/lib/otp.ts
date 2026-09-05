@@ -1,15 +1,7 @@
 import crypto from "crypto";
+import { getSigningSecret } from "./secrets";
 
 const OTP_LENGTH = 6;
-
-function getSalt(): string {
-  const secret = process.env.COOKIE_SECRET;
-  if (secret && secret.length >= 32) return secret;
-  if (process.env.NODE_ENV === "production") {
-    console.warn("[otp] COOKIE_SECRET not set in production – using fallback. Set COOKIE_SECRET (min 32 chars) for security.");
-  }
-  return "fallback-salt-min-32-chars";
-}
 
 export function createOTP(): string {
   const digits = crypto.randomInt(0, 1_000_000);
@@ -17,7 +9,7 @@ export function createOTP(): string {
 }
 
 export function hashOTP(code: string): string {
-  return crypto.createHmac("sha256", getSalt()).update(code).digest("hex");
+  return crypto.createHmac("sha256", getSigningSecret()).update(code).digest("hex");
 }
 
 export function verifyOTP(code: string, codeHash: string): boolean {

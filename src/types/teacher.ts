@@ -1,6 +1,7 @@
+/** Shapes returned by /api/teachers and rendered by the booking UI. */
 export type SubjectId = "math" | "english" | "psychometric" | "language";
 
-export interface MockTeacher {
+export interface TeacherView {
   id: string;
   name: string;
   photo: string;

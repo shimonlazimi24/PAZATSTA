@@ -5,7 +5,7 @@ import { getUserFromSession } from "@/lib/auth";
 import { sendApprovalRequest } from "@/lib/email";
 import { teacherMatchesTopic } from "@/lib/topics";
 import { formatDateInIsrael } from "@/lib/date-utils";
-import { ADMIN_TEACHER_EMAILS, ADMIN_NOTIFICATION_EMAILS } from "@/lib/admin";
+import { resolveAdminRecipients } from "@/lib/admin";
 import { isValidDeliveryEmail } from "@/lib/validation";
 import { upsertStudentProfileFromBookingForm } from "@/lib/booking-student-profile";
 import {
@@ -13,10 +13,7 @@ import {
   formatIsraelYYYYMMDD,
   utcDayBounds,
 } from "@/lib/dates";
-import {
-  expireOverduePendingLessons,
-  expirePendingForSlotInTx,
-} from "@/lib/expire-pending-lessons";
+import { expirePendingForSlotInTx } from "@/lib/expire-pending-lessons";
 
 const APPROVAL_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -54,26 +51,14 @@ const BookSubmitSchema = z.object({
 
 /** Create a lesson as pending_approval; email sent only after teacher/admin approve. */
 export async function POST(req: Request) {
-  const [user, adminsFromDb, adminTeachersFromDb] = await Promise.all([
-    getUserFromSession(),
-    prisma.user.findMany({ where: { role: "admin" }, select: { email: true } }),
-    ADMIN_TEACHER_EMAILS.length > 0
-      ? prisma.user.findMany({
-          where: { email: { in: ADMIN_TEACHER_EMAILS } },
-          select: { email: true },
-        })
-      : Promise.resolve([]),
-  ]);
-  const adminEmailsSet = new Set<string>();
-  for (const a of adminsFromDb) if (a.email && isValidDeliveryEmail(a.email)) adminEmailsSet.add(a.email.toLowerCase());
-  for (const t of adminTeachersFromDb) if (t.email && isValidDeliveryEmail(t.email)) adminEmailsSet.add(t.email.toLowerCase());
-  for (const e of ADMIN_NOTIFICATION_EMAILS) if (isValidDeliveryEmail(e)) adminEmailsSet.add(e.toLowerCase());
-  const adminsPreload = Array.from(adminEmailsSet).map((email) => ({ email }));
+  // Authorize first: an unauthenticated request must not cost a database query.
+  const user = await getUserFromSession();
   if (!user || user.role !== "student") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  const adminsPreload = (await resolveAdminRecipients()).map((email) => ({ email }));
   try {
-    await expireOverduePendingLessons(prisma);
     const body = await req.json();
     const parsed = BookSubmitSchema.safeParse(body);
     if (!parsed.success) {
@@ -128,27 +113,62 @@ export async function POST(req: Request) {
           { status: 403 }
         );
       }
-      const booked = await prisma.lesson.count({
-        where: { workshopId: w.id, status: { not: "canceled" } },
-      });
-      if (booked >= w.maxParticipants) {
-        return NextResponse.json(
-          { error: "אין מקומות פנויים בסדנה זו" },
-          { status: 409 }
+      // Counting seats and inserting must be one atomic step, or two concurrent
+      // requests for the last seat both pass the check. Serializable makes the
+      // conflict a P2034 the caller can retry; the partial unique index on
+      // (workshopId, studentId) is the backstop for the duplicate case.
+      try {
+        lesson = await prisma.$transaction(
+          async (tx) => {
+            const booked = await tx.lesson.count({
+              where: { workshopId: w.id, status: { not: "canceled" } },
+            });
+            if (booked >= w.maxParticipants) {
+              throw Object.assign(new Error("WORKSHOP_FULL"), { code: "WORKSHOP_FULL" });
+            }
+            const alreadyInWorkshop = await tx.lesson.findFirst({
+              where: {
+                workshopId: w.id,
+                studentId: user.id,
+                status: { not: "canceled" },
+              },
+            });
+            if (alreadyInWorkshop) {
+              throw Object.assign(new Error("ALREADY_IN_WORKSHOP"), {
+                code: "ALREADY_IN_WORKSHOP",
+              });
+            }
+            return tx.lesson.create({
+              data: {
+                teacherId: w.teacherId,
+                studentId: user.id,
+                date: w.date,
+                startTime: w.startTime,
+                endTime: w.endTime,
+                topic: topicLabel,
+                workshopId: w.id,
+                questionFromStudent: null,
+                status: "pending_approval",
+                approvalExpiresAt: new Date(Date.now() + APPROVAL_WINDOW_MS),
+              },
+              include: { teacher: true, student: true },
+            });
+          },
+          { isolationLevel: "Serializable", timeout: 15_000 }
         );
-      }
-      const alreadyInWorkshop = await prisma.lesson.findFirst({
-        where: {
-          workshopId: w.id,
-          studentId: user.id,
-          status: { not: "canceled" },
-        },
-      });
-      if (alreadyInWorkshop) {
-        return NextResponse.json(
-          { error: "כבר נרשמת לסדנה זו" },
-          { status: 409 }
-        );
+      } catch (e) {
+        const code = (e as { code?: string })?.code;
+        if (code === "WORKSHOP_FULL") {
+          return NextResponse.json({ error: "אין מקומות פנויים בסדנה זו" }, { status: 409 });
+        }
+        if (code === "ALREADY_IN_WORKSHOP" || code === "P2002") {
+          return NextResponse.json({ error: "כבר נרשמת לסדנה זו" }, { status: 409 });
+        }
+        // P2034: serialization conflict — another request took the seat first.
+        if (code === "P2034") {
+          return NextResponse.json({ error: "אין מקומות פנויים בסדנה זו" }, { status: 409 });
+        }
+        throw e;
       }
 
       await upsertStudentProfileFromBookingForm(user.id, {
@@ -157,22 +177,6 @@ export async function POST(req: Request) {
         parentNameFromForm,
         parentPhoneFromForm,
         parentEmailFromForm,
-      });
-
-      lesson = await prisma.lesson.create({
-        data: {
-          teacherId: w.teacherId,
-          studentId: user.id,
-          date: w.date,
-          startTime: w.startTime,
-          endTime: w.endTime,
-          topic: topicLabel,
-          workshopId: w.id,
-          questionFromStudent: null,
-          status: "pending_approval",
-          approvalExpiresAt: new Date(Date.now() + APPROVAL_WINDOW_MS),
-        },
-        include: { teacher: true, student: true },
       });
 
       admins = adminsPreload;

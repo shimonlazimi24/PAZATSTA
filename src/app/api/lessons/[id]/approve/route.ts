@@ -51,7 +51,9 @@ export async function POST(
       { status: 400 }
     );
   }
-  if (isTeacher && lesson.teacherId !== user.id) {
+  // Admins act on any lesson; teachers only on their own. A teacher who is also an
+  // admin gets the admin path, otherwise their admin grant would do nothing here.
+  if (!isAdmin && lesson.teacherId !== user.id) {
     return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
   }
 

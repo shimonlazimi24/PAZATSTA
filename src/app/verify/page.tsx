@@ -132,7 +132,7 @@ function VerifyForm() {
                 value={email}
                 onChange={(e) => handleEmailChange(e.target.value)}
                 required
-                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-input)] focus:ring-2 focus:ring-[var(--color-primary)]"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-input)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
                 disabled={status === "loading"}
               />
             </div>
@@ -150,7 +150,7 @@ function VerifyForm() {
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                 maxLength={6}
                 autoFocus
-                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-input)] text-center text-lg tracking-widest focus:ring-2 focus:ring-[var(--color-primary)]"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-input)] text-center text-lg tracking-widest focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
                 disabled={status === "loading"}
               />
             </div>

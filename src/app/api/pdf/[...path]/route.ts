@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import path from "path";
-import fs from "fs";
+import { readFile } from "fs/promises";
 import { prisma } from "@/lib/db";
 import { getUserFromSession } from "@/lib/auth";
 import { canAccessAdmin } from "@/lib/admin";
@@ -41,51 +41,46 @@ export async function GET(
 ) {
   const { path: pathSegments } = await params;
   const filename = pathSegments.join("/");
-  console.log("[pdf] filename:", filename);
 
-  if (!filename || filename.includes("..")) {
+  // Fail closed: this route serves lesson summaries and nothing else. Any path that
+  // does not resolve to a lesson id is a 404 before any filesystem access, so a file
+  // dropped into the storage directory can never be served unauthenticated.
+  const lessonId = parseLessonIdFromPath(filename);
+  if (!lessonId) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  const user = await getUserFromSession();
+  if (!user) {
+    return NextResponse.json({ error: "נדרשת התחברות" }, { status: 401 });
+  }
+  const allowed = await canAccessLessonPdf(user.id, user.role, lessonId);
+  if (!allowed) {
+    return NextResponse.json({ error: "אין הרשאה לצפייה בדוח זה" }, { status: 403 });
+  }
+
   const fullPath = path.join(STORAGE_DIR, filename);
-  const dispositionFilename = path.basename(filename);
   const pdfHeaders = {
     "Content-Type": "application/pdf",
-    "Content-Disposition": `inline; filename="${dispositionFilename}"`,
-    "Cache-Control": "no-store",
+    "Content-Disposition": `inline; filename="${path.basename(filename)}"`,
+    "Cache-Control": "private, no-store",
   };
 
-  const lessonId = parseLessonIdFromPath(filename);
-
-  if (lessonId) {
-    const user = await getUserFromSession();
-    if (!user) {
-      return NextResponse.json({ error: "נדרשת התחברות" }, { status: 401 });
-    }
-    const allowed = await canAccessLessonPdf(user.id, user.role, lessonId);
-    if (!allowed) {
-      return NextResponse.json({ error: "אין הרשאה לצפייה בדוח זה" }, { status: 403 });
-    }
+  try {
+    const buffer = await readFile(fullPath);
+    return new NextResponse(new Uint8Array(buffer), { headers: pdfHeaders });
+  } catch {
+    // Not cached on disk (expected on ephemeral filesystems) — render on demand.
   }
 
-  if (fs.existsSync(fullPath) && fs.statSync(fullPath).isFile()) {
-    const buffer = fs.readFileSync(fullPath);
-    return new NextResponse(buffer, { headers: pdfHeaders });
+  const result = await generateLessonPdfBuffer(lessonId);
+  if (result.ok) {
+    return new NextResponse(new Uint8Array(result.buffer), { headers: pdfHeaders });
   }
 
-  if (lessonId) {
-    const result = await generateLessonPdfBuffer(lessonId);
-    if (result.ok) {
-      return new NextResponse(new Uint8Array(result.buffer), { headers: pdfHeaders });
-    }
-    const code = result.code;
-    const details = result.details ?? code;
-    console.error("[pdf] generateLessonPdfBuffer failed, code:", code, "details:", details);
-    return NextResponse.json(
-      { error: "Failed to generate PDF", code, details },
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
-  }
-
-  return NextResponse.json({ error: "Not found" }, { status: 404 });
+  console.error("[pdf] generation failed for", lessonId, "code:", result.code);
+  return NextResponse.json(
+    { error: "לא ניתן להפיק את הדוח כרגע" },
+    { status: 500 }
+  );
 }

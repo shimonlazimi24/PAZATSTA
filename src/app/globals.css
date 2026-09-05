@@ -57,7 +57,7 @@
     --destructive: 0 84% 60%;
   }
   [dir="rtl"] {
-    font-family: "Heebo", "Assistant", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--font-heebo), "Heebo", "Assistant", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   }
   body {
     @apply antialiased;
@@ -68,5 +68,16 @@
     padding-bottom: env(safe-area-inset-bottom, 0px);
     padding-inline-start: env(safe-area-inset-left, 0px);
     padding-inline-end: env(safe-area-inset-right, 0px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

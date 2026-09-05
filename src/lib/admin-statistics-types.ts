@@ -54,6 +54,8 @@ export interface AdminStatisticsTimeDistribution {
 }
 
 export interface AdminStatisticsResponse {
+  /** True when the range exceeded the row ceiling and the numbers are partial. */
+  truncated?: boolean;
   range: { from: string; to: string };
   previousRange: { from: string; to: string };
   summary: AdminStatisticsSummary;

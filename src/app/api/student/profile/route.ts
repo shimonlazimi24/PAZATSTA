@@ -1,8 +1,33 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getUserFromSession } from "@/lib/auth";
+import { isValidEmail } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
+
+const MAX_NAME = 200;
+const MAX_PHONE = 30;
+const MAX_TOPIC = 200;
+
+/**
+ * Every field is optional (PATCH), but a field that is present must be valid.
+ * Previously an unparseable currentScreeningDate produced an Invalid Date that
+ * Prisma rejected as a 500, and parentEmail was stored without any format check.
+ */
+const ProfileSchema = z.object({
+  studentFullName: z.string().trim().max(MAX_NAME).optional(),
+  parentFullName: z.string().trim().max(MAX_NAME).optional(),
+  parentPhone: z.string().trim().max(MAX_PHONE).optional(),
+  parentEmail: z
+    .union([z.literal(""), z.null(), z.string().trim().max(MAX_NAME)])
+    .optional(),
+  currentScreeningType: z.string().trim().max(MAX_TOPIC).optional(),
+  currentScreeningDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "currentScreeningDate must be YYYY-MM-DD")
+    .optional(),
+});
 
 export async function GET() {
   const user = await getUserFromSession();
@@ -38,19 +63,31 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   try {
-    const body = await req.json();
-    const studentFullName = typeof body.studentFullName === "string" ? body.studentFullName.trim() : undefined;
-    const parentFullName = typeof body.parentFullName === "string" ? body.parentFullName.trim() : undefined;
-    const parentPhone = typeof body.parentPhone === "string" ? body.parentPhone.trim() : undefined;
-    const parentEmail =
-      body.parentEmail === null || body.parentEmail === ""
-        ? null
-        : typeof body.parentEmail === "string"
-          ? body.parentEmail.trim() || null
-          : undefined;
-    const currentScreeningType = typeof body.currentScreeningType === "string" ? body.currentScreeningType.trim() : undefined;
-    const currentScreeningDate = typeof body.currentScreeningDate === "string" && body.currentScreeningDate
-      ? new Date(body.currentScreeningDate)
+    const parsed = ProfileSchema.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
+      return NextResponse.json({ error: "נתוני הפרופיל לא תקינים" }, { status: 400 });
+    }
+    const {
+      studentFullName,
+      parentFullName,
+      parentPhone,
+      currentScreeningType,
+    } = parsed.data;
+
+    const rawParentEmail = parsed.data.parentEmail;
+    let parentEmail: string | null | undefined;
+    if (rawParentEmail === undefined) {
+      parentEmail = undefined;
+    } else if (!rawParentEmail) {
+      parentEmail = null;
+    } else if (isValidEmail(rawParentEmail)) {
+      parentEmail = rawParentEmail;
+    } else {
+      return NextResponse.json({ error: "כתובת אימייל של ההורה לא תקינה" }, { status: 400 });
+    }
+
+    const currentScreeningDate = parsed.data.currentScreeningDate
+      ? new Date(`${parsed.data.currentScreeningDate}T12:00:00.000Z`)
       : undefined;
 
     const data: Record<string, unknown> = {};

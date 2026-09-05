@@ -1,15 +1,33 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getUserFromSession } from "@/lib/auth";
-import { generateAndStoreLessonPdf } from "@/lib/pdf/generateLessonSummaryPdf";
 import { sendLessonCompleted } from "@/lib/email";
 import { createLessonSummaryLink } from "@/lib/publicPdfLink";
 import { isLessonStarted } from "@/lib/dates";
 import { formatDateInIsrael } from "@/lib/date-utils";
 import { isValidEmail, isValidDeliveryEmail } from "@/lib/validation";
-import { ADMIN_NOTIFICATION_EMAILS } from "@/lib/admin";
+import { resolveAdminRecipients } from "@/lib/admin";
 
 export const runtime = "nodejs";
+
+/** Report fields are free text; bound them so a single request cannot store megabytes. */
+const MAX_FIELD_LENGTH = 5000;
+
+const text = () =>
+  z.unknown().transform((v) => (typeof v === "string" ? v.trim() : "")).pipe(z.string().max(MAX_FIELD_LENGTH));
+
+const ReportSchema = z.object({
+  summaryText: text(),
+  homeworkText: text(),
+  pointsToKeep: text(),
+  pointsToImprove: text(),
+  tips: text(),
+  recommendations: text(),
+  screeningType: text().transform((v) => v || null),
+  parentEmail: text().transform((v) => v || null),
+  screeningDate: text().transform((v) => (/^\d{4}-\d{2}-\d{2}$/.test(v) ? v : "")),
+});
 
 export async function POST(
   req: Request,
@@ -33,17 +51,26 @@ export async function POST(
     console.log("[complete] user.id=", user.id, "role=", user.role, "lessonId=", lessonId);
   }
   try {
-    const body = await req.json();
-    const summaryText = typeof body.summaryText === "string" ? body.summaryText.trim() : "";
-    const homeworkText = typeof body.homeworkText === "string" ? body.homeworkText.trim() : "";
-    const pointsToKeep = typeof body.pointsToKeep === "string" ? body.pointsToKeep.trim() : "";
-    const pointsToImprove = typeof body.pointsToImprove === "string" ? body.pointsToImprove.trim() : "";
-    const tips = typeof body.tips === "string" ? body.tips.trim() : "";
-    const recommendations = typeof body.recommendations === "string" ? body.recommendations.trim() : "";
-    const screeningType = typeof body.screeningType === "string" ? body.screeningType.trim() || null : null;
-    const parentEmailFromBody = typeof body.parentEmail === "string" ? body.parentEmail.trim() || null : null;
-    const screeningDateStr = typeof body.screeningDate === "string" ? body.screeningDate.trim() : "";
-    const screeningDate = screeningDateStr && /^\d{4}-\d{2}-\d{2}$/.test(screeningDateStr)
+    const body = await req.json().catch(() => null);
+    const parsed = ReportSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: `כל שדה מוגבל ל-${MAX_FIELD_LENGTH} תווים` },
+        { status: 400 }
+      );
+    }
+    const {
+      summaryText,
+      homeworkText,
+      pointsToKeep,
+      pointsToImprove,
+      tips,
+      recommendations,
+      screeningType,
+      parentEmail: parentEmailFromBody,
+      screeningDate: screeningDateStr,
+    } = parsed.data;
+    const screeningDate = screeningDateStr
       ? new Date(screeningDateStr + "T12:00:00")
       : null;
     const missing: string[] = [];
@@ -127,43 +154,17 @@ export async function POST(
       });
     }
 
-    const fallbackPdfUrl = `/api/pdf/lesson-summaries/lesson-${lessonId}.pdf`;
-    let pdfUrl: string | null = null;
-    try {
-      const pdfResult = await generateAndStoreLessonPdf(lessonId);
-      pdfUrl = pdfResult.pdfUrl ?? fallbackPdfUrl;
-      if (pdfResult.pdfUrl) {
-        console.log("[complete] PDF stored, pdfUrl:", pdfResult.pdfUrl);
-      } else {
-        console.log("[complete] PDF storage failed, using on-demand URL:", pdfUrl);
-      }
-    } catch (pdfErr) {
-      console.error("[complete] PDF generation failed (lesson still completed):", pdfErr instanceof Error ? pdfErr.message : pdfErr);
-      pdfUrl = fallbackPdfUrl;
-    }
-
-    // Always persist pdfUrl so the UI shows "צפייה ב-PDF" for completed reports
-    if (pdfUrl) {
-      await prisma.lessonSummary.update({
-        where: { lessonId },
-        data: { pdfUrl },
-      });
-    }
-
-    const adminUsers = await prisma.user.findMany({
-      where: { role: "admin" },
-      select: { email: true },
+    // The PDF is rendered on first view, not here. Rendering inline added seconds
+    // of CPU to a request that already sends several emails, and the write it did
+    // afterwards is lost anyway on an ephemeral filesystem. Both PDF routes render
+    // on demand when the file is not cached.
+    const pdfUrl = `/api/pdf/lesson-summaries/lesson-${lessonId}.pdf`;
+    await prisma.lessonSummary.update({
+      where: { lessonId },
+      data: { pdfUrl },
     });
-    const adminEmailsSet = new Set<string>();
-    for (const a of adminUsers) if (a.email && isValidDeliveryEmail(a.email)) adminEmailsSet.add(a.email.toLowerCase());
-    for (const e of ADMIN_NOTIFICATION_EMAILS) if (isValidDeliveryEmail(e)) adminEmailsSet.add(e.toLowerCase());
-    // Runtime fallback: env may not be loaded at module init in serverless
-    const envAdmin = process.env.ADMIN_NOTIFICATION_EMAILS ?? "";
-    const envAdminList = envAdmin ? envAdmin.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean) : [];
-    for (const e of envAdminList) if (isValidDeliveryEmail(e)) adminEmailsSet.add(e);
-    if (adminEmailsSet.size === 0) {
-      for (const e of ["shachar.cygler@gmail.com", "admin@pazatsta.co.il"]) adminEmailsSet.add(e);
-    }
+
+    const allAdminEmails = await resolveAdminRecipients();
 
     const profile = lesson.student.studentProfile as { parentEmail?: string | null } | null;
     const parentEmailFromProfile = profile?.parentEmail?.trim();
@@ -171,10 +172,6 @@ export async function POST(
     const parentEmails = parentEmail && isValidEmail(parentEmail) && isValidDeliveryEmail(parentEmail)
       ? [parentEmail]
       : [];
-    console.log("[complete] parentEmailFromBody:", parentEmailFromBody, "fromProfile:", parentEmailFromProfile, "final:", parentEmail, "included:", parentEmails.length > 0);
-    const adminEmailsList = Array.from(adminEmailsSet);
-    const DEFAULT_ADMIN_EMAILS = ["shachar.cygler@gmail.com", "admin@pazatsta.co.il"];
-    const allAdminEmails = adminEmailsList.length > 0 ? adminEmailsList : DEFAULT_ADMIN_EMAILS;
 
     const toEmails = [
       lesson.teacher.email,
@@ -183,7 +180,7 @@ export async function POST(
       ...allAdminEmails,
     ];
     const toEmailsDeduped = Array.from(new Set(toEmails.map((e) => e.toLowerCase())));
-    console.log("[complete] toEmails:", toEmailsDeduped, "count:", toEmailsDeduped.length);
+    console.log("[complete] notifying", toEmailsDeduped.length, "recipient(s)");
 
     const baseUrl = (process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
     let publicPdfUrl: string | undefined;

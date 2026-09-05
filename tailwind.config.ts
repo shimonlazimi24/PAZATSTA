@@ -52,7 +52,7 @@ const config: Config = {
         "soft-lg": "0 10px 40px -15px rgb(0 0 0 / 0.1)",
       },
       fontFamily: {
-        heebo: ["Heebo", "Assistant", "system-ui", "sans-serif"],
+        heebo: ["var(--font-heebo)", "Heebo", "Assistant", "system-ui", "sans-serif"],
       },
     },
   },

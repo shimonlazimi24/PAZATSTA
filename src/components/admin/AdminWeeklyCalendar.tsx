@@ -16,7 +16,7 @@ type WeeklyLesson = {
 const DAY_NAMES_HE = ["א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"];
 const SLOT_MINUTES = 30;
 const START_HOUR = 8;
-const END_HOUR = 21;
+const END_HOUR = 22; // must match TeacherAvailability: evening slots run to 22:00
 
 function getWeekRange(ref: Date): { start: string; end: string; dates: string[] } {
   const d = new Date(ref);
