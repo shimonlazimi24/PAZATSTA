@@ -245,6 +245,14 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange, t
    * slot to availability and notify the student.
    */
   async function removeBookedSlot(lesson: BookedLesson) {
+    // A completed lesson has already happened; cancel would reject it with a 400
+    // after the confirm had promised otherwise. Say so instead of asking.
+    if (lesson.status === "completed") {
+      setLoadError(
+        `המשבצת ${lesson.startTime}–${lesson.endTime} שייכת לשיעור שכבר הושלם ולכן לא ניתן לפנות אותה.`
+      );
+      return;
+    }
     const action = lesson.status === "pending_approval" ? "reject" : "cancel";
     const verb = action === "reject" ? "לדחות את הבקשה" : "לבטל את השיעור";
     const who = lesson.student.name || lesson.student.email;
