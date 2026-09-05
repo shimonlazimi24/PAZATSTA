@@ -72,6 +72,15 @@ type TeacherAvailabilityProps = {
   teacherId?: string;
 };
 
+type BookedLesson = {
+  id: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  status: string;
+  student: { name: string | null; email: string };
+};
+
 const getApiBase = (teacherId?: string) =>
   teacherId ? `/api/admin/teachers/${teacherId}/availability` : "/api/teacher/availability";
 
@@ -90,6 +99,10 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange, t
   const [loadError, setLoadError] = useState<string | null>(null);
   const [toggling, setToggling] = useState<string | null>(null);
   const [fullDayLoading, setFullDayLoading] = useState(false);
+  // Booking deletes the Availability row, so a booked slot leaves no trace in the
+  // availability data this editor loads. Without the lessons it renders an occupied
+  // slot as an empty one, and clicking it adds availability on top of a real lesson.
+  const [booked, setBooked] = useState<BookedLesson[]>([]);
 
   const load = useCallback(() => {
     if (!selectedDate || weekDates.length === 0) return;
@@ -129,6 +142,29 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange, t
       .finally(() => setLoading(false));
   }, [weekDates, apiBase, onSlotsChange]);
 
+  const loadBooked = useCallback(() => {
+    // Admin mode only: the teacher-facing route has no equivalent endpoint, and
+    // leaving `booked` empty keeps that path behaving exactly as before.
+    if (!teacherId || weekDates.length === 0) return;
+    const start = weekDates[0];
+    const end = weekDates[weekDates.length - 1];
+    apiJson<BookedLesson[]>(
+      `/api/admin/weekly-lessons?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`
+    ).then((r) => {
+      if (r.ok) {
+        setBooked(
+          (r.data as (BookedLesson & { teacher?: { id: string } })[]).filter(
+            (l) => l.teacher?.id === teacherId
+          )
+        );
+      }
+    });
+  }, [teacherId, weekDates]);
+
+  useEffect(() => {
+    loadBooked();
+  }, [loadBooked]);
+
   const existingForDate = selectedDate
     ? slots.filter((s) => s.date === selectedDate)
     : [];
@@ -143,6 +179,9 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange, t
       available: true,
       date: selectedDate ?? "",
       isAdded: !!existing,
+      booked: booked.find(
+        (l) => l.date === selectedDate && l.startTime === opt.startTime
+      ),
     };
   });
 
@@ -177,7 +216,8 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange, t
     }
 
     setFullDayLoading(true);
-    const toAdd = slotOptions.filter((o) => !o.isAdded);
+    // Never publish availability on top of a slot a lesson already holds.
+    const toAdd = slotOptions.filter((o) => !o.isAdded && !o.booked);
     const slotsPayload = toAdd.map((o) => ({
       date: selectedDate,
       startTime: o.startTime,
@@ -196,7 +236,44 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange, t
     load();
   }
 
+  /**
+   * Free a slot that already has a lesson on it.
+   *
+   * Removing the availability row would do nothing here — booking deleted it. The
+   * slot is held by the lesson, so freeing it means ending the lesson: reject while
+   * it is still awaiting approval, cancel once it is scheduled. Both restore the
+   * slot to availability and notify the student.
+   */
+  async function removeBookedSlot(lesson: BookedLesson) {
+    const action = lesson.status === "pending_approval" ? "reject" : "cancel";
+    const verb = action === "reject" ? "לדחות את הבקשה" : "לבטל את השיעור";
+    const who = lesson.student.name || lesson.student.email;
+    if (
+      !window.confirm(
+        `המשבצת ${lesson.startTime}–${lesson.endTime} תפוסה על ידי ${who}.\n\n` +
+          `כדי לפנות אותה צריך ${verb}. התלמיד וההורה יקבלו הודעה על כך.\n\nלהמשיך?`
+      )
+    ) {
+      return;
+    }
+    setToggling(lesson.id);
+    setLoadError(null);
+    const res = await apiJson(`/api/lessons/${lesson.id}/${action}`, {
+      method: "POST",
+    });
+    if (!res.ok) {
+      setLoadError(res.error);
+    }
+    setToggling(null);
+    load();
+    loadBooked();
+  }
+
   async function toggleSlot(opt: (typeof slotOptions)[0]) {
+    if (opt.booked) {
+      await removeBookedSlot(opt.booked);
+      return;
+    }
     if (!selectedDate || toggling) return;
     const isRemoving = opt.isAdded && opt.id && !opt.id.startsWith("opt-") && !opt.id.startsWith("pending-");
 
@@ -313,24 +390,34 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange, t
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
               {slotOptions.map((opt) => {
                 const isSelected = opt.isAdded;
-                const busy = toggling === opt.id;
+                const isBooked = !!opt.booked;
+                const busy = toggling === opt.id || toggling === opt.booked?.id;
                 return (
                   <button
                     key={`${selectedDate}-${opt.startTime}-${opt.endTime}`}
                     type="button"
                     disabled={busy}
                     onClick={() => toggleSlot(opt)}
+                    title={
+                      isBooked
+                        ? `תפוס: ${opt.booked!.student.name || opt.booked!.student.email}`
+                        : undefined
+                    }
                     className={cn(
                       "rounded-[var(--radius-input)] border px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2",
-                      isSelected &&
+                      isBooked && "border-amber-500 bg-amber-50 text-amber-900 hover:bg-amber-100",
+                      !isBooked && isSelected &&
                         "border-[var(--color-primary)] bg-[var(--color-primary)] text-white",
-                      !isSelected &&
+                      !isBooked && !isSelected &&
                         "border-[var(--color-border)] bg-white text-[var(--color-text)] hover:border-[var(--color-primary)]",
                       busy && "opacity-50 cursor-wait"
                     )}
                   >
                     {opt.startTime}–{opt.endTime}
-                    {isSelected && <span className="mr-1 text-xs opacity-90">פנוי</span>}
+                    {isBooked && <span className="mr-1 text-xs">תפוס</span>}
+                    {!isBooked && isSelected && (
+                      <span className="mr-1 text-xs opacity-90">פנוי</span>
+                    )}
                   </button>
                 );
               })}

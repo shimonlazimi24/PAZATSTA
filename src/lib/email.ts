@@ -728,3 +728,45 @@ export async function sendLessonRescheduled(params: {
   }
   await sendToMany("sendLessonRescheduled", params.to, { subject, text });
 }
+
+/** Build the "lesson canceled" email (sent to student, parent, teacher and admins). */
+export function getLessonCanceledContent(params: {
+  studentName: string;
+  teacherName: string;
+  dateLabel: string;
+  timeRange: string;
+  topic?: string | null;
+}): { subject: string; text: string } {
+  const lines = [
+    "שלום,",
+    "",
+    `השיעור של ${params.studentName} עם ${params.teacherName} בוטל.`,
+    "",
+    `תאריך: ${params.dateLabel}`,
+    `שעה: ${params.timeRange}`,
+  ];
+  if (params.topic?.trim()) lines.push(`סוג מיון: ${params.topic.trim()}`);
+  const base = getAppBaseUrl();
+  if (base) lines.push("", `לקביעת מועד חדש: ${base}`);
+  lines.push("", "לשאלות ניתן לפנות למדריך או למנהל.", "", "בברכה,", "פזצט״א");
+  return {
+    subject: `ביטול שיעור – ${params.dateLabel}`,
+    text: lines.join("\n"),
+  };
+}
+
+export async function sendLessonCanceled(params: {
+  to: string[];
+  studentName: string;
+  teacherName: string;
+  dateLabel: string;
+  timeRange: string;
+  topic?: string | null;
+}): Promise<void> {
+  const { subject, text } = getLessonCanceledContent(params);
+  if (isDev && noRealKey()) {
+    console.log("[DEV] Lesson canceled email to", params.to.length, "recipient(s)");
+    return;
+  }
+  await sendToMany("sendLessonCanceled", params.to, { subject, text });
+}
