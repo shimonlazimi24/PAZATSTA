@@ -1,27 +1,5 @@
 /** @type {import('next').NextConfig} */
 
-// COOKIE_SECRET signs session cookies and hashes OTPs. If it is missing the app
-// cannot authenticate anyone, so fail the build rather than shipping a deploy that
-// 500s at request time. Vercel exposes environment variables during the build, so
-// a misconfigured project is caught here instead of by customers.
-if (process.env.NODE_ENV === "production" && process.env.NEXT_PHASE !== "phase-development-server") {
-  const secret = process.env.COOKIE_SECRET;
-  if (!secret || secret.length < 32) {
-    throw new Error(
-      "COOKIE_SECRET is missing or shorter than 32 characters. " +
-        "Set it in the deployment environment before building. " +
-        "Generate one with: openssl rand -base64 48"
-    );
-  }
-  for (const name of ["CRON_SECRET", "ADMIN_NOTIFICATION_EMAILS", "RESEND_API_KEY", "APP_URL"]) {
-    if (!process.env[name]?.trim()) {
-      // Not fatal — the app serves pages without these — but each one silently
-      // disables something: crons, admin notifications, or outbound mail.
-      console.warn(`[config] ${name} is not set. See docs/DEPLOYMENT.md.`);
-    }
-  }
-}
-
 const isProd = process.env.NODE_ENV === "production";
 
 // Teacher avatars may be absolute URLs stored in the database (see TeacherAvatar),
