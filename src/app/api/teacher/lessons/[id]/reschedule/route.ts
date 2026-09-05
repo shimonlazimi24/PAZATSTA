@@ -122,9 +122,18 @@ export async function PATCH(
           status: { notIn: ["canceled"] },
           date: targetDay,
         },
-        select: { id: true },
+        select: { id: true, status: true, date: true },
       });
       if (conflictingLesson) {
+        console.warn(
+          "[reschedule] blocked lesson=%s -> %s %s by lesson=%s status=%s date=%s",
+          lessonId,
+          dateStr,
+          startTime,
+          conflictingLesson.id,
+          conflictingLesson.status,
+          conflictingLesson.date.toISOString()
+        );
         throw Object.assign(new Error("SLOT_TAKEN"), { code: "SLOT_TAKEN" });
       }
 
@@ -172,6 +181,10 @@ export async function PATCH(
   } catch (e) {
     const err = e as { code?: string };
     if (err?.code === "SLOT_TAKEN" || err?.code === "P2002") {
+      // SLOT_TAKEN means the conflict query matched; P2002 means it did not but the
+      // unique index still fired — which would point at a normalization mismatch
+      // rather than a genuine clash. They are worth telling apart in the logs.
+      console.warn("[reschedule] 409 for lesson=%s cause=%s", lessonId, err.code);
       return NextResponse.json(
         { error: "המועד שבחרת תפוס (שיעור אחר או משבצת קיימת)" },
         { status: 409 }
