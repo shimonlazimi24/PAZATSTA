@@ -48,3 +48,5 @@ Thumbs.db
 # It pins the datasource provider and must be committed.
 .claude/
 .env
+.vercel
+.env*

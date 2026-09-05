@@ -108,8 +108,9 @@ export async function PATCH(
       // Both booking paths do this before their own conflict check; this one did
       // not. A pending_approval lesson whose 24h window has lapsed is still
       // status != 'canceled', so it counted as a conflict and the move failed with
-      // "the slot is taken" — permanently, because only the hourly cron clears
-      // those rows and it returns 503 whenever CRON_SECRET is unset.
+      // "the slot is taken". Nothing cancels those rows except the sweep cron, so
+      // the slot stays falsely blocked for at least as long as the gap between
+      // cron runs.
       await expirePendingForSlotInTx(tx, lesson.teacherId, dateStr, startTime);
 
       const conflictingLesson = await tx.lesson.findFirst({
