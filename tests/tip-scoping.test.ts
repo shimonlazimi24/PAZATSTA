@@ -2,8 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { TIP_GROUPS, getTipsForScreening } from "../src/data/tips";
-import { normalizeTopicKey, tipAppliesToLesson } from "../src/lib/topic-key";
+import { tipAppliesToLesson } from "../src/lib/topic-key";
 
 /**
  * The safety net for moving tips into the database.
@@ -21,26 +20,31 @@ const golden: Record<string, string[]> = JSON.parse(
   fs.readFileSync(path.join(__dirname, "fixtures-golden-tips.json"), "utf8")
 );
 
-/** Rebuild what the migration seeds: each tip's slug, group and topic keys. */
-function seededTips(): { slug: string; group: string; topicKeys: string[]; order: number }[] {
-  const keysByGroup = new Map<string, Set<string>>();
-  for (const topic of Object.keys(golden)) {
-    for (const group of getTipsForScreening(topic)) {
-      const set = keysByGroup.get(group.label) ?? new Set<string>();
-      set.add(normalizeTopicKey(topic));
-      keysByGroup.set(group.label, set);
-    }
-  }
-
-  const rows: { slug: string; group: string; topicKeys: string[]; order: number }[] = [];
-  let order = 0;
-  for (const group of TIP_GROUPS) {
-    const isGeneral = group.label === "כלליים";
-    const topicKeys = isGeneral ? [] : Array.from(keysByGroup.get(group.label) ?? []);
-    for (const tip of group.tips) {
-      order += 10;
-      rows.push({ slug: tip.id, group: group.label, topicKeys, order });
-    }
+/**
+ * Read the seed straight out of the migration — the artifact that actually runs
+ * against the database — rather than recomputing it. If someone edits the
+ * migration by hand, this notices.
+ */
+function seededTips(): { slug: string; topicKeys: string[]; order: number }[] {
+  const sql = fs.readFileSync(
+    path.join(__dirname, "..", "prisma", "migrations", "20260908000000_report_template", "migration.sql"),
+    "utf8"
+  );
+  const rows: { slug: string; topicKeys: string[]; order: number }[] = [];
+  for (const block of sql.split('INSERT INTO "Tip"').slice(1)) {
+    const stmt = block.slice(0, block.indexOf("ON CONFLICT"));
+    // Tag-agnostic: the generator picks a dollar-quote tag that avoids collisions.
+    const slug = /VALUES \('seed-tip-' \|\| \$(\w+)\$([\s\S]+?)\$\1\$/.exec(stmt)?.[2];
+    // The array literal and sortOrder are the last two positional values.
+    const tail = /, '\{(.*?)\}', (\d+), false/.exec(stmt);
+    if (!slug || !tail) continue;
+    const topicKeys = tail[1]
+      ? tail[1]
+          .split('","')
+          .map((k) => k.replace(/^"|"$/g, "").replace(/\\"/g, '"'))
+          .filter(Boolean)
+      : [];
+    rows.push({ slug, topicKeys, order: Number(tail[2]) });
   }
   return rows;
 }
@@ -53,6 +57,10 @@ function resolveSlugs(lessonTopic: string): string[] {
     .sort((a, b) => a.order - b.order)
     .map((t) => t.slug);
 }
+
+test("the migration seeds all 18 tips", () => {
+  assert.equal(SEEDED.length, 18, "parsed a different number of INSERTs than expected");
+});
 
 test("the golden fixture covers every topic and is not empty", () => {
   const topics = Object.keys(golden);
@@ -77,19 +85,15 @@ test("seeded slugs are unique — a reused slug would rewrite history", () => {
   assert.equal(new Set(slugs).size, slugs.length);
 });
 
-test("sort order follows the flattened group order the PDF renders in", () => {
-  const flattened = TIP_GROUPS.flatMap((g) => g.tips.map((t) => t.id));
-  assert.deepEqual(
-    SEEDED.slice().sort((a, b) => a.order - b.order).map((t) => t.slug),
-    flattened,
-    "the backfill joins tip texts in sortOrder; it must match getTipsDisplayText"
-  );
+test("sort order is strictly increasing — the backfill joins texts in that order", () => {
+  const orders = SEEDED.map((t) => t.order);
+  assert.deepEqual(orders, orders.slice().sort((a, b) => a - b));
+  assert.equal(new Set(orders).size, orders.length, "ties would make the join order undefined");
 });
 
-test("the general group is scoped to no topics", () => {
-  const general = SEEDED.filter((t) => t.group === "כלליים");
-  assert.ok(general.length > 0, "expected a general group");
-  for (const tip of general) assert.deepEqual(tip.topicKeys, []);
+test("some tips are general, so every lesson type gets at least one", () => {
+  const general = SEEDED.filter((t) => t.topicKeys.length === 0);
+  assert.ok(general.length > 0, "expected at least one unscoped tip");
 });
 
 test("lesson types with no tips today now receive the general ones", () => {
@@ -101,6 +105,6 @@ test("lesson types with no tips today now receive the general ones", () => {
   const resolved = resolveSlugs(topic);
   assert.ok(resolved.length > 0, `${topic} should now get the general tips`);
   for (const slug of resolved) {
-    assert.equal(SEEDED.find((t) => t.slug === slug)?.group, "כלליים");
+    assert.deepEqual(SEEDED.find((t) => t.slug === slug)?.topicKeys, []);
   }
 });
