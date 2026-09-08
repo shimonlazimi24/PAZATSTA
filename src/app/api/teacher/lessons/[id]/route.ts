@@ -53,6 +53,10 @@ export async function GET(
           pointsToKeep: lesson.summary.pointsToKeep,
           pointsToImprove: lesson.summary.pointsToImprove,
           tips: lesson.summary.tips,
+          tipsCustom: lesson.summary.tipsCustom,
+          // The read-only view renders this directly; without it a completed
+          // report would fall back to resolving slugs and lose the freeze.
+          tipsSnapshot: lesson.summary.tipsSnapshot,
           recommendations: lesson.summary.recommendations,
           pdfUrl: lesson.summary.pdfUrl,
         }
