@@ -429,7 +429,7 @@ export default function TeacherLessonReportPage() {
                 onChange={(e) => setSummaryText(e.target.value)}
                 rows={3}
                 className={fieldClass}
-                placeholder="סיכום כללי של השיעור"
+                placeholder={fieldByKey.get("summaryText")?.placeholder || "סיכום כללי של השיעור"}
                 disabled={status === "loading"}
                 required
               />
@@ -447,7 +447,7 @@ export default function TeacherLessonReportPage() {
                 onChange={(e) => setPointsToKeep(e.target.value)}
                 rows={2}
                 className={fieldClass}
-                placeholder="מה עבד טוב, לשמור עליו"
+                placeholder={fieldByKey.get("pointsToKeep")?.placeholder || "מה עבד טוב, לשמור עליו"}
                 disabled={status === "loading"}
                 required
               />
@@ -465,7 +465,7 @@ export default function TeacherLessonReportPage() {
                 onChange={(e) => setPointsToImprove(e.target.value)}
                 rows={2}
                 className={fieldClass}
-                placeholder="מה לשפר"
+                placeholder={fieldByKey.get("pointsToImprove")?.placeholder || "מה לשפר"}
                 disabled={status === "loading"}
                 required
               />
@@ -534,7 +534,7 @@ export default function TeacherLessonReportPage() {
                 onChange={(e) => setRecommendations(e.target.value)}
                 rows={2}
                 className={fieldClass}
-                placeholder="המלצות לשיעורים הבאים"
+                placeholder={fieldByKey.get("recommendations")?.placeholder || "המלצות לשיעורים הבאים"}
                 disabled={status === "loading"}
                 required
               />
@@ -552,7 +552,7 @@ export default function TeacherLessonReportPage() {
                 onChange={(e) => setHomeworkText(e.target.value)}
                 rows={2}
                 className={fieldClass}
-                placeholder="תרגול והכנה לשיעור הבא"
+                placeholder={fieldByKey.get("homeworkText")?.placeholder || "תרגול והכנה לשיעור הבא"}
                 disabled={status === "loading"}
               />
             </div>

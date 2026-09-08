@@ -49,12 +49,12 @@ ALTER TABLE "LessonSummary" ADD COLUMN IF NOT EXISTS "tipsSnapshot" TEXT NOT NUL
 -- its own headings, because PDFs re-render from the database on every view and a
 -- renamed label would otherwise rewrite reports parents already received.
 INSERT INTO "ReportFieldConfig" ("key", "label", "helpText", "placeholder", "isRequired", "updatedAt") VALUES
-  ('summaryText',     'סיכום כללי',    '', 'סיכום כללי של השיעור',      true,  CURRENT_TIMESTAMP),
-  ('pointsToKeep',    'נקודות לשימור', '', '',                           true,  CURRENT_TIMESTAMP),
-  ('pointsToImprove', 'נקודות לשיפור', '', '',                           true,  CURRENT_TIMESTAMP),
-  ('tips',            'טיפים',         '', '',                           false, CURRENT_TIMESTAMP),
-  ('recommendations', 'המלצות להמשך',  '', '',                           true,  CURRENT_TIMESTAMP),
-  ('homeworkText',    'משימות לתרגול', '', '',                           false, CURRENT_TIMESTAMP)
+  ('summaryText',     'סיכום כללי',    '', 'סיכום כללי של השיעור',  true,  CURRENT_TIMESTAMP),
+  ('pointsToKeep',    'נקודות לשימור', '', 'מה עבד טוב, לשמור עליו', true,  CURRENT_TIMESTAMP),
+  ('pointsToImprove', 'נקודות לשיפור', '', 'מה לשפר',                true,  CURRENT_TIMESTAMP),
+  ('tips',            'טיפים',         '', '',                       false, CURRENT_TIMESTAMP),
+  ('recommendations', 'המלצות להמשך',  '', 'המלצות לשיעורים הבאים',  true,  CURRENT_TIMESTAMP),
+  ('homeworkText',    'משימות לתרגול', '', 'תרגול והכנה לשיעור הבא', false, CURRENT_TIMESTAMP)
 ON CONFLICT ("key") DO NOTHING;
 
 -- Seed the tip library from the catalogue that lived in src/data/tips.ts.

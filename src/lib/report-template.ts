@@ -46,11 +46,11 @@ export type ReportField = {
  */
 const FIELD_DEFAULTS: readonly ReportField[] = [
   { key: "summaryText", label: "סיכום כללי", helpText: "", placeholder: "סיכום כללי של השיעור", isRequired: true },
-  { key: "pointsToKeep", label: "נקודות לשימור", helpText: "", placeholder: "", isRequired: true },
-  { key: "pointsToImprove", label: "נקודות לשיפור", helpText: "", placeholder: "", isRequired: true },
+  { key: "pointsToKeep", label: "נקודות לשימור", helpText: "", placeholder: "מה עבד טוב, לשמור עליו", isRequired: true },
+  { key: "pointsToImprove", label: "נקודות לשיפור", helpText: "", placeholder: "מה לשפר", isRequired: true },
   { key: "tips", label: "טיפים", helpText: "", placeholder: "", isRequired: false },
-  { key: "recommendations", label: "המלצות להמשך", helpText: "", placeholder: "", isRequired: true },
-  { key: "homeworkText", label: "משימות לתרגול", helpText: "", placeholder: "", isRequired: false },
+  { key: "recommendations", label: "המלצות להמשך", helpText: "", placeholder: "המלצות לשיעורים הבאים", isRequired: true },
+  { key: "homeworkText", label: "משימות לתרגול", helpText: "", placeholder: "תרגול והכנה לשיעור הבא", isRequired: false },
 ];
 
 export const REPORT_FIELD_KEYS: readonly ReportFieldKey[] = FIELD_DEFAULTS.map((f) => f.key);

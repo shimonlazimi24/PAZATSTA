@@ -115,6 +115,37 @@ export function TipsLibraryBlock() {
     else load();
   }
 
+  /**
+   * Move a tip past its neighbour by swapping sortOrder.
+   *
+   * Order matters beyond presentation: it is the order tips are joined into the
+   * snapshot, so a teacher's report reads in the sequence set here.
+   */
+  async function move(tip: AdminTip, direction: -1 | 1) {
+    const ordered = tips.filter((t) => !t.isArchived);
+    const index = ordered.findIndex((t) => t.id === tip.id);
+    const neighbour = ordered[index + direction];
+    if (!neighbour) return;
+
+    setSavingId(tip.id);
+    const results = await Promise.all([
+      apiJson(`/api/admin/tips/${tip.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sortOrder: neighbour.sortOrder }),
+      }),
+      apiJson(`/api/admin/tips/${neighbour.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sortOrder: tip.sortOrder }),
+      }),
+    ]);
+    setSavingId(null);
+    const failed = results.find((r) => !r.ok);
+    if (failed && !failed.ok) setMessage({ type: "err", text: failed.error });
+    load();
+  }
+
   async function restore(tip: AdminTip) {
     setSavingId(tip.id);
     const result = await apiJson(`/api/admin/tips/${tip.id}`, {
@@ -128,7 +159,11 @@ export function TipsLibraryBlock() {
   }
 
   const visible = tips.filter((t) => showArchived || !t.isArchived);
+  const existingGroups = Array.from(
+    new Set(tips.map((t) => t.groupLabel.trim()).filter(Boolean))
+  ).sort();
   const archivedCount = tips.filter((t) => t.isArchived).length;
+  const activeCount = tips.filter((t) => !t.isArchived).length;
 
   return (
     <div className="space-y-6" dir="rtl">
@@ -164,13 +199,29 @@ export function TipsLibraryBlock() {
               required
               hint="מה שהמורה רואה לצד תיבת הסימון"
             />
-            <FormField
-              label="כותרת קבוצה"
-              name="tip-group"
-              value={draft.groupLabel}
-              onChange={(v) => setDraft((d) => ({ ...d, groupLabel: v }))}
-              hint="לקיבוץ ויזואלי בלבד, למשל ״צו ראשון - דפר״"
-            />
+            <div className="text-right">
+              <label htmlFor="tip-group" className="block text-sm font-medium mb-1">
+                כותרת קבוצה
+              </label>
+              <input
+                id="tip-group"
+                list="tip-group-options"
+                value={draft.groupLabel}
+                onChange={(e) => setDraft((d) => ({ ...d, groupLabel: e.target.value }))}
+                className={fieldClass}
+                placeholder="למשל ״צו ראשון - דפר״"
+              />
+              {/* Existing groups are offered, so a typo does not silently create a
+                  second group with almost the same name. */}
+              <datalist id="tip-group-options">
+                {existingGroups.map((g) => (
+                  <option key={g} value={g} />
+                ))}
+              </datalist>
+              <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+                לקיבוץ ויזואלי בלבד במסך של המורה.
+              </p>
+            </div>
             <div className="text-right">
               <label htmlFor="tip-text" className="block text-sm font-medium mb-1">
                 תוכן <span className="text-[var(--color-primary)]">*</span>
@@ -262,7 +313,7 @@ export function TipsLibraryBlock() {
           </Card>
         ) : (
           <ul className="space-y-2">
-            {visible.map((tip) => (
+            {visible.map((tip, index) => (
               <li key={tip.id}>
                 <Card className="p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -290,6 +341,24 @@ export function TipsLibraryBlock() {
                         </button>
                       ) : (
                         <>
+                          <button
+                            type="button"
+                            onClick={() => move(tip, -1)}
+                            disabled={savingId !== null || index === 0}
+                            aria-label={`העברת ${tip.label} למעלה`}
+                            className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-primary)] disabled:opacity-30"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => move(tip, 1)}
+                            disabled={savingId !== null || index === activeCount - 1}
+                            aria-label={`העברת ${tip.label} למטה`}
+                            className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-primary)] disabled:opacity-30"
+                          >
+                            ↓
+                          </button>
                           <button
                             type="button"
                             onClick={() => startEdit(tip)}
