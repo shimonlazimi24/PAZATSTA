@@ -99,12 +99,17 @@ export default function TeacherLessonReportPage() {
   // field wording is admin-configurable. Both arrive together.
   useEffect(() => {
     if (!id) return;
-    apiJson<{ fields: ReportField[]; tips: OfferedTip[] }>(
-      `/api/report-template?lessonId=${encodeURIComponent(id)}`
-    ).then((r) => {
-      if (r.ok) setTemplate({ fields: r.data.fields, tips: r.data.tips });
-    });
-  }, [id]);
+    // screeningType is a dependency: on a lesson with no topic the teacher picks
+    // it here, and the offered tips have to follow that choice.
+    const query = screeningType.trim()
+      ? `?lessonId=${encodeURIComponent(id)}&topic=${encodeURIComponent(screeningType.trim())}`
+      : `?lessonId=${encodeURIComponent(id)}`;
+    apiJson<{ fields: ReportField[]; tips: OfferedTip[] }>(`/api/report-template${query}`).then(
+      (r) => {
+        if (r.ok) setTemplate({ fields: r.data.fields, tips: r.data.tips });
+      }
+    );
+  }, [id, screeningType]);
 
   const fieldByKey = useMemo(() => {
     const map = new Map<string, ReportField>();

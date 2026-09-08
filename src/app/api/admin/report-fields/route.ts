@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getReportFields, isReportFieldKey } from "@/lib/report-template";
-import { requireAdmin, missingTableResponse } from "../tips/route";
+import { requireAdmin, missingTableResponse } from "@/lib/admin-api";
 
 export const dynamic = "force-dynamic";
 

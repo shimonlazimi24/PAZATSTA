@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { normalizeTopicKey } from "@/lib/topic-key";
 import { MAX_TIP_LENGTH } from "@/lib/report-template";
-import { requireAdmin, missingTableResponse } from "../route";
+import { requireAdmin, missingTableResponse } from "@/lib/admin-api";
 
 export const dynamic = "force-dynamic";
 

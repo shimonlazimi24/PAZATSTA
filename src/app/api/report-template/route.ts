@@ -25,10 +25,15 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
   }
 
-  const lessonId = new URL(req.url).searchParams.get("lessonId")?.trim();
+  const params = new URL(req.url).searchParams;
+  const lessonId = params.get("lessonId")?.trim();
   if (!lessonId) {
     return NextResponse.json({ error: "חסר מזהה שיעור" }, { status: 400 });
   }
+  // When a lesson has no topic the teacher picks the screening type in the form,
+  // and the tips have to follow that choice before it is saved. Overriding which
+  // tips are offered is the point here, and tips carry no student data.
+  const topicOverride = params.get("topic")?.trim();
 
   const lesson = await prisma.lesson.findFirst({
     where: isAdmin ? { id: lessonId } : { id: lessonId, teacherId: user.id },
@@ -41,7 +46,8 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "שיעור לא נמצא" }, { status: 404 });
   }
 
-  const topic = lesson.topic ?? lesson.student.studentProfile?.currentScreeningType ?? null;
+  const topic =
+    topicOverride || lesson.topic || lesson.student.studentProfile?.currentScreeningType || null;
 
   const [fields, tips] = await Promise.all([getReportFields(), getTipsForLesson(topic)]);
 

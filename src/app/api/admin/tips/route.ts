@@ -1,32 +1,11 @@
 import { NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { getUserFromSession } from "@/lib/auth";
-import { canAccessAdmin } from "@/lib/admin";
+import { requireAdmin, missingTableResponse } from "@/lib/admin-api";
 import { normalizeTopicKey } from "@/lib/topic-key";
 import { MAX_TIP_LENGTH } from "@/lib/report-template";
 
 export const dynamic = "force-dynamic";
-
-export async function requireAdmin(): Promise<{ error: NextResponse } | { ok: true }> {
-  const user = await getUserFromSession();
-  if (!user || !canAccessAdmin(user)) {
-    return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
-  }
-  return { ok: true };
-}
-
-/** A deploy that lands before the migration should say so, not 500. */
-export function missingTableResponse(e: unknown): NextResponse | null {
-  if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2021") {
-    return NextResponse.json(
-      { error: "טבלת הטיפים לא קיימת עדיין. הריצו: npx prisma migrate deploy" },
-      { status: 503 }
-    );
-  }
-  return null;
-}
 
 const TipSchema = z.object({
   label: z.string().trim().min(1, "נדרשת כותרת").max(200),
