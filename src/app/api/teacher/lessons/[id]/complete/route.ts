@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import {
+  buildTipsSnapshot,
+  getReportFields,
+  parseStoredSlugs,
+  MAX_TIP_SELECTION,
+} from "@/lib/report-template";
 import { prisma } from "@/lib/db";
 import { getUserFromSession } from "@/lib/auth";
 import { sendLessonCompleted } from "@/lib/email";
@@ -22,7 +28,16 @@ const ReportSchema = z.object({
   homeworkText: text(),
   pointsToKeep: text(),
   pointsToImprove: text(),
+  /** Legacy shape: a comma-separated slug list. Still accepted so a client that
+   *  has not reloaded across the deploy keeps working. */
   tips: text(),
+  /** Current shape: the selected tip slugs. */
+  tipIds: z
+    .unknown()
+    .transform((v) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []))
+    .pipe(z.array(z.string().trim().max(120)).max(MAX_TIP_SELECTION)),
+  /** Free text the teacher added alongside the selection. */
+  tipsCustom: text(),
   recommendations: text(),
   screeningType: text().transform((v) => v || null),
   parentEmail: text().transform((v) => v || null),
@@ -65,6 +80,8 @@ export async function POST(
       pointsToKeep,
       pointsToImprove,
       tips,
+      tipIds,
+      tipsCustom,
       recommendations,
       screeningType,
       parentEmail: parentEmailFromBody,
@@ -73,11 +90,20 @@ export async function POST(
     const screeningDate = screeningDateStr
       ? new Date(screeningDateStr + "T12:00:00")
       : null;
-    const missing: string[] = [];
-    if (!summaryText) missing.push("סיכום כללי");
-    if (!pointsToKeep) missing.push("נקודות לשימור");
-    if (!pointsToImprove) missing.push("נקודות לשיפור");
-    if (!recommendations) missing.push("המלצות להמשך");
+    // Which fields are required, and what they are called, is admin-configurable.
+    // The server stays the authority; the form's asterisks are only a hint.
+    const values: Record<string, string> = {
+      summaryText,
+      pointsToKeep,
+      pointsToImprove,
+      recommendations,
+      homeworkText,
+      tips,
+    };
+    const fields = await getReportFields();
+    const missing = fields
+      .filter((f) => f.isRequired && !values[f.key]?.trim())
+      .map((f) => f.label);
     if (missing.length > 0) {
       return NextResponse.json(
         { error: `נא למלא את השדות החובה: ${missing.join(", ")}` },
@@ -113,6 +139,13 @@ export async function POST(
     const teacherName = lesson.teacher.name || lesson.teacher.email;
     const studentName = lesson.student.name || lesson.student.email;
 
+    // The selection may arrive either way while clients are mid-deploy.
+    const selectedSlugs = tipIds.length > 0 ? tipIds : parseStoredSlugs(tips);
+    // Resolved here, never taken from the client: the snapshot is what a parent
+    // reads, and it must not be arbitrary text a request supplied. Freezing it now
+    // is what stops a later edit to a tip from rewriting this report.
+    const tipsSnapshot = await buildTipsSnapshot(selectedSlugs, tipsCustom);
+
     await prisma.$transaction([
       prisma.lessonSummary.create({
         data: {
@@ -121,7 +154,9 @@ export async function POST(
           homeworkText: homeworkText || "",
           pointsToKeep: pointsToKeep || "",
           pointsToImprove: pointsToImprove || "",
-          tips: tips || "",
+          tips: selectedSlugs.join(","),
+          tipsCustom: tipsCustom || "",
+          tipsSnapshot,
           recommendations: recommendations || "",
           pdfUrl: null,
         },

@@ -1,0 +1,179 @@
+{
+  "יום המא״ה - תחנות קבוצתיות": [
+    "maha-dinamika",
+    "maha-hadracha",
+    "maha-simulazia",
+    "maha-psicho",
+    "klalim"
+  ],
+  "יום המא״ה - מבחנים פסיכוטכניים": [
+    "maha-dinamika",
+    "maha-hadracha",
+    "maha-simulazia",
+    "maha-psicho",
+    "klalim"
+  ],
+  "קורס טיס - ירפ״א א׳ (מבחנים פסיכוטכניים)": [
+    "yirpa-kubia",
+    "yirpa-reiya",
+    "klalim"
+  ],
+  "קורס טיס - ירפא ב׳ (ראיון פסיכולוג)": [
+    "yirpa-kubia",
+    "yirpa-reiya",
+    "klalim"
+  ],
+  "צו ראשון - מבחן דפר": [
+    "dafr-kvant-klali",
+    "dafr-kvant-hastabrut",
+    "dafr-kvant-geometria",
+    "dafr-analogiot-miluliot",
+    "dafr-havana-horaot",
+    "dafr-analogiot-tzuraniot",
+    "klalim"
+  ],
+  "צו ראשון - ראיון אישי": [],
+  "כלל חמ״ן - מבחנים פסיכוטכניים (מיון ראשון)": [
+    "haman-klalim-shivutzim",
+    "haman-sedorot",
+    "haman-haskata",
+    "haman-analogiot",
+    "haman-klali",
+    "klalim"
+  ],
+  "כלל חמ״ן - ראיון אישי/מקצועי": [
+    "haman-klalim-shivutzim",
+    "haman-sedorot",
+    "haman-haskata",
+    "haman-analogiot",
+    "haman-klali",
+    "klalim"
+  ],
+  "כלל חמ״ן - מבחני מצב (דינמיקה קבוצתית)": [
+    "haman-klalim-shivutzim",
+    "haman-sedorot",
+    "haman-haskata",
+    "haman-analogiot",
+    "haman-klali",
+    "klalim"
+  ],
+  "שחקים/חבצלות - מבחנים פסיכוטכניים (מיון ראשון)": [
+    "haman-klalim-shivutzim",
+    "haman-sedorot",
+    "haman-haskata",
+    "haman-analogiot",
+    "haman-klali",
+    "klalim"
+  ],
+  "שחקים/חבצלות - ראיון אישי/מקצועי": [
+    "haman-klalim-shivutzim",
+    "haman-sedorot",
+    "haman-haskata",
+    "haman-analogiot",
+    "haman-klali",
+    "klalim"
+  ],
+  "שחקים/חבצלות - מבחני מצב (דינמיקה קבוצתית)": [
+    "haman-klalim-shivutzim",
+    "haman-sedorot",
+    "haman-haskata",
+    "haman-analogiot",
+    "haman-klali",
+    "klalim"
+  ],
+  "ייעודי קצונה - ראיון אישי/דינמיקה קבוצתית": [],
+  "עתודה אקדמאית - ראיון אישי": [],
+  "סייבר - מיון ראשוני (מבחנים פסיכוטכניים)": [
+    "haman-klalim-shivutzim",
+    "haman-sedorot",
+    "haman-haskata",
+    "haman-analogiot",
+    "haman-klali",
+    "klalim"
+  ],
+  "דפ״ר משטרה": [
+    "dafr-kvant-klali",
+    "dafr-kvant-hastabrut",
+    "dafr-kvant-geometria",
+    "dafr-analogiot-miluliot",
+    "dafr-havana-horaot",
+    "dafr-analogiot-tzuraniot",
+    "klalim"
+  ],
+  "שנות שירות / מכינה": [],
+  "גדנע חובלים": [],
+  "צו ראשון - מבחן דפ\"ר": [
+    "dafr-kvant-klali",
+    "dafr-kvant-hastabrut",
+    "dafr-kvant-geometria",
+    "dafr-analogiot-miluliot",
+    "dafr-havana-horaot",
+    "dafr-analogiot-tzuraniot",
+    "klalim"
+  ],
+  "יום המא\"ה - תחנות קבוצתיות": [
+    "maha-dinamika",
+    "maha-hadracha",
+    "maha-simulazia",
+    "maha-psicho",
+    "klalim"
+  ],
+  "יום המא\"ה - מבחנים פסיכוטכניים": [
+    "maha-dinamika",
+    "maha-hadracha",
+    "maha-simulazia",
+    "maha-psicho",
+    "klalim"
+  ],
+  "כלל חמ\"ן - מבחנים פסיכוטכניים (מיון ראשון)": [
+    "haman-klalim-shivutzim",
+    "haman-sedorot",
+    "haman-haskata",
+    "haman-analogiot",
+    "haman-klali",
+    "klalim"
+  ],
+  "כלל חמ\"ן - ראיון אישי/מקצועי": [
+    "haman-klalim-shivutzim",
+    "haman-sedorot",
+    "haman-haskata",
+    "haman-analogiot",
+    "haman-klali",
+    "klalim"
+  ],
+  "כלל חמ\"ן - מבחני מצב (דינמיקה קבוצתית)": [
+    "haman-klalim-shivutzim",
+    "haman-sedorot",
+    "haman-haskata",
+    "haman-analogiot",
+    "haman-klali",
+    "klalim"
+  ],
+  "קורס טיס - ירפ\"א א' (מבחנים פסיכוטכניים)": [
+    "yirpa-kubia",
+    "yirpa-reiya",
+    "klalim"
+  ],
+  "קורס טיס - ירפ\"א ב' (ראיון פסיכולוג)": [
+    "yirpa-kubia",
+    "yirpa-reiya",
+    "klalim"
+  ],
+  "שנות שירות / מכינה / גנע חובלים": [],
+  "מבחן דפ״ר חוזר": [
+    "dafr-kvant-klali",
+    "dafr-kvant-hastabrut",
+    "dafr-kvant-geometria",
+    "dafr-analogiot-miluliot",
+    "dafr-havana-horaot",
+    "dafr-analogiot-tzuraniot",
+    "klalim"
+  ],
+  "יום המא״ה חוזר (תחנות קבוצתיות/מבחנים פסיכוטכניים)": [
+    "maha-dinamika",
+    "maha-hadracha",
+    "maha-simulazia",
+    "maha-psicho",
+    "klalim"
+  ]
+}

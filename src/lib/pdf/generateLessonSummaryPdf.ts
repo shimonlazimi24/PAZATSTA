@@ -3,7 +3,7 @@ import fs from "fs/promises";
 import { prisma } from "@/lib/db";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { createLessonSummaryDocument } from "./LessonSummaryPDF";
-import { getTipsDisplayText } from "@/data/tips";
+import { resolveTipsText } from "@/lib/report-template";
 
 const STORAGE_DIR = process.env.STORAGE_PATH || path.join(process.cwd(), "storage", "pdfs");
 const SUBDIR = "lesson-summaries";
@@ -91,7 +91,7 @@ export async function generateLessonPdfBuffer(
       homeworkText: summary.homeworkText || "—",
       pointsToKeep: summary.pointsToKeep || "",
       pointsToImprove: summary.pointsToImprove || "",
-      tips: getTipsDisplayText(summary.tips || "") || "",
+      tips: await resolveTipsText(summary),
       recommendations: summary.recommendations || "",
     });
     const buffer = await renderToBuffer(doc);

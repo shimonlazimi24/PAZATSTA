@@ -1,6 +1,10 @@
 /**
- * All topic labels used in booking flow. Must match CATEGORIES.subs[].label in book page exactly.
- * Used for teacher specialties chip selector and server-side validation.
+ * Topic labels offered as teacher specialties.
+ *
+ * NOTE: this is a subset of the booking page's CATEGORIES, not a mirror of it —
+ * the two "חוזר" (retake) options are bookable but absent here. Use
+ * ALL_LESSON_TOPIC_LABELS below when you need every label a Lesson.topic can
+ * actually hold.
  */
 export const BOOKING_TOPIC_LABELS = [
   "יום המא״ה - תחנות קבוצתיות",
@@ -24,6 +28,31 @@ export const BOOKING_TOPIC_LABELS = [
 ] as const;
 
 export type BookingTopicLabel = (typeof BOOKING_TOPIC_LABELS)[number];
+
+/**
+ * Retake options that exist only in the booking page's CATEGORIES. A lesson can
+ * carry them, so anything scoping by lesson type has to know about them.
+ */
+export const RETAKE_TOPIC_LABELS = [
+  "מבחן דפ״ר חוזר",
+  "יום המא״ה חוזר (תחנות קבוצתיות/מבחנים פסיכוטכניים)",
+] as const;
+
+/** Stands for every workshop, whose own topic is generated per instance. */
+export const WORKSHOP_TOPIC_LABEL = "סדנה";
+
+/**
+ * Every label a lesson's topic can hold, for pickers that scope by lesson type.
+ * Deduplicated on the raw string; callers that compare should still normalize,
+ * since the same type is spelled differently across these lists.
+ */
+export const ALL_LESSON_TOPIC_LABELS: string[] = Array.from(
+  new Set<string>([
+    ...BOOKING_TOPIC_LABELS,
+    ...RETAKE_TOPIC_LABELS,
+    WORKSHOP_TOPIC_LABEL,
+  ])
+);
 
 /**
  * Screening topics: flat list for storage (currentScreeningType), grouped for UI with colors.
