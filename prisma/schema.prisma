@@ -157,12 +157,55 @@ model LessonSummary {
   homeworkText     String   @default("")
   pointsToKeep     String   @default("") // נקודות לשימור (preservationPoints)
   pointsToImprove  String   @default("") // נקודות לשיפור (improvementPoints)
+  /// Comma-separated Tip.slug values the teacher selected. A record of the choice.
   tips             String   @default("")
+  /// Free text the teacher added alongside the selected tips.
+  tipsCustom       String   @default("")
+  /// Tip text resolved at completion and frozen. Editing a Tip afterwards must not
+  /// change a report a parent already received, so rendering prefers this over
+  /// re-resolving `tips`. Empty on rows written before this column existed.
+  tipsSnapshot     String   @default("")
   recommendations  String   @default("") // המלצות להמשך (nextRecommendations)
   pdfUrl           String?
   createdAt        DateTime @default(now())
 
   lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+}
+
+/// A reusable tip the teacher can attach to a lesson summary. Managed by the admin.
+model Tip {
+  id         String   @id @default(cuid())
+  /// Stable identifier carried in historical LessonSummary.tips values. Never reuse.
+  slug       String   @unique
+  label      String
+  text       String
+  /// Display-only heading in the teacher's picker, e.g. "צו ראשון - דפר".
+  groupLabel String   @default("")
+  /// Normalized topic keys (see normalizeTopicKey) this tip applies to.
+  /// Empty = general, offered for every lesson.
+  topics     String[] @default([])
+  sortOrder  Int      @default(0)
+  isArchived Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([isArchived, sortOrder])
+}
+
+/// Wording for one field of the lesson summary form, as the teacher sees it while
+/// writing. It deliberately does NOT drive the PDF headings: PDFs re-render from
+/// the database on every view, so a renamed label would rewrite reports parents
+/// already received.
+///
+/// One row per LessonSummary column; the set of fields is fixed, so `key` is the
+/// primary key and rows are only ever updated, never created or deleted.
+model ReportFieldConfig {
+  key         String   @id
+  label       String
+  helpText    String   @default("")
+  placeholder String   @default("")
+  isRequired  Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
 }
 
 model PublicPdfLink {

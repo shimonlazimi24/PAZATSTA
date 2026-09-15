@@ -15,6 +15,8 @@ const MENU_ITEMS = [
   { id: "teacher", label: "הגדרת מורה", href: "/admin?section=teacher" },
   { id: "teachers", label: "רשימת מורים", href: "/admin?section=teachers" },
   { id: "summary", label: "סיכום שעות לתשלום", href: "/admin?section=summary" },
+  { id: "tips", label: "טיפים לדוח", href: "/admin?section=tips" },
+  { id: "report-fields", label: "שדות דוח הסיכום", href: "/admin?section=report-fields" },
   { id: "statistics", label: "סטטיסטיקות", href: "/admin/statistics" },
   { id: "workshop", label: "יצירת מפגש סדנה", href: "/admin/workshop" },
 ] as const;

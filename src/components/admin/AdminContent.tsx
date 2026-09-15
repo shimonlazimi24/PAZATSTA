@@ -2,6 +2,8 @@
 
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { TipsLibraryBlock } from "@/components/admin/TipsLibraryBlock";
+import { ReportFieldsBlock } from "@/components/admin/ReportFieldsBlock";
 import { PendingLessonsBlock } from "./PendingLessonsBlock";
 import { AdminWeeklyCalendar } from "./AdminWeeklyCalendar";
 import { DefineTeacherForm } from "./DefineTeacherForm";
@@ -13,6 +15,28 @@ function AdminContentInner() {
   const searchParams = useSearchParams();
   const section = searchParams.get("section") || "weekly";
   const teacherEditId = searchParams.get("id") || "";
+
+  if (section === "tips") {
+    return (
+      <div className="max-w-3xl">
+        <h2 className="text-xl font-bold text-[var(--color-text)] mb-4 text-right">
+          טיפים לדוח הסיכום
+        </h2>
+        <TipsLibraryBlock />
+      </div>
+    );
+  }
+
+  if (section === "report-fields") {
+    return (
+      <div className="max-w-2xl">
+        <h2 className="text-xl font-bold text-[var(--color-text)] mb-4 text-right">
+          שדות דוח הסיכום
+        </h2>
+        <ReportFieldsBlock />
+      </div>
+    );
+  }
 
   if (section === "pending") {
     return (

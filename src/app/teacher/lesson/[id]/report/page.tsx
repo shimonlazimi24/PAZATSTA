@@ -1,19 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { BackLink } from "@/components/design/BackLink";
 import { apiJson } from "@/lib/api";
 import { formatHebrewShortDate } from "@/lib/dates";
 import { SCREENING_TOPICS } from "@/data/topics";
-import {
-  getTipsForScreening,
-  hasPredefinedTips,
-  parseTipsToIds,
-  buildTipsFromIds,
-  getTipsDisplayText,
-} from "@/data/tips";
+import type { ReportField, OfferedTip } from "@/lib/report-template";
 import { isLessonStarted } from "@/lib/dates";
 
 /** Mirrors the cap enforced by /api/teacher/lessons/[id]/complete. */
@@ -42,6 +36,8 @@ type Lesson = {
     pointsToKeep?: string;
     pointsToImprove?: string;
     tips?: string;
+    tipsCustom?: string;
+    tipsSnapshot?: string;
     recommendations?: string;
     pdfUrl?: string | null;
   } | null;
@@ -57,7 +53,9 @@ export default function TeacherLessonReportPage() {
   const [homeworkText, setHomeworkText] = useState("");
   const [pointsToKeep, setPointsToKeep] = useState("");
   const [pointsToImprove, setPointsToImprove] = useState("");
-  const [tips, setTips] = useState("");
+  const [tipSlugs, setTipSlugs] = useState<Set<string>>(new Set());
+  const [tipsCustom, setTipsCustom] = useState("");
+  const [template, setTemplate] = useState<{ fields: ReportField[]; tips: OfferedTip[] } | null>(null);
   const [recommendations, setRecommendations] = useState("");
   const [screeningType, setScreeningType] = useState("");
   const [screeningDate, setScreeningDate] = useState("");
@@ -88,16 +86,52 @@ export default function TeacherLessonReportPage() {
       .finally(() => setLoading(false));
   }, [id, router]);
 
-  const tipsIds = parseTipsToIds(tips);
-  const tipGroups = getTipsForScreening(screeningType);
-  function toggleTip(id: string) {
-    const next = new Set(tipsIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setTips(buildTipsFromIds(next));
+  function toggleTip(slug: string) {
+    setTipSlugs((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
+      return next;
+    });
   }
 
-  const DRAFT_KEY = id ? `paza_report_draft_${id}` : "";
+  // The tips offered depend on the lesson's type, which the server resolves; the
+  // field wording is admin-configurable. Both arrive together.
+  useEffect(() => {
+    if (!id) return;
+    // screeningType is a dependency: on a lesson with no topic the teacher picks
+    // it here, and the offered tips have to follow that choice.
+    const query = screeningType.trim()
+      ? `?lessonId=${encodeURIComponent(id)}&topic=${encodeURIComponent(screeningType.trim())}`
+      : `?lessonId=${encodeURIComponent(id)}`;
+    apiJson<{ fields: ReportField[]; tips: OfferedTip[] }>(`/api/report-template${query}`).then(
+      (r) => {
+        if (r.ok) setTemplate({ fields: r.data.fields, tips: r.data.tips });
+      }
+    );
+  }, [id, screeningType]);
+
+  const fieldByKey = useMemo(() => {
+    const map = new Map<string, ReportField>();
+    for (const f of template?.fields ?? []) map.set(f.key, f);
+    return map;
+  }, [template]);
+
+  /** Tips grouped for display, preserving the order the server returned. */
+  const tipGroups = useMemo(() => {
+    const groups: { label: string; tips: OfferedTip[] }[] = [];
+    for (const tip of template?.tips ?? []) {
+      const label = tip.groupLabel || "כלליים";
+      const existing = groups.find((g) => g.label === label);
+      if (existing) existing.tips.push(tip);
+      else groups.push({ label, tips: [tip] });
+    }
+    return groups;
+  }, [template]);
+
+  // Bumped: the previous draft shape stored tips as a comma-separated string, and
+  // restoring it into a Set-based selection would silently drop the choices.
+  const DRAFT_KEY = id ? `paza_report_draft_v2_${id}` : "";
 
   useEffect(() => {
     if (lesson) {
@@ -109,7 +143,15 @@ export default function TeacherLessonReportPage() {
         setHomeworkText(lesson.summary.homeworkText);
         setPointsToKeep(lesson.summary.pointsToKeep ?? "");
         setPointsToImprove(lesson.summary.pointsToImprove ?? "");
-        setTips(lesson.summary.tips ?? "");
+        setTipSlugs(
+          new Set(
+            (lesson.summary.tips ?? "")
+              .split(",")
+              .map((t) => t.trim())
+              .filter(Boolean)
+          )
+        );
+        setTipsCustom(lesson.summary.tipsCustom ?? "");
         setRecommendations(lesson.summary.recommendations ?? "");
         if (DRAFT_KEY && typeof sessionStorage !== "undefined") sessionStorage.removeItem(DRAFT_KEY);
       }
@@ -121,13 +163,14 @@ export default function TeacherLessonReportPage() {
     try {
       const raw = sessionStorage.getItem(DRAFT_KEY);
       if (raw) {
-        const d = JSON.parse(raw) as Record<string, string>;
-        if (d.summaryText !== undefined) setSummaryText(d.summaryText);
-        if (d.homeworkText !== undefined) setHomeworkText(d.homeworkText);
-        if (d.pointsToKeep !== undefined) setPointsToKeep(d.pointsToKeep);
-        if (d.pointsToImprove !== undefined) setPointsToImprove(d.pointsToImprove);
-        if (d.tips !== undefined) setTips(d.tips);
-        if (d.recommendations !== undefined) setRecommendations(d.recommendations);
+        const d = JSON.parse(raw) as Record<string, unknown>;
+        if (typeof d.summaryText === "string") setSummaryText(d.summaryText);
+        if (typeof d.homeworkText === "string") setHomeworkText(d.homeworkText);
+        if (typeof d.pointsToKeep === "string") setPointsToKeep(d.pointsToKeep);
+        if (typeof d.pointsToImprove === "string") setPointsToImprove(d.pointsToImprove);
+        if (Array.isArray(d.tipSlugs)) setTipSlugs(new Set(d.tipSlugs as string[]));
+        if (typeof d.tipsCustom === "string") setTipsCustom(d.tipsCustom);
+        if (typeof d.recommendations === "string") setRecommendations(d.recommendations);
       }
     } catch {
       /* ignore */
@@ -141,7 +184,8 @@ export default function TeacherLessonReportPage() {
       homeworkText,
       pointsToKeep,
       pointsToImprove,
-      tips,
+      tipSlugs: Array.from(tipSlugs),
+      tipsCustom,
       recommendations,
     };
     const t = setTimeout(() => {
@@ -152,7 +196,7 @@ export default function TeacherLessonReportPage() {
       }
     }, 500);
     return () => clearTimeout(t);
-  }, [DRAFT_KEY, lesson?.summary, summaryText, homeworkText, pointsToKeep, pointsToImprove, tips, recommendations]);
+  }, [DRAFT_KEY, lesson?.summary, summaryText, homeworkText, pointsToKeep, pointsToImprove, tipSlugs, tipsCustom, recommendations]);
 
   const alreadyCompleted = !!lesson?.reportCompleted || !!lesson?.summary;
   const lessonDateDisplay = lesson?.date ? formatHebrewShortDate(lesson.date) : lesson?.date ?? "—";
@@ -180,7 +224,8 @@ export default function TeacherLessonReportPage() {
         homeworkText: homeworkText.trim(),
         pointsToKeep: pointsToKeep.trim(),
         pointsToImprove: pointsToImprove.trim(),
-        tips: tips.trim(),
+        tipIds: Array.from(tipSlugs),
+        tipsCustom: tipsCustom.trim(),
         recommendations: recommendations.trim(),
         screeningType: screeningType.trim() || undefined,
         screeningDate: screeningDate.trim() || undefined,
@@ -199,7 +244,12 @@ export default function TeacherLessonReportPage() {
       }
       return;
     }
-    if (id && typeof sessionStorage !== "undefined") sessionStorage.removeItem(`paza_report_draft_${id}`);
+    if (id && typeof sessionStorage !== "undefined") {
+      sessionStorage.removeItem(DRAFT_KEY);
+      // Drop the pre-v2 draft too, so a teacher who had this page open across the
+      // deploy is not left with an orphaned entry.
+      sessionStorage.removeItem(`paza_report_draft_${id}`);
+    }
     setStatus("idle");
     apiJson<Lesson>(`/api/teacher/lessons/${id}`).then((r) => {
       if (r.ok) setLesson(r.data);
@@ -332,7 +382,7 @@ export default function TeacherLessonReportPage() {
             </p>
             <h3 className="font-semibold text-[var(--color-text)]">טיפים</h3>
             <p className="text-sm text-[var(--color-text)] whitespace-pre-wrap">
-              {getTipsDisplayText(lesson.summary?.tips ?? "") || "—"}
+              {lesson.summary?.tipsSnapshot?.trim() || lesson.summary?.tipsCustom?.trim() || "—"}
             </p>
             <h3 className="font-semibold text-[var(--color-text)]">המלצות להמשך</h3>
             <p className="text-sm text-[var(--color-text)] whitespace-pre-wrap">
@@ -367,111 +417,142 @@ export default function TeacherLessonReportPage() {
               </div>
             )}
             <div>
-              <label className={labelClass}>סיכום כללי <span className="text-red-600" aria-hidden>*</span></label>
+              <label className={labelClass}>
+                {fieldByKey.get("summaryText")?.label ?? "סיכום כללי"}
+                {(fieldByKey.get("summaryText")?.isRequired ?? true) && (
+                  <span className="text-red-600" aria-hidden> *</span>
+                )}
+              </label>
               <textarea
                 maxLength={MAX_FIELD_LENGTH}
                 value={summaryText}
                 onChange={(e) => setSummaryText(e.target.value)}
                 rows={3}
                 className={fieldClass}
-                placeholder="סיכום כללי של השיעור"
+                placeholder={fieldByKey.get("summaryText")?.placeholder || "סיכום כללי של השיעור"}
                 disabled={status === "loading"}
                 required
               />
             </div>
             <div>
-              <label className={labelClass}>נקודות לשימור <span className="text-red-600" aria-hidden>*</span></label>
+              <label className={labelClass}>
+                {fieldByKey.get("pointsToKeep")?.label ?? "נקודות לשימור"}
+                {(fieldByKey.get("pointsToKeep")?.isRequired ?? true) && (
+                  <span className="text-red-600" aria-hidden> *</span>
+                )}
+              </label>
               <textarea
                 maxLength={MAX_FIELD_LENGTH}
                 value={pointsToKeep}
                 onChange={(e) => setPointsToKeep(e.target.value)}
                 rows={2}
                 className={fieldClass}
-                placeholder="מה עבד טוב, לשמור עליו"
+                placeholder={fieldByKey.get("pointsToKeep")?.placeholder || "מה עבד טוב, לשמור עליו"}
                 disabled={status === "loading"}
                 required
               />
             </div>
             <div>
-              <label className={labelClass}>נקודות לשיפור <span className="text-red-600" aria-hidden>*</span></label>
+              <label className={labelClass}>
+                {fieldByKey.get("pointsToImprove")?.label ?? "נקודות לשיפור"}
+                {(fieldByKey.get("pointsToImprove")?.isRequired ?? true) && (
+                  <span className="text-red-600" aria-hidden> *</span>
+                )}
+              </label>
               <textarea
                 maxLength={MAX_FIELD_LENGTH}
                 value={pointsToImprove}
                 onChange={(e) => setPointsToImprove(e.target.value)}
                 rows={2}
                 className={fieldClass}
-                placeholder="מה לשפר"
+                placeholder={fieldByKey.get("pointsToImprove")?.placeholder || "מה לשפר"}
                 disabled={status === "loading"}
                 required
               />
             </div>
             <div>
-              <label className={labelClass}>טיפים</label>
-              {hasPredefinedTips(screeningType) ? (
+              <label className={labelClass}>{fieldByKey.get("tips")?.label ?? "טיפים"}</label>
+              {fieldByKey.get("tips")?.helpText ? (
+                <p className="text-sm text-[var(--color-text-muted)] mt-1">
+                  {fieldByKey.get("tips")!.helpText}
+                </p>
+              ) : null}
+              {tipGroups.length > 0 && (
                 <div className="mt-2 space-y-4">
                   {tipGroups.map((group) => (
                     <div key={group.label} className="space-y-2">
                       <p className="text-sm font-medium text-[var(--color-text-muted)]">{group.label}</p>
                       <div className="space-y-1.5">
-                        {group.tips.map((tip) => {
-                          const selected = tipsIds.has(tip.id);
-                          return (
-                            <label
-                              key={tip.id}
-                              className="flex items-start gap-2 cursor-pointer text-sm text-[var(--color-text)]"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={selected}
-                                onChange={() => toggleTip(tip.id)}
-                                disabled={status === "loading"}
-                                className="mt-0.5 rounded border-[var(--color-border)]"
-                              />
-                              <span>{tip.label}</span>
-                            </label>
-                          );
-                        })}
+                        {group.tips.map((tip) => (
+                          <label
+                            key={tip.slug}
+                            className="flex items-start gap-2 cursor-pointer text-sm text-[var(--color-text)]"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={tipSlugs.has(tip.slug)}
+                              onChange={() => toggleTip(tip.slug)}
+                              disabled={status === "loading"}
+                              className="mt-0.5 rounded border-[var(--color-border)]"
+                            />
+                            <span>{tip.label}</span>
+                          </label>
+                        ))}
                       </div>
                     </div>
                   ))}
                 </div>
-              ) : (
-                <div className="mt-2">
-                  <p className="text-sm text-[var(--color-text-muted)] mb-2">אחר — מלל חופשי</p>
-                  <textarea
-                    maxLength={MAX_FIELD_LENGTH}
-                    value={tips}
-                    onChange={(e) => setTips(e.target.value)}
-                    rows={4}
-                    className={fieldClass}
-                    placeholder="הזינו טיפים בהתאם לסוג המיון..."
-                    disabled={status === "loading"}
-                  />
-                </div>
               )}
+              {/* Always offered. It used to appear only when no tips matched the
+                  lesson type, so a teacher on a דפ״ר lesson had no way to add a
+                  note of their own. */}
+              <div className="mt-3">
+                <p className="text-sm text-[var(--color-text-muted)] mb-2">
+                  {tipGroups.length > 0 ? "להוספה — מלל חופשי" : "אחר — מלל חופשי"}
+                </p>
+                <textarea
+                  maxLength={MAX_FIELD_LENGTH}
+                  value={tipsCustom}
+                  onChange={(e) => setTipsCustom(e.target.value)}
+                  rows={4}
+                  className={fieldClass}
+                  placeholder="הזינו טיפים נוספים..."
+                  disabled={status === "loading"}
+                />
+              </div>
             </div>
             <div>
-              <label className={labelClass}>המלצות להמשך <span className="text-red-600" aria-hidden>*</span></label>
+              <label className={labelClass}>
+                {fieldByKey.get("recommendations")?.label ?? "המלצות להמשך"}
+                {(fieldByKey.get("recommendations")?.isRequired ?? true) && (
+                  <span className="text-red-600" aria-hidden> *</span>
+                )}
+              </label>
               <textarea
                 maxLength={MAX_FIELD_LENGTH}
                 value={recommendations}
                 onChange={(e) => setRecommendations(e.target.value)}
                 rows={2}
                 className={fieldClass}
-                placeholder="המלצות לשיעורים הבאים"
+                placeholder={fieldByKey.get("recommendations")?.placeholder || "המלצות לשיעורים הבאים"}
                 disabled={status === "loading"}
                 required
               />
             </div>
             <div>
-              <label className={labelClass}>משימות לתרגול (אופציונלי)</label>
+              <label className={labelClass}>
+                {fieldByKey.get("homeworkText")?.label ?? "משימות לתרגול"}
+                {fieldByKey.get("homeworkText")?.isRequired && (
+                  <span className="text-red-600" aria-hidden> *</span>
+                )}
+              </label>
               <textarea
                 maxLength={MAX_FIELD_LENGTH}
                 value={homeworkText}
                 onChange={(e) => setHomeworkText(e.target.value)}
                 rows={2}
                 className={fieldClass}
-                placeholder="תרגול והכנה לשיעור הבא"
+                placeholder={fieldByKey.get("homeworkText")?.placeholder || "תרגול והכנה לשיעור הבא"}
                 disabled={status === "loading"}
               />
             </div>
