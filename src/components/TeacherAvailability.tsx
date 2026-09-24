@@ -193,10 +193,9 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange, t
     if (allSlotsAdded) {
       setFullDayLoading(true);
       try {
-        const res = await fetch(
-          `${apiBase}?date=${encodeURIComponent(selectedDate)}`,
-          { method: "DELETE", credentials: "include" }
-        );
+        const res = await apiJson(`${apiBase}?date=${encodeURIComponent(selectedDate)}`, {
+          method: "DELETE",
+        });
         if (res.ok) {
           setSlots((prev) => {
             const next = prev.filter((s) => s.date !== selectedDate);
@@ -204,7 +203,7 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange, t
             return next;
           });
         } else {
-          setLoadError("שגיאה בהסרת המשבצות. נסו שוב.");
+          setLoadError(`שגיאה בהסרת המשבצות (${res.status}): ${res.error}`);
         }
       } catch {
         setLoadError("שגיאה בהסרת המשבצות. נסו שוב.");
@@ -223,14 +222,13 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange, t
       startTime: o.startTime,
       endTime: o.endTime,
     }));
-    const res = await fetch(teacherId ? `${apiBase}` : "/api/teacher/availability/batch", {
+    const res = await apiJson(teacherId ? `${apiBase}` : "/api/teacher/availability/batch", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      credentials: "include",
       body: JSON.stringify({ slots: slotsPayload }),
     });
     if (!res.ok) {
-      setLoadError("שגיאה בשמירת המשבצות. נסו שוב.");
+      setLoadError(`שגיאה בשמירת המשבצות (${res.status}): ${res.error}`);
     }
     setFullDayLoading(false);
     load();
@@ -283,12 +281,26 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange, t
       return;
     }
     if (!selectedDate || toggling) return;
+    try {
+      await runToggle(opt);
+    } finally {
+      // A single lock guards every slot, so leaving it set wedges the whole screen:
+      // the next click returns early and nothing happens, with the previous error
+      // still on display. Release it no matter how this ends.
+      setToggling(null);
+    }
+  }
+
+  async function runToggle(opt: (typeof slotOptions)[0]) {
+    if (!selectedDate) return;
     const isRemoving = opt.isAdded && opt.id && !opt.id.startsWith("opt-") && !opt.id.startsWith("pending-");
 
     if (isRemoving) {
       setToggling(opt.id);
       setLoadError(null);
-      const res = await fetch(`${apiBase}?id=${encodeURIComponent(opt.id)}`, { method: "DELETE", credentials: "include" });
+      const res = await apiJson(`${apiBase}?id=${encodeURIComponent(opt.id)}`, {
+        method: "DELETE",
+      });
       if (res.ok) {
         setSlots((prev) => {
           const next = prev.filter((s) => s.id !== opt.id);
@@ -297,9 +309,11 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange, t
         });
       } else {
         load();
-        setLoadError("שגיאה בהסרת המשבצת. נסו שוב.");
+        // Show what the server actually said. A generic message here hid the real
+        // reason — session expired, no permission, teacher not found — behind one
+        // sentence that made every cause look the same.
+        setLoadError(`שגיאה בהסרת המשבצת (${res.status}): ${res.error}`);
       }
-      setToggling(null);
       return;
     }
 
@@ -314,10 +328,9 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange, t
     setSlots((prev) => [...prev, newSlot]);
     onSlotsChange?.([...slots, newSlot]);
 
-    const res = await fetch(apiBase, {
+    const res = await apiJson(apiBase, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      credentials: "include",
       body: JSON.stringify(
         teacherId
           ? { slots: [{ date: selectedDate, startTime: opt.startTime, endTime: opt.endTime }] }
@@ -327,21 +340,20 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange, t
     if (!res.ok) {
       setSlots((prev) => prev.filter((s) => s.id !== pendingId));
       onSlotsChange?.(slots);
-      setLoadError("שגיאה בשמירת המשבצת. נסו שוב.");
-      setToggling(null);
+      setLoadError(`שגיאה בשמירת המשבצת (${res.status}): ${res.error}`);
       return;
     }
     if (teacherId) {
       load();
-      setToggling(null);
       return;
     }
     try {
-      const created = await res.json();
+      // apiJson already parsed the body; swap the optimistic id for the real one.
+      const created = res.data as { id?: string } | undefined;
       if (created?.id) {
         setSlots((prev) => {
           const next = prev.map((s) =>
-            s.id === pendingId ? { ...s, id: created.id } : s
+            s.id === pendingId ? { ...s, id: created.id! } : s
           );
           onSlotsChange?.(next);
           return next;
@@ -351,7 +363,6 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange, t
       setSlots((prev) => prev.filter((s) => s.id !== pendingId));
       onSlotsChange?.(slots);
     } finally {
-      setToggling(null);
     }
   }
 
