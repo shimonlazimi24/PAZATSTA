@@ -293,14 +293,20 @@ export function TeacherAvailability({ weekDates: weekDatesProp, onSlotsChange, t
 
   async function runToggle(opt: (typeof slotOptions)[0]) {
     if (!selectedDate) return;
-    const isRemoving = opt.isAdded && opt.id && !opt.id.startsWith("opt-") && !opt.id.startsWith("pending-");
+    // A slot the screen shows as taken is removable whatever its id looks like:
+    // an optimistic "pending-" id means the row exists on the server, it is only
+    // this copy of its id that is stale, and the natural key below covers that.
+    const isRemoving = opt.isAdded && !opt.id.startsWith("opt-");
 
     if (isRemoving) {
       setToggling(opt.id);
       setLoadError(null);
-      const res = await apiJson(`${apiBase}?id=${encodeURIComponent(opt.id)}`, {
-        method: "DELETE",
+      const query = new URLSearchParams({
+        date: selectedDate,
+        startTime: opt.startTime,
       });
+      if (opt.id && !opt.id.startsWith("pending-")) query.set("id", opt.id);
+      const res = await apiJson(`${apiBase}?${query.toString()}`, { method: "DELETE" });
       if (res.ok) {
         setSlots((prev) => {
           const next = prev.filter((s) => s.id !== opt.id);

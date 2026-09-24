@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getUserFromSession } from "@/lib/auth";
 import { canAccessAdmin } from "@/lib/admin";
+import { resolveAvailabilityDeletion } from "@/lib/availability-deletion";
 import {
   availabilityDateFromYYYYMMDD,
   formatIsraelYYYYMMDD,
@@ -135,21 +136,42 @@ export async function DELETE(
   if (auth.error) return auth.error;
 
   const { searchParams } = new URL(req.url);
-  const id = searchParams.get("id");
-  const dateStr = searchParams.get("date");
+  const plan = resolveAvailabilityDeletion({
+    id: searchParams.get("id"),
+    date: searchParams.get("date"),
+    startTime: searchParams.get("startTime"),
+  });
 
-  if (dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-    const day = utcDayBounds(dateStr);
+  const removeSlot = (date: string, startTime: string) => {
+    const day = utcDayBounds(date);
+    return prisma.availability.deleteMany({
+      where: { teacherId, startTime, date: { gte: day.gte, lte: day.lte } },
+    });
+  };
+
+  if (plan.kind === "by-id") {
+    const deleted = await prisma.availability.deleteMany({
+      where: { id: plan.id, teacherId },
+    });
+    // A stale id finds nothing; fall back to the natural key rather than failing.
+    if (deleted.count === 0 && plan.fallback) {
+      await removeSlot(plan.fallback.date, plan.fallback.startTime);
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  if (plan.kind === "by-slot") {
+    await removeSlot(plan.date, plan.startTime);
+    return NextResponse.json({ ok: true });
+  }
+
+  if (plan.kind === "whole-day") {
+    const day = utcDayBounds(plan.date);
     await prisma.availability.deleteMany({
       where: { teacherId, date: { gte: day.gte, lte: day.lte } },
     });
     return NextResponse.json({ ok: true });
   }
-  if (id) {
-    await prisma.availability.deleteMany({
-      where: { id, teacherId },
-    });
-    return NextResponse.json({ ok: true });
-  }
+
   return NextResponse.json({ error: "id or date required" }, { status: 400 });
 }
