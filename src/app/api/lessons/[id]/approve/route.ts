@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getUserFromSession } from "@/lib/auth";
 import { canAccessAdmin } from "@/lib/admin";
+import { canActOnLesson } from "@/lib/lesson-authz";
 import { sendBookingConfirmation } from "@/lib/email";
 import { formatDateInIsrael } from "@/lib/date-utils";
 
@@ -33,12 +34,7 @@ export async function POST(
   if (!lesson) {
     return NextResponse.json({ error: "שיעור לא נמצא" }, { status: 404 });
   }
-  if (lesson.workshopId && isTeacher) {
-    return NextResponse.json(
-      { error: "רישום לסדנה מאושר רק על ידי האדמין" },
-      { status: 403 }
-    );
-  }
+
   if (lesson.status !== "pending_approval") {
     return NextResponse.json(
       { error: "השיעור לא ממתין לאישור" },
@@ -51,10 +47,9 @@ export async function POST(
       { status: 400 }
     );
   }
-  // Admins act on any lesson; teachers only on their own. A teacher who is also an
-  // admin gets the admin path, otherwise their admin grant would do nothing here.
-  if (!isAdmin && lesson.teacherId !== user.id) {
-    return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
+  const allowed = canActOnLesson({ isAdmin, userId: user.id }, lesson);
+  if (!allowed.ok) {
+    return NextResponse.json({ error: allowed.message }, { status: 403 });
   }
 
   const studentProfile = await prisma.studentProfile.findUnique({
