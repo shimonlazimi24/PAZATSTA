@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getUserFromSession } from "@/lib/auth";
 import { canAccessAdmin } from "@/lib/admin";
+import { canActOnLesson } from "@/lib/lesson-authz";
 
 /** Teacher or admin rejects a pending lesson; cancels and restores the slot to availability. */
 export async function POST(
@@ -32,14 +33,9 @@ export async function POST(
       { status: 400 }
     );
   }
-  if (isTeacher && lesson.teacherId !== user.id) {
-    return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
-  }
-  if (lesson.workshopId && isTeacher) {
-    return NextResponse.json(
-      { error: "דחיית רישום לסדנה רק על ידי האדמין" },
-      { status: 403 }
-    );
+  const allowed = canActOnLesson({ isAdmin, userId: user.id }, lesson);
+  if (!allowed.ok) {
+    return NextResponse.json({ error: allowed.message }, { status: 403 });
   }
 
   await prisma.$transaction(async (tx) => {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getUserFromSession } from "@/lib/auth";
 import { canAccessAdmin } from "@/lib/admin";
+import { canActOnLesson } from "@/lib/lesson-authz";
 import { restoreAvailabilityForLesson } from "@/lib/expire-pending-lessons";
 import { resolveAdminRecipients } from "@/lib/admin";
 import { sendLessonCanceled } from "@/lib/email";
@@ -46,8 +47,9 @@ export async function POST(
       { status: 400 }
     );
   }
-  if (!isAdmin && lesson.teacherId !== user.id) {
-    return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
+  const allowed = canActOnLesson({ isAdmin, userId: user.id }, lesson);
+  if (!allowed.ok) {
+    return NextResponse.json({ error: allowed.message }, { status: 403 });
   }
 
   await prisma.$transaction(async (tx) => {
