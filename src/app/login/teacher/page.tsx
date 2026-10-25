@@ -8,6 +8,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Logo } from "@/components/Logo";
 import { BackLink } from "@/components/design/BackLink";
 import { apiJson } from "@/lib/api";
+import {
+  normalizeEmailInput,
+  requestLoginCode,
+  sentHint,
+  verifyCodeErrorMessage,
+  LOGIN_MESSAGES,
+} from "@/lib/login-messages";
 
 type Step = "email" | "code";
 
@@ -22,7 +29,7 @@ export default function TeacherLoginPage() {
   const [verifyMessage, setVerifyMessage] = useState("");
   const codeInputRef = useRef<HTMLInputElement>(null);
 
-  const emailTrimmed = email.trim().toLowerCase();
+  const emailTrimmed = normalizeEmailInput(email);
   const codeDigitsOnly = code.replace(/\D/g, "").slice(0, 6);
 
   useEffect(() => {
@@ -33,27 +40,18 @@ export default function TeacherLoginPage() {
 
   async function handleSendCode(e: React.FormEvent) {
     e.preventDefault();
-    if (!emailTrimmed) return;
+    if (!emailTrimmed || sendStatus === "sending") return;
     setSendMessage("");
     setSendStatus("sending");
-    setStep("code");
-    try {
-      const res = await fetch("/api/auth/request-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: emailTrimmed }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setSendStatus("error");
-        setSendMessage(data.error || "שליחת הקוד נכשלה");
-        return;
-      }
-      setSendStatus("sent");
-    } catch {
+    // Move to the code step only once the code is actually on its way.
+    const result = await requestLoginCode(email);
+    if (!result.ok) {
       setSendStatus("error");
-      setSendMessage("שגיאת רשת");
+      setSendMessage(result.message);
+      return;
     }
+    setSendStatus("sent");
+    setStep("code");
   }
 
   async function handleVerify(e: React.FormEvent) {
@@ -74,7 +72,7 @@ export default function TeacherLoginPage() {
       });
       if (!result.ok) {
         setVerifyStatus("error");
-        setVerifyMessage(result.error || "אימות נכשל");
+        setVerifyMessage(verifyCodeErrorMessage(result.status, result.error || "אימות נכשל"));
         return;
       }
       const redirectPath = result.data?.redirect;
@@ -84,7 +82,7 @@ export default function TeacherLoginPage() {
       window.location.href = safePath;
     } catch {
       setVerifyStatus("error");
-      setVerifyMessage("שגיאה באימות. נסו שוב.");
+      setVerifyMessage(LOGIN_MESSAGES.temporary);
     }
   }
 
@@ -101,7 +99,7 @@ export default function TeacherLoginPage() {
               <p className="text-sm text-muted-foreground mt-1">
                 {step === "email"
                   ? "הזן את האימייל שלך לקבלת קוד. רק חשבונות מורים יכולים להיכנס מכאן."
-                  : "נשלח קוד בן 6 ספרות לאימייל שלך"}
+                  : sentHint(emailTrimmed)}
               </p>
             </div>
 
@@ -119,12 +117,21 @@ export default function TeacherLoginPage() {
                     type="email"
                     placeholder="you@example.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (sendStatus === "error") {
+                      setSendStatus("idle");
+                      setSendMessage("");
+                    }
+                  }}
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full">
-                  שלחו לי קוד
+                {sendStatus === "error" && (
+                  <p className="text-sm text-destructive text-center" role="alert">{sendMessage}</p>
+                )}
+                <Button type="submit" className="w-full" disabled={sendStatus === "sending"}>
+                  {sendStatus === "sending" ? "שולח…" : "שלחו לי קוד"}
                 </Button>
               </form>
             ) : (
@@ -147,12 +154,6 @@ export default function TeacherLoginPage() {
                     disabled={verifyStatus === "loading"}
                   />
                 </div>
-                {sendStatus === "sending" && (
-                  <p className="text-sm text-muted-foreground text-center">שולחים קוד...</p>
-                )}
-                {sendStatus === "error" && (
-                  <p className="text-sm text-destructive text-center">{sendMessage}</p>
-                )}
                 {verifyMessage && (
                   <p className="text-sm text-destructive text-center">{verifyMessage}</p>
                 )}
@@ -175,7 +176,7 @@ export default function TeacherLoginPage() {
                     setSendMessage("");
                   }}
                 >
-                  חזרה לאימייל
+                  שינוי כתובת
                 </Button>
               </form>
             )}

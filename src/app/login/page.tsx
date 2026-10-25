@@ -4,6 +4,7 @@ import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { requestLoginCode } from "@/lib/login-messages";
 
 type LoginMode = "student" | "teacher" | "admin" | null;
 
@@ -27,26 +28,27 @@ function LoginForm() {
     ? MODES.filter((m) => m.value !== "student")
     : MODES;
 
-  function handleSendCode(e: React.FormEvent) {
+  async function handleSendCode(e: React.FormEvent) {
     e.preventDefault();
+    if (status === "loading") return;
     if (mode === null) {
       setMessage("נא לבחור סוג התחברות");
       setStatus("error");
       return;
     }
-    const trimmed = email.trim().toLowerCase();
-    if (!trimmed) return;
+    if (!email.trim()) return;
     setStatus("loading");
     setMessage("");
-    const baseVerify = `/verify?email=${encodeURIComponent(trimmed)}&role=${mode}`;
-    const verifyUrl = nextAdmin ? `${baseVerify}&next=/admin` : baseVerify;
-    router.push(verifyUrl);
-    fetch("/api/auth/request-code", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: trimmed }),
-      keepalive: true,
-    }).catch(() => {});
+    // Wait for the answer: moving on first left people waiting for a code the
+    // server had refused to send, with nothing on screen to say so.
+    const result = await requestLoginCode(email);
+    if (!result.ok) {
+      setStatus("error");
+      setMessage(result.message);
+      return;
+    }
+    const baseVerify = `/verify?email=${encodeURIComponent(result.email)}&role=${mode}&sent=1`;
+    router.push(nextAdmin ? `${baseVerify}&next=/admin` : baseVerify);
   }
 
   return (
@@ -116,19 +118,29 @@ function LoginForm() {
                   type="email"
                   placeholder="you@example.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (status === "error") {
+                      setStatus("idle");
+                      setMessage("");
+                    }
+                  }}
                   required
                   className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-input)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:border-[var(--color-primary)]"
                   disabled={status === "loading"}
                 />
               </div>
               {message && (
-                <p className="text-sm text-red-600">{message}</p>
+                <p className="text-sm text-red-600" role="alert">{message}</p>
               )}
               <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => setMode(null)}
+                    onClick={() => {
+                      setMode(null);
+                      setStatus("idle");
+                      setMessage("");
+                    }}
                     className="px-4 py-2 rounded-[var(--radius-input)] border border-[var(--color-border)] text-[var(--color-text)]"
                   >
                     חזרה

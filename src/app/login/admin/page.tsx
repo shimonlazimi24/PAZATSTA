@@ -5,6 +5,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { apiJson } from "@/lib/api";
+import {
+  normalizeEmailInput,
+  requestLoginCode,
+  sentHint,
+  verifyCodeErrorMessage,
+  LOGIN_MESSAGES,
+} from "@/lib/login-messages";
 
 type Step = "email" | "code";
 
@@ -19,7 +26,7 @@ export default function AdminLoginPage() {
   const [verifyMessage, setVerifyMessage] = useState("");
   const codeInputRef = useRef<HTMLInputElement>(null);
 
-  const emailTrimmed = email.trim().toLowerCase();
+  const emailTrimmed = normalizeEmailInput(email);
   const codeDigitsOnly = code.replace(/\D/g, "").slice(0, 6);
 
   useEffect(() => {
@@ -30,27 +37,18 @@ export default function AdminLoginPage() {
 
   async function handleSendCode(e: React.FormEvent) {
     e.preventDefault();
-    if (!emailTrimmed) return;
+    if (!emailTrimmed || sendStatus === "sending") return;
     setSendMessage("");
     setSendStatus("sending");
-    setStep("code");
-    try {
-      const res = await fetch("/api/auth/request-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: emailTrimmed }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setSendStatus("error");
-        setSendMessage(data.error || "שליחת הקוד נכשלה");
-        return;
-      }
-      setSendStatus("sent");
-    } catch {
+    // Move to the code step only once the code is actually on its way.
+    const result = await requestLoginCode(email);
+    if (!result.ok) {
       setSendStatus("error");
-      setSendMessage("שגיאת רשת");
+      setSendMessage(result.message);
+      return;
     }
+    setSendStatus("sent");
+    setStep("code");
   }
 
   async function handleVerify(e: React.FormEvent) {
@@ -72,7 +70,7 @@ export default function AdminLoginPage() {
       });
       if (!result.ok) {
         setVerifyStatus("error");
-        setVerifyMessage(result.error || "אימות נכשל");
+        setVerifyMessage(verifyCodeErrorMessage(result.status, result.error || "אימות נכשל"));
         return;
       }
       const redirectPath = result.data?.redirect;
@@ -82,7 +80,7 @@ export default function AdminLoginPage() {
       window.location.href = safePath;
     } catch {
       setVerifyStatus("error");
-      setVerifyMessage("שגיאה באימות. נסו שוב.");
+      setVerifyMessage(LOGIN_MESSAGES.temporary);
     }
   }
 
@@ -109,11 +107,20 @@ export default function AdminLoginPage() {
                   type="email"
                   placeholder="admin@example.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (sendStatus === "error") {
+                      setSendStatus("idle");
+                      setSendMessage("");
+                    }
+                  }}
                   required
                   className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-input)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:border-[var(--color-primary)]"
                 />
               </div>
+              {sendStatus === "error" && (
+                <p className="text-sm text-red-600 text-center" role="alert">{sendMessage}</p>
+              )}
               <div className="flex gap-2">
                 <Link
                   href="/login"
@@ -123,9 +130,10 @@ export default function AdminLoginPage() {
                 </Link>
                 <button
                   type="submit"
+                  disabled={sendStatus === "sending"}
                   className="flex-1 py-2.5 rounded-[var(--radius-input)] bg-[var(--color-primary)] text-white font-medium hover:opacity-90 disabled:opacity-50"
                 >
-                  שלח קוד
+                  {sendStatus === "sending" ? "שולח…" : "שלח קוד"}
                 </button>
               </div>
             </form>
@@ -152,12 +160,9 @@ export default function AdminLoginPage() {
                   disabled={verifyStatus === "loading"}
                 />
               </div>
-              {sendStatus === "sending" && (
-                <p className="text-sm text-[var(--color-text-muted)] text-center">שולחים קוד...</p>
-              )}
-              {sendStatus === "error" && (
-                <p className="text-sm text-red-600 text-center">{sendMessage}</p>
-              )}
+              <p className="text-sm text-[var(--color-text-muted)] text-center break-words">
+                {sentHint(emailTrimmed)}
+              </p>
               {verifyMessage && (
                 <p className="text-sm text-red-600 text-center">{verifyMessage}</p>
               )}
@@ -173,7 +178,7 @@ export default function AdminLoginPage() {
                   disabled={sendStatus === "sending"}
                   className="px-4 py-2 rounded-[var(--radius-input)] border border-[var(--color-border)] text-[var(--color-text)]"
                 >
-                  חזרה
+                  שינוי כתובת
                 </button>
                 <button
                   type="submit"
