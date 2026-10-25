@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { normalizeEmailInput } from "@/lib/login-messages";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { verifyOTP } from "@/lib/otp";
@@ -13,7 +14,8 @@ import { canAccessAdmin } from "@/lib/admin";
 const MAX_ATTEMPTS = 5;
 
 const VerifyCodeSchema = z.object({
-  email: z.unknown().transform((s) => (typeof s === "string" ? s.trim().toLowerCase() : "")),
+  // Must clean exactly as request-code does, or the stored code would never match.
+  email: z.unknown().transform((s) => (typeof s === "string" ? normalizeEmailInput(s) : "")),
   code: z.unknown().transform((s) => (typeof s === "string" ? s.replace(/\D/g, "") : "")),
   role: z.unknown().transform((s) => (s === "teacher" || s === "admin" ? s : "student")),
   phone: z.unknown().transform((s) => (typeof s === "string" ? s.trim() : "")),
@@ -84,7 +86,7 @@ export async function POST(req: Request) {
             error:
               role === "teacher"
                 ? "חשבון מורה לא קיים עבור אימייל זה. נא לפנות לאדמין להגדרת מורה."
-                : "חשבון אדמין לא קיים עבור אימייל זה. אם זה סביבת פיתוח, הרץ: npx prisma db seed",
+                : "לכתובת הזו אין הרשאת ניהול. ודאו שזו הכתובת הנכונה",
           },
           { status: 403 }
         );
@@ -162,7 +164,7 @@ export async function POST(req: Request) {
     console.error("[verify-code] Error:", e);
     const message = process.env.NODE_ENV === "development" && e instanceof Error
       ? e.message
-      : "Verification failed";
+      : "יש תקלה זמנית. נסו שוב בעוד דקה";
     return NextResponse.json(
       { error: message },
       { status: 500 }

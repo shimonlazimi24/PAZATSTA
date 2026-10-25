@@ -8,6 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { BackLink } from "@/components/design/BackLink";
 import { apiJson } from "@/lib/api";
+import {
+  normalizeEmailInput,
+  requestLoginCode,
+  sentHint,
+  verifyCodeErrorMessage,
+  LOGIN_MESSAGES,
+} from "@/lib/login-messages";
 
 type Step = "email" | "code";
 
@@ -24,7 +31,7 @@ export default function StudentLoginPage() {
   const [testLoading, setTestLoading] = useState<"teacher" | "student" | null>(null);
   const codeInputRef = useRef<HTMLInputElement>(null);
 
-  const emailTrimmed = email.trim().toLowerCase();
+  const emailTrimmed = normalizeEmailInput(email);
   const codeDigitsOnly = code.replace(/\D/g, "").slice(0, 6);
 
   useEffect(() => {
@@ -35,30 +42,18 @@ export default function StudentLoginPage() {
 
   async function handleSendCode(e: React.FormEvent) {
     e.preventDefault();
-    if (!emailTrimmed) return;
+    if (!emailTrimmed || sendStatus === "sending") return;
     setSendMessage("");
     setSendStatus("sending");
-    setStep("code");
-    try {
-      const res = await fetch("/api/auth/request-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: emailTrimmed,
-          phone: phone.trim() || undefined,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setSendStatus("error");
-        setSendMessage(data.error || "שליחת הקוד נכשלה");
-        return;
-      }
-      setSendStatus("sent");
-    } catch {
+    // Move to the code step only once the code is actually on its way.
+    const result = await requestLoginCode(email, { phone });
+    if (!result.ok) {
       setSendStatus("error");
-      setSendMessage("שגיאת רשת");
+      setSendMessage(result.message);
+      return;
     }
+    setSendStatus("sent");
+    setStep("code");
   }
 
   async function handleVerify(e: React.FormEvent) {
@@ -80,7 +75,7 @@ export default function StudentLoginPage() {
       });
       if (!result.ok) {
         setVerifyStatus("error");
-        setVerifyMessage(result.error || "אימות נכשל");
+        setVerifyMessage(verifyCodeErrorMessage(result.status, result.error || "אימות נכשל"));
         return;
       }
       const redirectPath = result.data?.redirect;
@@ -90,7 +85,7 @@ export default function StudentLoginPage() {
       window.location.href = safePath;
     } catch {
       setVerifyStatus("error");
-      setVerifyMessage("שגיאה באימות. נסו שוב.");
+      setVerifyMessage(LOGIN_MESSAGES.temporary);
     }
   }
 
@@ -126,7 +121,7 @@ export default function StudentLoginPage() {
               <p className="text-sm text-muted-foreground mt-1">
                 {step === "email"
                   ? "הזן אימייל וטלפון — יישלח אליכם קוד לאימייל לאימות"
-                  : "נשלח קוד בן 6 ספרות לאימייל שלך"}
+                  : sentHint(emailTrimmed)}
               </p>
               <p className="text-sm mt-2">
                 <Link href="/login/teacher" className="text-primary underline hover:no-underline">
@@ -146,7 +141,13 @@ export default function StudentLoginPage() {
                     type="email"
                     placeholder="you@example.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (sendStatus === "error") {
+                      setSendStatus("idle");
+                      setSendMessage("");
+                    }
+                  }}
                     required
                   />
                 </div>
@@ -162,8 +163,11 @@ export default function StudentLoginPage() {
                     onChange={(e) => setPhone(e.target.value)}
                   />
                 </div>
-                <Button type="submit" className="w-full">
-                  שלחו לי קוד
+                {sendStatus === "error" && (
+                  <p className="text-sm text-destructive text-center" role="alert">{sendMessage}</p>
+                )}
+                <Button type="submit" className="w-full" disabled={sendStatus === "sending"}>
+                  {sendStatus === "sending" ? "שולח…" : "שלחו לי קוד"}
                 </Button>
               </form>
             ) : (
@@ -186,12 +190,6 @@ export default function StudentLoginPage() {
                     disabled={verifyStatus === "loading"}
                   />
                 </div>
-                {sendStatus === "sending" && (
-                  <p className="text-sm text-muted-foreground text-center">שולחים קוד...</p>
-                )}
-                {sendStatus === "error" && (
-                  <p className="text-sm text-destructive text-center">{sendMessage}</p>
-                )}
                 {verifyMessage && (
                   <p className="text-sm text-destructive text-center">{verifyMessage}</p>
                 )}
@@ -214,13 +212,15 @@ export default function StudentLoginPage() {
                     setSendMessage("");
                   }}
                 >
-                  חזרה לאימייל
+                  שינוי כתובת
                 </Button>
               </form>
             )}
           </CardContent>
         </Card>
 
+        {/* The test-login API refuses in production; don't offer real students a dead button. */}
+        {process.env.NODE_ENV !== "production" && (
         <Card className="rounded-2xl shadow-soft border-border border-dashed">
           <CardContent className="p-6 space-y-3">
             <p className="text-sm font-medium text-muted-foreground text-center">
@@ -249,6 +249,7 @@ export default function StudentLoginPage() {
             </p>
           </CardContent>
         </Card>
+        )}
     </div>
   );
 }

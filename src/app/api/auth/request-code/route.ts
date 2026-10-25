@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { createOTP, hashOTP } from "@/lib/otp";
 import { sendLoginCode } from "@/lib/email";
 import { EMAIL_REGEX } from "@/lib/validation";
+import { maskEmail, normalizeEmailInput } from "@/lib/login-messages";
 
 const OTP_TTL_MINUTES = 10;
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
@@ -23,11 +24,13 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
-  const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+  const email = typeof body.email === "string" ? normalizeEmailInput(body.email) : "";
   if (!email) {
+    console.warn("[request-code] rejected: missing_email");
     return NextResponse.json({ error: "Email required" }, { status: 400 });
   }
   if (!EMAIL_REGEX.test(email)) {
+    console.warn("[request-code] rejected: invalid_email", maskEmail(email));
     return NextResponse.json({ error: "נא להזין כתובת אימייל תקינה" }, { status: 400 });
   }
 
@@ -40,11 +43,17 @@ export async function POST(req: Request) {
         prisma.otpRequest.count({ where: { email, createdAt: { gte: since } } }),
         ip ? prisma.otpRequest.count({ where: { ip, createdAt: { gte: since } } }) : 0,
       ]);
-      if (emailCount >= MAX_REQUESTS_PER_EMAIL || ipCount >= MAX_REQUESTS_PER_IP) {
+      if (emailCount >= MAX_REQUESTS_PER_EMAIL) {
+        console.warn("[request-code] rejected: rate_limited_email", maskEmail(email));
+        return "rate_limited" as const;
+      }
+      if (ipCount >= MAX_REQUESTS_PER_IP) {
+        console.warn("[request-code] rejected: rate_limited_ip", maskEmail(email));
         return "rate_limited" as const;
       }
       return true as const;
-    } catch {
+    } catch (e) {
+      console.error("[request-code] rate limit check failed, continuing without it:", (e as Error)?.message ?? e);
       return false as const;
     }
   })();
@@ -85,7 +94,7 @@ export async function POST(req: Request) {
       ]);
     }
   } catch (e) {
-    console.error("[request-code] Database error:", (e as Error)?.message ?? e);
+    console.error("[request-code] rejected: db_error", maskEmail(email), (e as Error)?.message ?? e);
     return NextResponse.json(
       { error: "Failed to send code" },
       { status: 503 }

@@ -2,8 +2,16 @@
 
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { BackLink } from "@/components/design/BackLink";
 import { apiJson } from "@/lib/api";
+import {
+  normalizeEmailInput,
+  requestLoginCode,
+  sentHint,
+  verifyCodeErrorMessage,
+  LOGIN_MESSAGES,
+} from "@/lib/login-messages";
 
 type Role = "student" | "teacher" | "admin";
 
@@ -51,8 +59,11 @@ function VerifyForm() {
   };
 
   const codeDigitsOnly = code.replace(/\D/g, "").slice(0, 6);
-  const emailTrimmed = email.trim().toLowerCase();
+  const emailTrimmed = normalizeEmailInput(email);
   const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed);
+  // Back to the screen this person came from, keeping their role.
+  const changeEmailHref =
+    role === "admin" ? "/login/admin" : nextParam === "/admin" ? "/login?next=/admin" : "/login";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -74,7 +85,7 @@ function VerifyForm() {
       });
       if (!result.ok) {
         setStatus("error");
-        setMessage(result.error || "אימות נכשל");
+        setMessage(verifyCodeErrorMessage(result.status, result.error || "אימות נכשל"));
         return;
       }
       const redirectPath = result.data?.redirect;
@@ -82,7 +93,7 @@ function VerifyForm() {
       window.location.href = safePath;
     } catch (err) {
       setStatus("error");
-      setMessage("שגיאה באימות. נסו שוב.");
+      setMessage(LOGIN_MESSAGES.temporary);
     }
   }
 
@@ -90,16 +101,9 @@ function VerifyForm() {
     if (resendStatus === "loading" || !isEmailValid) return;
     setResendMessage("");
     setResendStatus("loading");
-    const result = await apiJson<{ emailSent?: boolean }>("/api/auth/request-code", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: emailTrimmed,
-        phone: phoneParam.trim() || undefined,
-      }),
-    });
+    const result = await requestLoginCode(emailTrimmed, { phone: phoneParam });
     setResendStatus(result.ok ? "success" : "error");
-    setResendMessage(result.ok ? "נשלח קוד חדש" : result.error);
+    setResendMessage(result.ok ? `נשלח קוד חדש ל-${result.email}` : result.message);
   }
 
   const hintNoEmailText =
@@ -113,7 +117,17 @@ function VerifyForm() {
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 space-y-6">
           <div className="text-center" dir="rtl">
             <h1 className="text-xl font-semibold text-[var(--color-text)]">הזנת קוד</h1>
-            <p className="text-sm text-[var(--color-text-muted)] mt-1">נשלח קוד בן 6 ספרות לאימייל שלך</p>
+            <p className="text-sm text-[var(--color-text-muted)] mt-1 break-words">
+              {emailParam ? sentHint(normalizeEmailInput(emailParam)) : "נשלח קוד בן 6 ספרות לאימייל שלך"}
+            </p>
+            {emailParam && (
+              <Link
+                href={changeEmailHref}
+                className="inline-block mt-2 text-sm text-[var(--color-primary)] underline hover:no-underline"
+              >
+                שינוי כתובת
+              </Link>
+            )}
             {hintNoEmail && (
               <p className="text-xs text-amber-700 bg-amber-50 rounded-[var(--radius-input)] py-2 px-3 mt-2">
                 {hintNoEmailText}
@@ -154,7 +168,7 @@ function VerifyForm() {
                 disabled={status === "loading"}
               />
             </div>
-            {message && <p className="text-sm text-red-600">{message}</p>}
+            {message && <p className="text-sm text-red-600" role="alert">{message}</p>}
             <button
               type="submit"
               disabled={status === "loading" || codeDigitsOnly.length !== 6}
