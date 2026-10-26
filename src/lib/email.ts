@@ -1,14 +1,42 @@
 import { Resend } from "resend";
 import { isValidDeliveryEmail } from "@/lib/validation";
+import { emailDeliveryMode, redirectMessage } from "@/lib/email-guard";
 
 const isDev = process.env.NODE_ENV !== "production";
 const noRealKey = () =>
   !process.env.RESEND_API_KEY || process.env.RESEND_API_KEY === "re_xxxx";
 
-function getResend() {
+/**
+ * The only Resend client in the app. Outside production it is wrapped by the
+ * email guard, so staging and previews can never email real customers.
+ */
+function getResend(): Pick<Resend, "emails" | "batch"> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) throw new Error("RESEND_API_KEY not set");
-  return new Resend(apiKey);
+  const client = new Resend(apiKey);
+  const mode = emailDeliveryMode(process.env);
+  if (mode.kind === "live") return client;
+
+  type One = Parameters<Resend["emails"]["send"]>[0];
+  type Many = Parameters<Resend["batch"]["send"]>[0];
+  const blocked = (count: number) => {
+    console.warn(`[email-guard] ${process.env.APP_ENV || process.env.VERCEL_ENV}: blocked ${count} email(s); set EMAIL_REDIRECT_TO to receive them`);
+    return Promise.resolve({ data: null, error: null });
+  };
+  return {
+    emails: {
+      send: ((message: One) =>
+        mode.kind === "blocked"
+          ? blocked(1)
+          : client.emails.send(redirectMessage(message, mode.to))) as Resend["emails"]["send"],
+    },
+    batch: {
+      send: ((messages: Many) =>
+        mode.kind === "blocked"
+          ? blocked(messages.length)
+          : client.batch.send(messages.map((m) => redirectMessage(m, mode.to)))) as Resend["batch"]["send"],
+    },
+  } as Pick<Resend, "emails" | "batch">;
 }
 
 const RESEND_DEV_FROM = "onboarding@resend.dev";
