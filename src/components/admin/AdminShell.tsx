@@ -42,10 +42,10 @@ const ICONS: Record<string, LucideIcon> = {
 function AdminNav({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
   const active = activeAdminHref(pathname);
   return (
-    <nav aria-label="תפריט ניהול" className="space-y-6 px-3">
+    <nav aria-label="תפריט ניהול" className="space-y-5 px-2">
       {ADMIN_NAV.map((group, gi) => (
         <div key={group.title ?? gi}>
-          {group.title && <p className="mb-1.5 px-3 text-xs font-semibold text-[var(--color-text-muted)]">{group.title}</p>}
+          {group.title && <p className="mb-1 px-2.5 text-[11px] font-semibold text-[var(--color-text-muted)]">{group.title}</p>}
           <ul className="space-y-0.5">
             {group.items.map((item) => {
               const Icon = ICONS[item.href];
@@ -56,7 +56,7 @@ function AdminNav({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
                     href={item.href}
                     onClick={onNavigate}
                     aria-current={isActive ? "page" : undefined}
-                    className={`relative flex h-9 items-center gap-2.5 rounded-md px-3 text-sm transition-colors ${
+                    className={`relative flex h-8 items-center gap-2 rounded-md px-2.5 text-[13px] transition-colors ${
                       isActive
                         ? "bg-white font-semibold text-[var(--color-text)] shadow-sm before:absolute before:inset-y-2 before:start-0 before:w-[3px] before:rounded-full before:bg-[var(--color-primary)]"
                         : "text-[var(--color-text-muted)] hover:bg-white/70 hover:text-[var(--color-text)]"
@@ -78,7 +78,7 @@ function AdminNav({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
 function SignedInAs({ email }: { email: string }) {
   const router = useRouter();
   return (
-    <div className="border-t border-[var(--color-border)] px-6 py-4">
+    <div className="border-t border-[var(--color-border)] px-4 py-3">
       <p className="truncate text-xs text-[var(--color-text-muted)]" title={email}>
         {email}
       </p>
@@ -114,9 +114,9 @@ export function AdminShell({ email, children }: AdminShellProps) {
 
   return (
     <div className="flex min-h-screen bg-[var(--color-bg)]" dir="rtl">
-      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-s border-[var(--color-border)] bg-[var(--color-bg-muted)] md:flex">
-        <Link href="/admin" className="flex items-center gap-3 px-6 pb-6 pt-6" aria-label="ניהול פזצט״א, דף הבית">
-          <Logo alt="Paza" className="h-8 w-auto object-contain" width={96} height={28} />
+      <aside className="sticky top-0 hidden h-screen w-52 shrink-0 flex-col border-s border-[var(--color-border)] bg-[var(--color-bg-muted)] md:flex">
+        <Link href="/admin" className="flex items-center gap-2.5 px-4 pb-5 pt-5" aria-label="ניהול פזצט״א, דף הבית">
+          <Logo alt="Paza" className="h-7 w-auto object-contain" width={84} height={24} />
           <span className="text-sm font-semibold text-[var(--color-text-muted)]">ניהול</span>
         </Link>
         <div className="flex-1 overflow-y-auto pb-6">
