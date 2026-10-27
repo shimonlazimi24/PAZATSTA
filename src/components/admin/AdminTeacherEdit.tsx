@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Card } from "@/components/design/Card";
 import { Button } from "@/components/design/Button";
 import { FormField } from "@/components/design/FormField";
@@ -34,6 +35,8 @@ function getWeekDatesIsrael(): string[] {
 
 export function AdminTeacherEdit({ teacherId }: { teacherId: string }) {
   const [profile, setProfile] = useState<TeacherProfile | null>(null);
+  const router = useRouter();
+  const [deleting, setDeleting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -129,7 +132,7 @@ export function AdminTeacherEdit({ teacherId }: { teacherId: string }) {
       </div>
 
       <h2 className="text-xl font-bold text-[var(--color-text)]">
-        עריכת מורה: {profile.displayName || profile.name || profile.email}
+        {profile.displayName || profile.name || profile.email}
       </h2>
 
       <Card>
@@ -267,6 +270,29 @@ export function AdminTeacherEdit({ teacherId }: { teacherId: string }) {
         </p>
         <TeacherAvailability weekDates={weekDates} teacherId={teacherId} />
       </Card>
+
+      <section className="rounded-lg border border-red-200 p-5" aria-labelledby="danger-h">
+        <h3 id="danger-h" className="font-semibold text-red-800">מחיקת המדריך</h3>
+        <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+          המחיקה מוחקת גם את כל השיעורים והזמינות של המדריך, ואי אפשר לבטל אותה.
+        </p>
+        <button
+          type="button"
+          disabled={deleting}
+          onClick={async () => {
+            const label = profile.displayName || profile.name || profile.email;
+            if (!confirm(`למחוק את ${label}? כל השיעורים והזמינות שלו יימחקו לצמיתות.`)) return;
+            setDeleting(true);
+            const r = await apiJson(`/api/admin/teachers/${teacherId}`, { method: "DELETE" });
+            setDeleting(false);
+            if (r.ok) router.push("/admin/teachers");
+            else setError(r.error || "המחיקה לא הצליחה");
+          }}
+          className="mt-3 min-h-[40px] rounded-md border border-red-300 bg-white px-4 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+        >
+          {deleting ? "מוחק…" : "מחיקת המדריך"}
+        </button>
+      </section>
     </div>
   );
 }

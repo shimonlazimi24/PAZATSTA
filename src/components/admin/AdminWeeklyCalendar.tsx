@@ -1,415 +1,195 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { addDaysYYYYMMDD } from "@/lib/dates";
 
 type WeeklyLesson = {
   id: string;
   date: string;
   startTime: string;
   endTime: string;
-  status: string;
-  reportCompleted?: boolean;
+  status: "pending_approval" | "scheduled" | "completed" | string;
+  topic: string | null;
+  isWorkshop: boolean;
   teacher: { id: string; email: string; name: string | null };
   student: { id: string; email: string; name: string | null };
 };
 
-const DAY_NAMES_HE = ["א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"];
-const SLOT_MINUTES = 30;
-const START_HOUR = 8;
-const END_HOUR = 22; // must match TeacherAvailability: evening slots run to 22:00
+const todayIL = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Jerusalem" });
 
-function getWeekRange(ref: Date): { start: string; end: string; dates: string[] } {
-  const d = new Date(ref);
-  const day = d.getDay();
-  const sunday = new Date(d);
-  sunday.setDate(d.getDate() - day);
-  const start = sunday.toISOString().slice(0, 10);
-  const dates: string[] = [];
-  for (let i = 0; i < 7; i++) {
-    const x = new Date(sunday);
-    x.setDate(sunday.getDate() + i);
-    dates.push(x.toISOString().slice(0, 10));
-  }
-  const saturday = new Date(sunday);
-  saturday.setDate(sunday.getDate() + 6);
-  const end = saturday.toISOString().slice(0, 10);
-  return { start, end, dates };
+/** Sunday of the week containing dateStr, computed on calendar dates (no local-clock drift). */
+function sundayOf(dateStr: string): string {
+  const weekday = new Date(`${dateStr}T12:00:00Z`).getUTCDay();
+  return addDaysYYYYMMDD(dateStr, -weekday);
 }
 
-function parseTime(t: string): number {
-  const [h, m] = t.split(":").map(Number);
-  return (h ?? 0) * 60 + (m ?? 0);
-}
+const dayHeading = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("he-IL", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
+const rangeLabel = (start: string) => {
+  const a = new Date(`${start}T12:00:00Z`);
+  const b = new Date(`${addDaysYYYYMMDD(start, 6)}T12:00:00Z`);
+  const sameMonth = a.getUTCMonth() === b.getUTCMonth();
+  const opts = { day: "numeric", month: "long", timeZone: "UTC" } as const;
+  return sameMonth
+    ? `${a.getUTCDate()}–${b.toLocaleDateString("he-IL", opts)}`
+    : `${a.toLocaleDateString("he-IL", opts)} – ${b.toLocaleDateString("he-IL", opts)}`;
+};
 
-function formatDateShort(dateStr: string): string {
-  const d = new Date(dateStr + "T12:00:00");
-  return d.toLocaleDateString("he-IL", { weekday: "short", day: "numeric", month: "short" });
-}
+const STATUS: Record<string, { label: string; cls: string }> = {
+  pending_approval: { label: "ממתין לאישור", cls: "bg-amber-50 text-amber-800" },
+  scheduled: { label: "מאושר", cls: "bg-[var(--color-bg-muted)] text-[var(--color-text)]" },
+  completed: { label: "הושלם", cls: "bg-green-50 text-green-800" },
+};
+
+const actionBtn = "text-sm text-[var(--color-text-muted)] underline-offset-2 hover:text-[var(--color-text)] hover:underline disabled:opacity-50";
 
 export function AdminWeeklyCalendar() {
-  const [weekStart, setWeekStart] = useState(() => getWeekRange(new Date()));
-  const [lessons, setLessons] = useState<WeeklyLesson[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [cancelingId, setCancelingId] = useState<string | null>(null);
-  const [rejectingId, setRejectingId] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [weekStart, setWeekStart] = useState(() => sundayOf(todayIL()));
+  const [lessons, setLessons] = useState<WeeklyLesson[] | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
-  function fetchLessons() {
-    setLoading(true);
-    fetch(`/api/admin/weekly-lessons?start=${weekStart.start}&end=${weekStart.end}`, {
-      cache: "no-store",
-      credentials: "include",
-    })
-      .then((r) => (r.ok ? r.json() : []))
-      .then(setLessons)
-      .catch(() => setLessons([]))
-      .finally(() => setLoading(false));
-  }
-
-  useEffect(() => {
-    fetchLessons();
-  }, [weekStart.start, weekStart.end]);
-
-  async function handleCancel(lessonId: string) {
-    if (!confirm("האם לבטל את השיעור? המשבצת תחזור לזמינות.")) return;
-    setCancelingId(lessonId);
-    setActionError(null);
+  const load = useCallback(async (start: string) => {
+    const end = addDaysYYYYMMDD(start, 6);
     try {
-      const res = await fetch(`/api/lessons/${lessonId}/cancel`, {
-        method: "POST",
-        credentials: "include",
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) {
-        fetchLessons();
-      } else {
-        setActionError((data as { error?: string }).error ?? "שגיאה בביטול השיעור");
-      }
+      const r = await fetch(`/api/admin/weekly-lessons?start=${start}&end=${end}`, { cache: "no-store", credentials: "include" });
+      setLessons(r.ok ? await r.json() : []);
     } catch {
-      setActionError("שגיאה בביטול השיעור");
-    } finally {
-      setCancelingId(null);
+      setLessons([]);
     }
-  }
-
-  /** A completed lesson that did not really happen: keep the report, drop it from the hours. */
-  async function handleNotHeld(lessonId: string) {
-    if (!confirm("להוציא את השיעור מסיכום השעות? הוא יסומן כמבוטל. הדוח שנשלח נשמר.")) return;
-    setCancelingId(lessonId);
-    setActionError(null);
-    try {
-      const res = await fetch(`/api/lessons/${lessonId}/not-held`, { method: "POST", credentials: "include" });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      if (res.ok) fetchLessons();
-      else setActionError(data.error ?? "לא הצלחנו לעדכן את השיעור");
-    } catch {
-      setActionError("אין חיבור לאינטרנט. בדקו את החיבור ונסו שוב");
-    } finally {
-      setCancelingId(null);
-    }
-  }
-
-  async function handleReject(lessonId: string) {
-    if (!confirm("האם לדחות את הבקשה? השיעור יבוטל והמשבצת תחזור לזמינות.")) return;
-    setRejectingId(lessonId);
-    setActionError(null);
-    try {
-      const res = await fetch(`/api/lessons/${lessonId}/reject`, {
-        method: "POST",
-        credentials: "include",
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) {
-        fetchLessons();
-      } else {
-        setActionError((data as { error?: string }).error ?? "שגיאה בדחיית הבקשה");
-      }
-    } catch {
-      setActionError("שגיאה בדחיית הבקשה");
-    } finally {
-      setRejectingId(null);
-    }
-  }
-
-  const goPrev = () => {
-    const d = new Date(weekStart.start + "T12:00:00");
-    d.setDate(d.getDate() - 7);
-    setWeekStart(getWeekRange(d));
-  };
-  const goNext = () => {
-    const d = new Date(weekStart.start + "T12:00:00");
-    d.setDate(d.getDate() + 7);
-    setWeekStart(getWeekRange(d));
-  };
-
-  const timeSlots = useMemo(() => {
-    const slots: string[] = [];
-    for (let h = START_HOUR; h < END_HOUR; h++) {
-      for (let m = 0; m < 60; m += SLOT_MINUTES) {
-        slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
-      }
-    }
-    return slots;
   }, []);
 
-  const lessonsByDate = useMemo(() => {
-    const map = new Map<string, WeeklyLesson[]>();
-    for (const l of lessons) {
-      const arr = map.get(l.date) ?? [];
-      arr.push(l);
-      map.set(l.date, arr);
-    }
-    Array.from(map.values()).forEach((arr) => {
-      arr.sort((a, b) => parseTime(a.startTime) - parseTime(b.startTime));
-    });
-    return map;
-  }, [lessons]);
+  useEffect(() => {
+    setLessons(null);
+    load(weekStart);
+  }, [weekStart, load]);
 
-  if (loading) {
-    return (
-      <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-8 text-center">
-        <p className="text-sm text-[var(--color-text-muted)]">טוען…</p>
-      </div>
-    );
+  async function act(lesson: WeeklyLesson, action: "cancel" | "reject" | "not-held") {
+    const prompts = {
+      cancel: "לבטל את השיעור? התלמיד והמדריך יקבלו מייל, והמשבצת תחזור לזמינות.",
+      reject: "לא לאשר את הבקשה? השיעור יבוטל והמשבצת תחזור לזמינות.",
+      "not-held": "השיעור לא התקיים? הוא יוצא מסיכום השעות. הדוח שנשלח נשמר.",
+    };
+    if (!confirm(prompts[action])) return;
+    setBusyId(lesson.id);
+    setMessage(null);
+    try {
+      const r = await fetch(`/api/lessons/${lesson.id}/${action}`, { method: "POST", credentials: "include" });
+      const data = (await r.json().catch(() => ({}))) as { error?: string };
+      if (!r.ok) setMessage({ ok: false, text: data.error ?? "הפעולה לא הצליחה. נסו שוב." });
+      else {
+        setMessage({ ok: true, text: action === "reject" ? "הבקשה נדחתה." : action === "cancel" ? "השיעור בוטל." : "השיעור הוצא מסיכום השעות." });
+        load(weekStart);
+      }
+    } catch {
+      setMessage({ ok: false, text: "אין חיבור לאינטרנט. בדקו את החיבור ונסו שוב." });
+    } finally {
+      setBusyId(null);
+    }
   }
 
+  const today = todayIL();
+  const days = Array.from({ length: 7 }, (_, i) => addDaysYYYYMMDD(weekStart, i));
+  const isThisWeek = weekStart === sundayOf(today);
+  const counts = {
+    total: lessons?.length ?? 0,
+    pending: lessons?.filter((l) => l.status === "pending_approval").length ?? 0,
+  };
+  const navBtn = "min-h-[36px] rounded-md border border-[var(--color-border)] bg-white px-3 text-sm hover:bg-[var(--color-bg-muted)]";
+
   return (
-    <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white overflow-hidden shadow-sm" dir="rtl">
-      {actionError && (
-        <div className="mx-4 mt-4 p-3 rounded-[var(--radius-input)] bg-red-50 border border-red-200 text-red-700 text-sm text-right">
-          {actionError}
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-lg font-semibold text-[var(--color-text)]">{rangeLabel(weekStart)}</p>
+          {lessons && (
+            <p className="text-sm text-[var(--color-text-muted)]">
+              {counts.total === 0 ? "אין שיעורים" : counts.total === 1 ? "שיעור אחד" : `${counts.total} שיעורים`}
+              {counts.pending > 0 && `, ${counts.pending} ממתינים לאישור`}
+            </p>
+          )}
         </div>
-      )}
-      <div className="flex items-center justify-between gap-2 sm:gap-4 p-4 border-b border-[var(--color-border)]">
-        <button
-          type="button"
-          onClick={goPrev}
-          className="rounded-[var(--radius-input)] border border-[var(--color-border)] px-3 py-2 min-h-[44px] text-sm hover:bg-[var(--color-bg-muted)] shrink-0"
-        >
-          השבוע הקודם
-        </button>
-        <span className="text-sm font-medium text-[var(--color-text)] truncate text-center">
-          {weekStart.start} – {weekStart.end}
-        </span>
-        <button
-          type="button"
-          onClick={goNext}
-          className="rounded-[var(--radius-input)] border border-[var(--color-border)] px-3 py-2 min-h-[44px] text-sm hover:bg-[var(--color-bg-muted)] shrink-0"
-        >
-          השבוע הבא
-        </button>
+        <div className="flex gap-2">
+          <button type="button" className={navBtn} onClick={() => setWeekStart(addDaysYYYYMMDD(weekStart, -7))}>
+            השבוע הקודם
+          </button>
+          {!isThisWeek && (
+            <button type="button" className={navBtn} onClick={() => setWeekStart(sundayOf(today))}>
+              השבוע
+            </button>
+          )}
+          <button type="button" className={navBtn} onClick={() => setWeekStart(addDaysYYYYMMDD(weekStart, 7))}>
+            השבוע הבא
+          </button>
+        </div>
       </div>
 
-      {/* Mobile: stacked cards by day */}
-      <div className="md:hidden divide-y divide-[var(--color-border)]">
-        {weekStart.dates.map((date) => {
-          const dayLessons = lessonsByDate.get(date) ?? [];
-          return (
-            <div key={date} className="p-4">
-              <h3 className="text-sm font-semibold text-[var(--color-text)] mb-2">
-                {formatDateShort(date)}
-              </h3>
-              {dayLessons.length === 0 ? (
-                <p className="text-xs text-[var(--color-text-muted)]">אין שיעורים</p>
-              ) : (
-                <div className="space-y-2">
-                  {dayLessons.map((l) => (
-                    <div
-                      key={l.id}
-                      className="rounded-[var(--radius-input)] p-3 border border-[var(--color-border)] bg-[var(--color-bg-muted)]/30"
-                    >
-                      <div className="font-medium text-[var(--color-text)] text-sm">
-                        {l.startTime}–{l.endTime}
-                      </div>
-                      <div className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                        {l.teacher.name || l.teacher.email} ↔ {l.student.name || l.student.email}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                        <span
-                          className={`inline-block px-1.5 py-0.5 rounded text-[10px] ${
-                            l.status === "pending_approval"
-                              ? "bg-amber-100 text-amber-800"
-                              : l.status === "completed"
-                                ? "bg-green-100 text-green-800"
-                                : "bg-[var(--color-primary)]/15 text-[var(--color-primary)]"
-                          }`}
-                        >
-                          {l.status === "pending_approval"
-                            ? "ממתין"
-                            : l.status === "completed"
-                              ? "הושלם"
-                              : "מתוזמן"}
-                        </span>
-                        {l.status === "scheduled" && (
-                          <button
-                            type="button"
-                            onClick={() => handleCancel(l.id)}
-                            disabled={!!cancelingId || !!rejectingId}
-                            className="text-[10px] text-amber-700 hover:underline disabled:opacity-50"
-                          >
-                            {cancelingId === l.id ? "מבטל…" : "בטל"}
-                          </button>
-                        )}
-                        {l.status === "completed" && (
-                          <button
-                            type="button"
-                            onClick={() => handleNotHeld(l.id)}
-                            disabled={!!cancelingId || !!rejectingId}
-                            className="text-[10px] text-amber-700 hover:underline disabled:opacity-50"
-                            title="השיעור לא התקיים בפועל: יוסר מסיכום השעות"
-                          >
-                            {cancelingId === l.id ? "מעדכן…" : "לא התקיים"}
-                          </button>
-                        )}
-                        {l.status === "pending_approval" && (
-                          <button
-                            type="button"
-                            onClick={() => handleReject(l.id)}
-                            disabled={!!cancelingId || !!rejectingId}
-                            className="text-[10px] text-amber-700 hover:underline disabled:opacity-50"
-                          >
-                            {rejectingId === l.id ? "דוחה…" : "לא לאשר"}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Desktop: full table */}
-      <div className="hidden md:block overflow-x-auto">
-        <table className="w-full border-collapse min-w-[700px]">
-          <thead>
-            <tr>
-              <th className="w-16 p-2 text-xs font-medium text-[var(--color-text-muted)] border-b border-r border-[var(--color-border)] bg-[var(--color-bg-muted)]">
-                שעה
-              </th>
-              {weekStart.dates.map((date, i) => (
-                <th
-                  key={date}
-                  className="min-w-[100px] p-2 text-xs font-medium text-[var(--color-text)] border-b border-r last:border-r-0 border-[var(--color-border)] bg-[var(--color-bg-muted)]"
-                >
-                  <div>{DAY_NAMES_HE[i]}</div>
-                  <div className="text-[10px] text-[var(--color-text-muted)] mt-0.5">
-                    {formatDateShort(date)}
-                  </div>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {timeSlots.map((slotTime) => (
-              <tr key={slotTime}>
-                <td className="p-1 text-xs text-[var(--color-text-muted)] border-b border-r border-[var(--color-border)] align-top bg-[var(--color-bg-muted)]/50">
-                  {slotTime}
-                </td>
-                {weekStart.dates.map((date) => {
-                  const slotMin = parseTime(slotTime);
-                  const matchingLessons = lessons.filter((l) => {
-                    if (l.date !== date) return false;
-                    const startMin = parseTime(l.startTime);
-                    const endMin = parseTime(l.endTime);
-                    return slotMin >= startMin && slotMin < endMin;
-                  });
-                  const lessonsStartingHere = matchingLessons.filter(
-                    (l) => parseTime(l.startTime) === slotMin
-                  );
-
-                  return (
-                    <td
-                      key={date}
-                      className="p-1 align-top border-b border-r last:border-r-0 border-[var(--color-border)] min-h-[36px]"
-                    >
-                      <div className="flex flex-col gap-1">
-                        {lessonsStartingHere.map((lesson) => (
-                          <div
-                            key={lesson.id}
-                            className="rounded-[var(--radius-input)] p-2 text-xs border border-[var(--color-border)] bg-white shadow-sm"
-                            style={{
-                              minHeight: Math.max(
-                                36,
-                                ((parseTime(lesson.endTime) - parseTime(lesson.startTime)) /
-                                  SLOT_MINUTES) *
-                                  36
-                              ),
-                            }}
-                          >
-                            <div className="font-medium text-[var(--color-text)]">
-                              {lesson.startTime}–{lesson.endTime}
-                            </div>
-                            <div className="text-[var(--color-text-muted)] mt-0.5 truncate">
-                              {lesson.teacher.name || lesson.teacher.email} ↔{" "}
-                              {lesson.student.name || lesson.student.email}
-                            </div>
-                            <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                              <span
-                                className={`inline-block px-1.5 py-0.5 rounded text-[10px] ${
-                                  lesson.status === "pending_approval"
-                                    ? "bg-amber-100 text-amber-800"
-                                    : lesson.status === "completed"
-                                      ? "bg-green-100 text-green-800"
-                                      : "bg-[var(--color-primary)]/15 text-[var(--color-primary)]"
-                                }`}
-                              >
-                                {lesson.status === "pending_approval"
-                                  ? "ממתין"
-                                  : lesson.status === "completed"
-                                    ? "הושלם"
-                                    : "מתוזמן"}
-                              </span>
-                              {lesson.status === "scheduled" && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleCancel(lesson.id)}
-                                  disabled={!!cancelingId || !!rejectingId}
-                                  className="text-[10px] text-amber-700 hover:underline disabled:opacity-50"
-                                >
-                                  {cancelingId === lesson.id ? "מבטל…" : "בטל"}
-                                </button>
-                              )}
-                              {lesson.status === "completed" && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleNotHeld(lesson.id)}
-                                  disabled={!!cancelingId || !!rejectingId}
-                                  className="text-[10px] text-amber-700 hover:underline disabled:opacity-50"
-                                  title="השיעור לא התקיים בפועל: יוסר מסיכום השעות"
-                                >
-                                  {cancelingId === lesson.id ? "מעדכן…" : "לא התקיים"}
-                                </button>
-                              )}
-                              {lesson.status === "pending_approval" && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleReject(lesson.id)}
-                                  disabled={!!cancelingId || !!rejectingId}
-                                  className="text-[10px] text-amber-700 hover:underline disabled:opacity-50"
-                                >
-                                  {rejectingId === lesson.id ? "דוחה…" : "לא לאשר"}
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {lessons.length === 0 && (
-        <p className="p-6 text-center text-sm text-[var(--color-text-muted)]">
-          אין שיעורים בשבוע זה.
+      {message && (
+        <p className={`rounded-md px-3 py-2 text-sm ${message.ok ? "bg-green-50 text-green-800" : "bg-red-50 text-red-700"}`} role={message.ok ? "status" : "alert"}>
+          {message.text}
         </p>
+      )}
+
+      {!lessons ? (
+        <p className="text-sm text-[var(--color-text-muted)]">טוען…</p>
+      ) : (
+        <ol className="space-y-4">
+          {days.map((d) => {
+            const dayLessons = lessons.filter((l) => l.date === d);
+            const isToday = d === today;
+            return (
+              <li key={d} className={d < today ? "opacity-75" : ""}>
+                <h3 className={`mb-1.5 text-sm font-semibold ${isToday ? "text-[var(--color-primary)]" : "text-[var(--color-text)]"}`}>
+                  {dayHeading(d)}
+                  {isToday && " (היום)"}
+                </h3>
+                {dayLessons.length === 0 ? (
+                  <p className="border-b border-[var(--color-border)] pb-3 text-sm text-[var(--color-text-muted)]">אין שיעורים</p>
+                ) : (
+                  <ul className="divide-y divide-[var(--color-border)] rounded-lg border border-[var(--color-border)] bg-white">
+                    {dayLessons.map((l) => {
+                      const status = STATUS[l.status] ?? { label: l.status, cls: "bg-[var(--color-bg-muted)]" };
+                      const busy = busyId === l.id;
+                      return (
+                        <li key={l.id} className="grid gap-x-4 gap-y-1 px-4 py-3 sm:grid-cols-[5.5rem_1fr_auto] sm:items-center">
+                          <span className="text-sm font-medium tabular-nums text-[var(--color-text)]">
+                            {l.startTime}–{l.endTime}
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block truncate text-sm text-[var(--color-text)]">
+                              {l.student.name || l.student.email}
+                              <span className="text-[var(--color-text-muted)]"> עם {l.teacher.name || l.teacher.email}</span>
+                            </span>
+                            {(l.topic || l.isWorkshop) && (
+                              <span className="block truncate text-xs text-[var(--color-text-muted)]">{l.isWorkshop ? "סדנה" : l.topic}</span>
+                            )}
+                          </span>
+                          <span className="flex flex-wrap items-center gap-3">
+                            <span className={`rounded px-2 py-0.5 text-xs font-medium ${status.cls}`}>{status.label}</span>
+                            {l.status === "pending_approval" && (
+                              <button type="button" disabled={busy} className={actionBtn} onClick={() => act(l, "reject")}>
+                                לא לאשר
+                              </button>
+                            )}
+                            {l.status === "scheduled" && (
+                              <button type="button" disabled={busy} className={actionBtn} onClick={() => act(l, "cancel")}>
+                                ביטול
+                              </button>
+                            )}
+                            {l.status === "completed" && (
+                              <button type="button" disabled={busy} className={actionBtn} onClick={() => act(l, "not-held")}>
+                                לא התקיים
+                              </button>
+                            )}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </li>
+            );
+          })}
+        </ol>
       )}
     </div>
   );

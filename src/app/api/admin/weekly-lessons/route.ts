@@ -43,6 +43,8 @@ export async function GET(req: Request) {
       endTime: l.endTime,
       status: l.status,
       reportCompleted: l.reportCompleted,
+      topic: l.topic,
+      isWorkshop: !!l.workshopId,
       teacher: l.teacher,
       student: l.student,
     }))
