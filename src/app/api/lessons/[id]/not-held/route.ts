@@ -51,7 +51,7 @@ export async function POST(
   // Conditional update: if the status changed since we read it, nothing is written.
   const updated = await prisma.lesson.updateMany({
     where: { id, status: decision.from },
-    data: { status: "canceled" },
+    data: { status: "canceled", canceledAt: new Date() },
   });
   if (updated.count === 0) {
     return NextResponse.json({ error: "השיעור השתנה בינתיים. רעננו את הדף ונסו שוב" }, { status: 409 });

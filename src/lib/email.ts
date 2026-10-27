@@ -803,3 +803,57 @@ export async function sendLessonCanceled(params: {
   }
   await sendToMany("sendLessonCanceled", params.to, { subject, text });
 }
+
+/** Reminder to a teacher that a lesson request is still waiting for approval. */
+export function getApprovalReminderContent(params: {
+  teacherName: string;
+  studentName: string;
+  date: string;
+  timeRange: string;
+  topic?: string | null;
+  hoursLeft: number;
+  expiresAtLabel: string;
+}) {
+  const subject = `תזכורת: בקשת שיעור ממתינה לאישורך – נותרו ${params.hoursLeft} שעות`;
+  const base = getAppBaseUrl();
+  const lines = [
+    `שלום ${params.teacherName},`,
+    "",
+    `בקשת השיעור של ${params.studentName} עדיין ממתינה לאישורך.`,
+    `מועד השיעור: ${params.date} ${params.timeRange}`,
+    ...(params.topic ? [`סוג המיון: ${params.topic}`] : []),
+    "",
+    `אם הבקשה לא תאושר עד ${params.expiresAtLabel} (בעוד כ-${params.hoursLeft} שעות), היא תבוטל אוטומטית והתלמיד יצטרך לקבוע מחדש.`,
+    ...(base ? ["", `לאישור או דחייה: ${base}/teacher/dashboard`] : []),
+  ];
+  return { subject, text: lines.join("\n") };
+}
+
+function getApprovalReminderHtml(params: Parameters<typeof getApprovalReminderContent>[0]): string {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const base = getAppBaseUrl();
+  const cta = base
+    ? `<p style="margin:20px 0"><a href="${esc(base)}/teacher/dashboard" style="background:#4a7c59;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:600;display:inline-block">לאישור או דחייה של הבקשה</a></p>`
+    : "";
+  return `<div dir="rtl" style="font-family:Heebo,sans-serif;max-width:600px">
+  <h2 style="font-size:18px;margin:0 0 8px">בקשת שיעור ממתינה לאישורך</h2>
+  <p style="margin:0 0 12px">שלום ${esc(params.teacherName)}, בקשת השיעור של <strong>${esc(params.studentName)}</strong> עדיין ממתינה לאישורך.</p>
+  <table style="border-collapse:collapse;font-size:15px">
+    <tr><td style="padding:4px 0;font-weight:600;padding-left:12px">מועד השיעור</td><td>${esc(params.date)} ${esc(params.timeRange)}</td></tr>
+    ${params.topic ? `<tr><td style="padding:4px 0;font-weight:600;padding-left:12px">סוג המיון</td><td>${esc(params.topic)}</td></tr>` : ""}
+  </table>
+  <p style="margin-top:16px;padding:12px 16px;background:#fff4e5;border:1px solid #f0b46a;border-radius:6px;font-weight:700;color:#8a4b00">אם הבקשה לא תאושר עד ${esc(params.expiresAtLabel)} (בעוד כ-${params.hoursLeft} שעות), היא תבוטל אוטומטית.</p>
+  ${cta}
+</div>`;
+}
+
+export async function sendApprovalReminder(
+  params: Parameters<typeof getApprovalReminderContent>[0] & { to: string }
+): Promise<void> {
+  const { subject, text } = getApprovalReminderContent(params);
+  if (isDev && noRealKey()) {
+    console.log("[DEV] Approval reminder to", params.to, "-", subject);
+    return;
+  }
+  await sendMessages("sendApprovalReminder", [{ to: params.to, subject, text, html: getApprovalReminderHtml(params) }]);
+}

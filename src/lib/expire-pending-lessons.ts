@@ -54,7 +54,7 @@ export async function cancelExpiredPendingLesson(
 ): Promise<void> {
   await tx.lesson.update({
     where: { id: lesson.id },
-    data: { status: "canceled" },
+    data: { status: "canceled", canceledAt: new Date() },
   });
   await restoreAvailabilityForLesson(tx, lesson);
 }
@@ -97,7 +97,7 @@ export async function expireOverduePendingLessons(
     const [, restoredResult] = await prisma.$transaction([
       prisma.lesson.updateMany({
         where: { id: { in: expired.map((l) => l.id) } },
-        data: { status: "canceled" },
+        data: { status: "canceled", canceledAt: new Date() },
       }),
       // skipDuplicates covers the slot already being back on the calendar.
       prisma.availability.createMany({ data: slots, skipDuplicates: true }),
