@@ -124,7 +124,7 @@ export function AdminTeacherEdit({ teacherId }: { teacherId: string }) {
           href="/admin/teachers"
           className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
         >
-          ← רשימת מדריכים
+          חזרה לרשימת המדריכים
         </Link>
       </div>
 

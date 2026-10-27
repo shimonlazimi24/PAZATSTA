@@ -57,100 +57,134 @@ export default async function AdminRemindersPage({ searchParams }: { searchParam
     canceled: "בוטל",
   };
 
+  const hasData = stats.some((x) => x.remindersSent > 0 || x.expiredUnapproved > 0) || recent.length > 0;
+  const periodLabel = days === 7 ? "בשבוע האחרון" : `ב-${days} הימים האחרונים`;
+
   return (
-    <div className="max-w-4xl space-y-6">
+    <div className="max-w-4xl space-y-8">
       <AdminPageHeader
         title="תזכורות אישור למדריכים"
-        description={`מדריך שלא אישר בקשה מקבל תזכורת כשנותרו ${REMINDER_MARKS_HOURS_LEFT.join(" ו-")} שעות לחלון האישור. הבקשה עצמה נשלחת אליו מיד עם ההזמנה.`}
-        actions={<RunRemindersButton />}
+        description="תלמיד שמזמין שיעור מחכה לאישור של המדריך. כאן רואים איזה מדריך מאשר בזמן ואיזה צריך תזכורות."
       />
 
-      <div className="flex gap-2" role="tablist" aria-label="תקופה">
-        {PERIODS.map((p) => (
-          <Link
-            key={p}
-            href={`/admin/reminders?days=${p}`}
-            aria-current={p === days ? "page" : undefined}
-            className={`rounded-full px-3 py-1 text-sm ${
-              p === days ? "bg-[var(--color-primary)] text-white" : "border border-[var(--color-border)] bg-white text-[var(--color-text)]"
-            }`}
-          >
-            {p} ימים
-          </Link>
-        ))}
-      </div>
-
-      <section className="overflow-x-auto rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-4 shadow-[var(--shadow-card)]">
-        <h3 className="mb-3 text-sm font-semibold text-[var(--color-text)]">לפי מדריך</h3>
-        {stats.length === 0 ? (
-          <p className="text-sm text-[var(--color-text-muted)]">אין בקשות שיעור בתקופה הזו.</p>
-        ) : (
-          <table className="w-full min-w-[640px] text-right text-sm">
-            <thead>
-              <tr className="border-b border-[var(--color-border)] text-[var(--color-text-muted)]">
-                <th className="px-2 py-2 font-medium">מדריך</th>
-                <th className="px-2 py-2 font-medium tabular-nums">תזכורות שנשלחו</th>
-                <th className="px-2 py-2 font-medium tabular-nums">בקשות שקיבלו תזכורת</th>
-                <th className="px-2 py-2 font-medium tabular-nums">אושרו אחרי תזכורת</th>
-                <th className="px-2 py-2 font-medium tabular-nums">פגו בלי אישור</th>
-                <th className="px-2 py-2 font-medium tabular-nums">זמן אישור (חציון, שעות)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stats.map((s) => (
-                <tr key={s.teacherId} className="border-b border-[var(--color-border)]/60">
-                  <td className="px-2 py-2">{nameOf.get(s.teacherId) ?? "—"}</td>
-                  <td className="px-2 py-2 tabular-nums">{s.remindersSent}</td>
-                  <td className="px-2 py-2 tabular-nums">{s.lessonsReminded}</td>
-                  <td className="px-2 py-2 tabular-nums">{s.approvedAfterReminder}</td>
-                  <td className={`px-2 py-2 tabular-nums ${s.expiredUnapproved > 0 ? "font-semibold text-red-700" : ""}`}>
-                    {s.expiredUnapproved}
-                  </td>
-                  <td className="px-2 py-2 tabular-nums">{s.medianHoursToApprove ?? "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+      <section aria-labelledby="how-h" className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5">
+        <h3 id="how-h" className="text-sm font-semibold text-[var(--color-text)]">מה קורה לבקשה שלא אושרה</h3>
+        <ol className="mt-4 grid gap-4 sm:grid-cols-4">
+          {[
+            ["מיד", "המדריך מקבל מייל עם הבקשה"],
+            [`אחרי ${24 - REMINDER_MARKS_HOURS_LEFT[0]} שעות`, "תזכורת ראשונה, אם עוד לא אישר"],
+            [`אחרי ${24 - REMINDER_MARKS_HOURS_LEFT[1]} שעות`, "תזכורת שנייה"],
+            ["אחרי 24 שעות", "הבקשה מתבטלת אוטומטית"],
+          ].map(([when, what], i) => (
+            <li key={when} className="flex gap-3 sm:block">
+              <span
+                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
+                  i === 3 ? "bg-red-50 text-red-700" : "bg-[var(--color-bg-muted)] text-[var(--color-text)]"
+                }`}
+              >
+                {i + 1}
+              </span>
+              <span className="sm:mt-2 sm:block">
+                <span className="block text-sm font-semibold text-[var(--color-text)]">{when}</span>
+                <span className="block text-sm text-[var(--color-text-muted)]">{what}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
       </section>
 
-      <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-4 shadow-[var(--shadow-card)]">
-        <h3 className="mb-3 text-sm font-semibold text-[var(--color-text)]">תזכורות אחרונות</h3>
-        {recent.length === 0 ? (
-          <p className="text-sm text-[var(--color-text-muted)]">לא נשלחו תזכורות בתקופה הזו.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-right text-sm">
-              <thead>
-                <tr className="border-b border-[var(--color-border)] text-[var(--color-text-muted)]">
-                  <th className="px-2 py-2 font-medium">מדריך</th>
-                  <th className="px-2 py-2 font-medium">תלמיד</th>
-                  <th className="px-2 py-2 font-medium">מועד השיעור</th>
-                  <th className="px-2 py-2 font-medium">נשלחה</th>
-                  <th className="px-2 py-2 font-medium">שעות שנותרו</th>
-                  <th className="px-2 py-2 font-medium">ערוץ</th>
-                  <th className="px-2 py-2 font-medium">מצב הבקשה היום</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recent.map((r) => (
-                  <tr key={r.id} className="border-b border-[var(--color-border)]/60">
-                    <td className="px-2 py-2 font-medium">{nameOf.get(r.teacherId) ?? "—"}</td>
-                    <td className="px-2 py-2">{r.lesson.student.name || r.lesson.student.email}</td>
-                    <td className="px-2 py-2 tabular-nums">
-                      {r.lesson.date.toLocaleDateString("he-IL", { timeZone: "UTC", day: "numeric", month: "numeric" })} {r.lesson.startTime}
-                    </td>
-                    <td className="px-2 py-2 tabular-nums">{fmt(r.sentAt)}</td>
-                    <td className="px-2 py-2 tabular-nums">{r.mark}</td>
-                    <td className="px-2 py-2">{r.channel === "sms" ? "SMS" : "מייל"}</td>
-                    <td className="px-2 py-2">{statusLabel[r.lesson.status] ?? r.lesson.status}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <section aria-labelledby="who-h" className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 id="who-h" className="text-lg font-semibold text-[var(--color-text)]">מדריכים שקיבלו תזכורות</h3>
+          <div className="inline-flex rounded-md border border-[var(--color-border)] bg-white p-0.5" role="group" aria-label="תקופה">
+            {PERIODS.map((p) => (
+              <Link
+                key={p}
+                href={`/admin/reminders?days=${p}`}
+                aria-current={p === days ? "page" : undefined}
+                className={`rounded px-3 py-1.5 text-sm ${p === days ? "bg-[var(--color-bg-muted)] font-semibold text-[var(--color-text)]" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"}`}
+              >
+                {p === 7 ? "שבוע" : `${p} ימים`}
+              </Link>
+            ))}
           </div>
+        </div>
+
+        {!hasData ? (
+          <p className="rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-white px-5 py-8 text-center text-[var(--color-text)]">
+            לא נשלחו תזכורות {periodLabel}. כל הבקשות אושרו בזמן, או שלא היו בקשות.
+            <span className="mt-1 block text-sm text-[var(--color-text-muted)]">כשמדריך לא יאשר בקשה תוך {24 - REMINDER_MARKS_HOURS_LEFT[0]} שעות, הוא יופיע כאן.</span>
+          </p>
+        ) : (
+          <>
+            <div className="overflow-x-auto rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white">
+              <table className="w-full min-w-[640px] text-right text-sm">
+                <thead className="bg-[var(--color-bg-muted)] text-[var(--color-text-muted)]">
+                  <tr>
+                    <th className="px-4 py-2.5 font-medium">מדריך</th>
+                    <th className="px-4 py-2.5 font-medium">תזכורות</th>
+                    <th className="px-4 py-2.5 font-medium">אישר אחרי תזכורת</th>
+                    <th className="px-4 py-2.5 font-medium">בקשות שבוטלו כי לא אישר</th>
+                    <th className="px-4 py-2.5 font-medium">זמן אישור רגיל</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stats
+                    .filter((x) => x.remindersSent > 0 || x.expiredUnapproved > 0)
+                    .map((x) => (
+                      <tr key={x.teacherId} className="border-t border-[var(--color-border)]">
+                        <td className="px-4 py-3 font-medium">{nameOf.get(x.teacherId) ?? "—"}</td>
+                        <td className="px-4 py-3 tabular-nums">{x.remindersSent}</td>
+                        <td className="px-4 py-3 tabular-nums">{x.approvedAfterReminder}</td>
+                        <td className={`px-4 py-3 tabular-nums ${x.expiredUnapproved > 0 ? "font-semibold text-red-700" : ""}`}>{x.expiredUnapproved}</td>
+                        <td className="px-4 py-3">
+                          {x.medianHoursToApprove === null ? "—" : x.medianHoursToApprove < 1 ? "פחות משעה" : `כ-${Math.round(x.medianHoursToApprove)} שעות`}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+
+            {recent.length > 0 && (
+              <details className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white">
+                <summary className="cursor-pointer px-5 py-3 text-sm font-medium">התזכורות האחרונות שנשלחו ({recent.length})</summary>
+                <div className="overflow-x-auto border-t border-[var(--color-border)]">
+                  <table className="w-full min-w-[600px] text-right text-sm">
+                    <thead className="text-[var(--color-text-muted)]">
+                      <tr>
+                        <th className="px-4 py-2 font-medium">מדריך</th>
+                        <th className="px-4 py-2 font-medium">תלמיד</th>
+                        <th className="px-4 py-2 font-medium">מועד השיעור</th>
+                        <th className="px-4 py-2 font-medium">נשלחה</th>
+                        <th className="px-4 py-2 font-medium">מצב הבקשה עכשיו</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recent.map((r) => (
+                        <tr key={r.id} className="border-t border-[var(--color-border)]">
+                          <td className="px-4 py-2">{nameOf.get(r.teacherId) ?? "—"}</td>
+                          <td className="px-4 py-2">{r.lesson.student.name || r.lesson.student.email}</td>
+                          <td className="px-4 py-2 tabular-nums">
+                            {r.lesson.date.toLocaleDateString("he-IL", { timeZone: "UTC", day: "numeric", month: "numeric" })} {r.lesson.startTime}
+                          </td>
+                          <td className="px-4 py-2 tabular-nums">{fmt(r.sentAt)}</td>
+                          <td className="px-4 py-2">{statusLabel[r.lesson.status] ?? r.lesson.status}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            )}
+          </>
         )}
       </section>
+
+      <div className="flex flex-col gap-2 border-t border-[var(--color-border)] pt-5 text-sm text-[var(--color-text-muted)] sm:flex-row sm:items-center sm:justify-between">
+        <p>המערכת בודקת כל רבע שעה ושולחת תזכורות לבד. אין צורך לעשות כלום.</p>
+        <RunRemindersButton />
+      </div>
     </div>
   );
 }

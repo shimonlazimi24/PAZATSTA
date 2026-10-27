@@ -33,9 +33,9 @@ export function RunRemindersButton() {
         type="button"
         onClick={run}
         disabled={state === "running"}
-        className="inline-flex min-h-[40px] items-center rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-4 text-sm font-medium text-[var(--color-text)] hover:bg-[var(--color-bg-muted)] disabled:opacity-50"
+        className="text-sm text-[var(--color-primary)] underline hover:no-underline disabled:opacity-50"
       >
-        {state === "running" ? "שולח…" : "שליחת תזכורות שהגיע זמנן"}
+        {state === "running" ? "בודק…" : "לבדוק עכשיו"}
       </button>
       {message && <p className="text-xs text-[var(--color-text-muted)]">{message}</p>}
     </div>

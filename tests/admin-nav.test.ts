@@ -13,8 +13,11 @@ test("a teacher's edit page highlights the teacher list, not the home item", () 
   assert.equal(activeAdminHref("/admin/teachers/abc123"), "/admin/teachers");
 });
 
-test("the add-teacher page wins over the list, as the longer match", () => {
-  assert.equal(activeAdminHref("/admin/teachers/new"), "/admin/teachers/new");
+test("screens reached from inside a section highlight that section", () => {
+  assert.equal(activeAdminHref("/admin/teachers/new"), "/admin/teachers");
+  assert.equal(activeAdminHref("/admin/group-lessons/types"), "/admin/group-lessons");
+  assert.equal(activeAdminHref("/admin/frontal-days/settings"), "/admin/frontal-days");
+  assert.equal(activeAdminHref("/admin/frontal-days/abc"), "/admin/frontal-days");
 });
 
 test("a path that only shares a prefix is not a match", () => {
