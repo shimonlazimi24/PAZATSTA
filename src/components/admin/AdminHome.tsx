@@ -54,47 +54,46 @@ async function loadAttention() {
   };
 }
 
-function AttentionCard({
+/** One thing waiting on the admin: how many, what it means, and where to deal with it. */
+function AttentionRow({
   count,
   title,
   detail,
   href,
-  cta,
-  tone,
+  action,
   children,
 }: {
   count: number;
   title: string;
   detail: string;
   href: string;
-  cta: string;
-  tone: "alert" | "info";
+  action: string;
   children?: React.ReactNode;
 }) {
-  const needsAction = tone === "alert" && count > 0;
+  const waiting = count > 0;
   return (
-    <div
-      className={`rounded-[var(--radius-card)] border bg-white p-5 shadow-[var(--shadow-card)] ${
-        needsAction ? "border-amber-300" : "border-[var(--color-border)]"
-      }`}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1 text-right">
-          <p className="text-sm font-medium text-[var(--color-text-muted)]">{title}</p>
-          <p className={`text-3xl font-bold tabular-nums ${needsAction ? "text-amber-700" : "text-[var(--color-text)]"}`}>
-            {count}
-          </p>
-        </div>
-        {needsAction && (
-          <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">דורש טיפול</span>
-        )}
+    <li className="flex flex-col gap-3 py-5 sm:flex-row sm:items-start sm:gap-6">
+      <p
+        className={`w-14 shrink-0 text-4xl font-bold leading-none tabular-nums ${
+          waiting ? "text-amber-700" : "text-[var(--color-text-muted)]"
+        }`}
+      >
+        {count}
+      </p>
+      <div className="min-w-0 flex-1 space-y-1">
+        <h3 className="text-base font-semibold text-[var(--color-text)]">{title}</h3>
+        <p className="text-sm text-[var(--color-text-muted)]">{detail}</p>
+        {children}
       </div>
-      <p className="mt-2 text-sm text-[var(--color-text-muted)] text-right">{detail}</p>
-      {children}
-      <Link href={href} className="mt-4 inline-block text-sm font-medium text-[var(--color-primary)] hover:underline">
-        {cta} ←
-      </Link>
-    </div>
+      {waiting && (
+        <Link
+          href={href}
+          className="inline-flex min-h-[40px] shrink-0 items-center self-start rounded-[var(--radius-input)] bg-[var(--color-primary)] px-4 text-sm font-medium text-white hover:opacity-90"
+        >
+          {action}
+        </Link>
+      )}
+    </li>
   );
 }
 
@@ -106,64 +105,71 @@ export async function AdminHome() {
     console.error("[admin/home] failed to load attention items:", e);
   }
 
-  return (
-    <div className="max-w-4xl">
-      <AdminPageHeader title="דורש טיפול" description="מה מחכה לכם עכשיו. כל כרטיס מוביל למסך שבו מטפלים בזה." />
-      {!data ? (
+  if (!data) {
+    return (
+      <div className="max-w-3xl">
+        <AdminPageHeader title="דורש טיפול" />
         <p className="rounded-[var(--radius-input)] bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           לא הצלחנו לטעון את הנתונים. רעננו את הדף בעוד רגע.
         </p>
+      </div>
+    );
+  }
+
+  const nothingWaiting = data.pending === 0 && data.missingReports === 0;
+
+  return (
+    <div className="max-w-3xl">
+      <AdminPageHeader title="דורש טיפול" description="מה מחכה לכם עכשיו, מהדחוף ביותר." />
+
+      {nothingWaiting ? (
+        <p className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white px-5 py-6 text-[var(--color-text)]">
+          אין כרגע בקשות שממתינות לאישור ואין שיעורים שחסר עליהם דוח.
+        </p>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <AttentionCard
-            tone="alert"
+        <ul className="divide-y divide-[var(--color-border)] rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white px-5">
+          <AttentionRow
             count={data.pending}
-            title="ממתינים לאישור"
+            title="בקשות שממתינות לאישור"
             detail={
               data.pendingSoon > 0
-                ? `${data.pendingSoon} מהם יתבטלו אוטומטית בשש השעות הקרובות אם לא יאושרו.`
-                : "בקשות שהמדריך עוד לא אישר."
+                ? `${data.pendingSoon} מהן יתבטלו אוטומטית בשש השעות הקרובות אם לא יאושרו.`
+                : "בקשה שלא מאושרת תוך 24 שעות מתבטלת אוטומטית."
             }
             href="/admin/pending"
-            cta="לאישור בקשות"
+            action="לאישור בקשות"
           />
-          <AttentionCard
-            tone="alert"
+          <AttentionRow
             count={data.missingReports}
             title="שיעורים שעברו בלי דוח"
-            detail="שיעורים שמועדם עבר והמדריך עוד לא מילא דוח או סימן שלא התקיימו."
+            detail="המדריך עוד לא מילא דוח ולא סימן שהשיעור לא התקיים."
             href="/admin/calendar"
-            cta="ללוח השבועי"
+            action="ללוח השבועי"
           >
             {data.missingTop.length > 0 && (
-              <ul className="mt-3 space-y-1 text-sm text-right">
-                {data.missingTop.map((t) => (
-                  <li key={t.name} className="flex justify-between gap-2">
-                    <span className="text-[var(--color-text)]">{t.name}</span>
-                    <span className="tabular-nums text-[var(--color-text-muted)]">{t.count}</span>
-                  </li>
-                ))}
-              </ul>
+              <table className="mt-2 text-sm">
+                <tbody>
+                  {data.missingTop.map((t) => (
+                    <tr key={t.name}>
+                      <td className="py-0.5 pl-6 text-[var(--color-text)]">{t.name}</td>
+                      <td className="py-0.5 tabular-nums text-[var(--color-text-muted)]">
+                        {t.count === 1 ? "שיעור אחד" : `${t.count} שיעורים`}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
-          </AttentionCard>
-          <AttentionCard
-            tone="info"
-            count={data.todayLessons}
-            title="שיעורים היום"
-            detail="מתוזמנים או ממתינים לאישור."
-            href="/admin/calendar"
-            cta="ללוח השבועי"
-          />
-          <AttentionCard
-            tone="info"
-            count={data.weekLessons}
-            title="שיעורים בשבוע הקרוב"
-            detail="שיעורים מאושרים בשבעת הימים הקרובים."
-            href="/admin/calendar"
-            cta="ללוח השבועי"
-          />
-        </div>
+          </AttentionRow>
+        </ul>
       )}
+
+      <p className="mt-6 text-sm text-[var(--color-text-muted)]">
+        היום מתוכננים {data.todayLessons} שיעורים, ובשבוע הקרוב {data.weekLessons} שיעורים מאושרים.{" "}
+        <Link href="/admin/calendar" className="font-medium text-[var(--color-primary)] hover:underline">
+          ללוח השבועי
+        </Link>
+      </p>
     </div>
   );
 }
