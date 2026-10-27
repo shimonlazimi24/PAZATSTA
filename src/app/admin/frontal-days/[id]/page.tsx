@@ -1,9 +1,10 @@
 import { AdminFrontalDayDetail } from "@/components/frontal-days/AdminFrontalDayDetail";
 
-export default function AdminFrontalDayPage({ params }: { params: { id: string } }) {
+export default async function AdminFrontalDayPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   return (
     <div className="max-w-4xl">
-      <AdminFrontalDayDetail id={params.id} />
+      <AdminFrontalDayDetail id={id} />
     </div>
   );
 }

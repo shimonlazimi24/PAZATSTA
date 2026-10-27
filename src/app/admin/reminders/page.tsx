@@ -6,8 +6,9 @@ import { REMINDER_MARKS_HOURS_LEFT, summarizeReminders } from "@/lib/approval-re
 
 const PERIODS = [7, 30, 90] as const;
 
-export default async function AdminRemindersPage({ searchParams }: { searchParams: { days?: string } }) {
-  const days = PERIODS.find((p) => String(p) === searchParams.days) ?? 30;
+export default async function AdminRemindersPage({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
+  const { days: daysParam } = await searchParams;
+  const days = PERIODS.find((p) => String(p) === daysParam) ?? 30;
   const now = new Date();
   const since = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
 
