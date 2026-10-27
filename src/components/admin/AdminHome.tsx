@@ -2,6 +2,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { addDaysYYYYMMDD, todayIsraelYYYYMMDD } from "@/lib/dates";
 import { AdminPageHeader } from "./AdminPageHeader";
+import { monthKeyOf, monthLabel, monthRange, nextMonthKey } from "@/lib/group-lessons";
+import { NO_TEACHER_ALERT_DAYS } from "@/lib/frontal-days";
 
 /** Lesson.date is stored as UTC midnight of the Israeli calendar date. */
 const asLessonDate = (yyyymmdd: string) => new Date(`${yyyymmdd}T00:00:00.000Z`);
@@ -36,6 +38,19 @@ async function loadAttention() {
     prisma.lesson.count({ where: { date: { gte: todayDate, lt: weekEnd }, status: "scheduled" } }),
   ]);
 
+  // Frontal days and group lessons: what is waiting on the admin there.
+  const frontalHorizon = asLessonDate(addDaysYYYYMMDD(today, NO_TEACHER_ALERT_DAYS));
+  const nextMonth = nextMonthKey(monthKeyOf(today));
+  const { start: nmStart, end: nmEnd } = monthRange(nextMonth);
+  const [reportsToApprove, unstaffedDays, nextMonthLessons, teachers] = await Promise.all([
+    prisma.frontalDayReport.count({ where: { status: "submitted" } }),
+    prisma.frontalDay.count({ where: { status: "open", date: { gte: todayDate, lte: frontalHorizon }, signups: { none: {} } } }),
+    prisma.groupLesson.findMany({ where: { status: "open", date: { gte: nmStart, lt: nmEnd } }, select: { signups: { select: { teacherId: true } } } }),
+    prisma.user.count({ where: { role: "teacher" } }),
+  ]);
+  const signedNextMonth = new Set(nextMonthLessons.flatMap((l) => l.signups.map((s) => s.teacherId)));
+  const groupMissing = nextMonthLessons.length > 0 && Number(today.slice(8, 10)) >= 15 ? Math.max(0, teachers - signedNextMonth.size) : 0;
+
   const names = missingByTeacher.length
     ? await prisma.user.findMany({
         where: { id: { in: missingByTeacher.map((r) => r.teacherId) } },
@@ -51,6 +66,10 @@ async function loadAttention() {
     missingTop: missingByTeacher.map((r) => ({ name: nameOf.get(r.teacherId) ?? "—", count: r._count._all })),
     todayLessons,
     weekLessons,
+    reportsToApprove,
+    unstaffedDays,
+    groupMissing,
+    nextMonthLabel: monthLabel(nextMonth),
   };
 }
 
@@ -116,7 +135,8 @@ export async function AdminHome() {
     );
   }
 
-  const nothingWaiting = data.pending === 0 && data.missingReports === 0;
+  const nothingWaiting =
+    data.pending === 0 && data.missingReports === 0 && data.reportsToApprove === 0 && data.unstaffedDays === 0 && data.groupMissing === 0;
 
   return (
     <div className="max-w-3xl">
@@ -124,7 +144,7 @@ export async function AdminHome() {
 
       {nothingWaiting ? (
         <p className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white px-5 py-6 text-[var(--color-text)]">
-          אין כרגע בקשות שממתינות לאישור ואין שיעורים שחסר עליהם דוח.
+          אין כרגע שום דבר שמחכה לטיפול.
         </p>
       ) : (
         <ul className="divide-y divide-[var(--color-border)] rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white px-5">
@@ -161,6 +181,33 @@ export async function AdminHome() {
               </table>
             )}
           </AttentionRow>
+          {data.reportsToApprove > 0 && (
+            <AttentionRow
+              count={data.reportsToApprove}
+              title="דוחות סיום של ימים פרונטליים לאישור"
+              detail="אחרי האישור הדוח נשלח אוטומטית אל בית הספר או המקום."
+              href="/admin/frontal-days"
+              action="לימים הפרונטליים"
+            />
+          )}
+          {data.unstaffedDays > 0 && (
+            <AttentionRow
+              count={data.unstaffedDays}
+              title="ימים פרונטליים בשבועיים הקרובים בלי מדריכים"
+              detail="אף מדריך לא נרשם. אפשר לשבץ מדריך מתוך עמוד היום."
+              href="/admin/frontal-days"
+              action="לשיבוץ מדריכים"
+            />
+          )}
+          {data.groupMissing > 0 && (
+            <AttentionRow
+              count={data.groupMissing}
+              title={`מדריכים שעוד לא נרשמו לשיעור קבוצתי ב${data.nextMonthLabel}`}
+              detail="כל מדריך מעביר לפחות שיעור קבוצתי אחד בחודש. ב-20 לחודש הם מקבלים תזכורת אוטומטית."
+              href="/admin/group-lessons"
+              action="לשיעורים הקבוצתיים"
+            />
+          )}
         </ul>
       )}
 

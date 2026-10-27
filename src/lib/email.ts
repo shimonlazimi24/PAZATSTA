@@ -883,7 +883,8 @@ function simpleEmailText(paragraphs: string[], cta?: { label: string; path: stri
   return [...paragraphs, ...(cta && base ? ["", `${cta.label}: ${base}${cta.path}`] : [])].join("\n\n");
 }
 
-async function sendSimple(
+/** Plain notice email (heading, paragraphs, optional button), sent to each recipient separately. */
+export async function sendNotice(
   label: string,
   to: string[],
   subject: string,
@@ -904,7 +905,7 @@ async function sendSimple(
 const GROUP_CTA = { label: "לשיעורים הקבוצתיים", path: "/teacher/group-lessons" };
 
 export function sendGroupSignupOpen(to: string[], p: { monthLabel: string; lessonCount: number }) {
-  return sendSimple(
+  return sendNotice(
     "sendGroupSignupOpen",
     to,
     `ההרשמה לשיעורים הקבוצתיים של ${p.monthLabel} נפתחה`,
@@ -918,7 +919,7 @@ export function sendGroupSignupOpen(to: string[], p: { monthLabel: string; lesso
 }
 
 export function sendGroupMissingSignup(to: string[], p: { monthLabel: string }) {
-  return sendSimple(
+  return sendNotice(
     "sendGroupMissingSignup",
     to,
     `עוד לא נרשמת לשיעור קבוצתי ב${p.monthLabel}`,
@@ -940,7 +941,7 @@ function groupLessonLines(p: GroupLessonEmailInfo): string[] {
 }
 
 export function sendGroupLessonDayBefore(to: string, p: GroupLessonEmailInfo) {
-  return sendSimple(
+  return sendNotice(
     "sendGroupLessonDayBefore",
     [to],
     `מחר: שיעור קבוצתי, ${p.typeLabel}`,
@@ -951,7 +952,7 @@ export function sendGroupLessonDayBefore(to: string, p: GroupLessonEmailInfo) {
 }
 
 export function sendGroupLessonAssigned(to: string, p: GroupLessonEmailInfo) {
-  return sendSimple(
+  return sendNotice(
     "sendGroupLessonAssigned",
     [to],
     `שובצת לשיעור קבוצתי, ${p.dateLabel}`,
@@ -962,7 +963,7 @@ export function sendGroupLessonAssigned(to: string, p: GroupLessonEmailInfo) {
 }
 
 export function sendGroupLessonRemoved(to: string, p: GroupLessonEmailInfo) {
-  return sendSimple(
+  return sendNotice(
     "sendGroupLessonRemoved",
     [to],
     `הוסרת משיעור קבוצתי, ${p.dateLabel}`,
@@ -973,7 +974,7 @@ export function sendGroupLessonRemoved(to: string, p: GroupLessonEmailInfo) {
 }
 
 export function sendGroupLessonCanceled(to: string[], p: GroupLessonEmailInfo) {
-  return sendSimple(
+  return sendNotice(
     "sendGroupLessonCanceled",
     to,
     `השיעור הקבוצתי בוטל, ${p.dateLabel}`,
@@ -987,7 +988,7 @@ export function sendGroupLessonReportToAdmins(
   to: string[],
   p: GroupLessonEmailInfo & { teacherName: string; reportedType: string; participants: number; notes: string }
 ) {
-  return sendSimple(
+  return sendNotice(
     "sendGroupLessonReportToAdmins",
     to,
     `דוח שיעור קבוצתי: ${p.teacherName}, ${p.dateLabel}`,

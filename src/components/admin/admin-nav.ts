@@ -31,6 +31,13 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     ],
   },
   {
+    title: "ימים פרונטליים",
+    items: [
+      { href: "/admin/frontal-days", label: "כל הימים" },
+      { href: "/admin/frontal-days/settings", label: "הודעות ודוח" },
+    ],
+  },
+  {
     title: "מדריכים",
     items: [
       { href: "/admin/teachers", label: "רשימת מדריכים" },
