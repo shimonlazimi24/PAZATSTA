@@ -14,5 +14,7 @@ URI="${URI_TEMPLATE/\[YOUR-PASSWORD\]/$ENC}"
 URI="${URI%%\?*}"
 read -r -p "Email you will log in to the staging admin with: " ADMIN_EMAIL
 
-DATABASE_URL="${URI}?pgbouncer=true&connection_limit=1" SEED_ADMIN_EMAIL="$ADMIN_EMAIL" npx tsx scripts/seed-staging.ts
+# The session pooler (5432) is reachable over IPv4 from a laptop; the transaction
+# pooler (6543) the app uses may be IPv6-only from here.
+DATABASE_URL="${URI/:6543\//:5432/}" SEED_ADMIN_EMAIL="$ADMIN_EMAIL" npx tsx scripts/seed-staging.ts
 unset DB_PASSWORD ENC URI
