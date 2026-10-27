@@ -426,8 +426,9 @@ export function TeacherHomeLessons() {
                       ) : (() => {
                         if (l.status === "canceled") {
                           return (
-                            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">
-                              בוטל · לא נספר בשעות
+                            <span className="text-sm text-[var(--color-text-muted)]">
+                              <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">בוטל</span>{" "}
+                              לא נספר בשעות
                             </span>
                           );
                         }

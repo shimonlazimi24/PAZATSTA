@@ -119,21 +119,36 @@ export default async function AdminRemindersPage({ searchParams }: { searchParam
         {recent.length === 0 ? (
           <p className="text-sm text-[var(--color-text-muted)]">לא נשלחו תזכורות בתקופה הזו.</p>
         ) : (
-          <ul className="divide-y divide-[var(--color-border)] text-sm">
-            {recent.map((r) => (
-              <li key={r.id} className="flex flex-wrap justify-between gap-2 py-2">
-                <span>
-                  <span className="font-medium">{nameOf.get(r.teacherId) ?? "—"}</span>
-                  <span className="text-[var(--color-text-muted)]">
-                    {" "}· {r.lesson.student.name || r.lesson.student.email} · שיעור {r.lesson.date.toISOString().slice(0, 10)} {r.lesson.startTime}
-                  </span>
-                </span>
-                <span className="text-[var(--color-text-muted)]">
-                  {fmt(r.sentAt)} · נותרו {r.mark} שעות · {r.channel === "sms" ? "SMS" : "מייל"} · {statusLabel[r.lesson.status] ?? r.lesson.status}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] text-right text-sm">
+              <thead>
+                <tr className="border-b border-[var(--color-border)] text-[var(--color-text-muted)]">
+                  <th className="px-2 py-2 font-medium">מדריך</th>
+                  <th className="px-2 py-2 font-medium">תלמיד</th>
+                  <th className="px-2 py-2 font-medium">מועד השיעור</th>
+                  <th className="px-2 py-2 font-medium">נשלחה</th>
+                  <th className="px-2 py-2 font-medium">שעות שנותרו</th>
+                  <th className="px-2 py-2 font-medium">ערוץ</th>
+                  <th className="px-2 py-2 font-medium">מצב הבקשה היום</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recent.map((r) => (
+                  <tr key={r.id} className="border-b border-[var(--color-border)]/60">
+                    <td className="px-2 py-2 font-medium">{nameOf.get(r.teacherId) ?? "—"}</td>
+                    <td className="px-2 py-2">{r.lesson.student.name || r.lesson.student.email}</td>
+                    <td className="px-2 py-2 tabular-nums">
+                      {r.lesson.date.toLocaleDateString("he-IL", { timeZone: "UTC", day: "numeric", month: "numeric" })} {r.lesson.startTime}
+                    </td>
+                    <td className="px-2 py-2 tabular-nums">{fmt(r.sentAt)}</td>
+                    <td className="px-2 py-2 tabular-nums">{r.mark}</td>
+                    <td className="px-2 py-2">{r.channel === "sms" ? "SMS" : "מייל"}</td>
+                    <td className="px-2 py-2">{statusLabel[r.lesson.status] ?? r.lesson.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </div>
