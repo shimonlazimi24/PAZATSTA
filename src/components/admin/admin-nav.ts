@@ -28,6 +28,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     items: [
       { href: "/admin/teachers", label: "רשימת מדריכים" },
       { href: "/admin/teachers/new", label: "הוספת מדריך" },
+      { href: "/admin/reminders", label: "תזכורות אישור" },
     ],
   },
   {

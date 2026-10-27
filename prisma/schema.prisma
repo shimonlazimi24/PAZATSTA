@@ -106,10 +106,13 @@ model Lesson {
   createdAt             DateTime     @default(now())
   /// Set when 24h-before reminder email was sent to student + parent (cron).
   reminder24hSentAt     DateTime?
+  /// When the lesson became canceled (cancel, reject, expiry, not held). Null on older rows.
+  canceledAt            DateTime?
 
   teacher User @relation("LessonTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
   student User @relation("LessonStudent", fields: [studentId], references: [id], onDelete: Cascade)
   summary LessonSummary?
+  approvalReminders ApprovalReminder[]
 
   workshopId String?
   workshop   Workshop? @relation(fields: [workshopId], references: [id], onDelete: SetNull)
@@ -272,4 +275,23 @@ model Session {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+/// One reminder sent to a teacher about a lesson request they have not approved yet.
+/// The unique key makes a reminder impossible to send twice, even if two cron runs overlap.
+model ApprovalReminder {
+  id        String   @id @default(cuid())
+  lessonId  String
+  teacherId String
+  /// Hours left in the approval window when this reminder was due (18, 12).
+  mark      Int
+  /// "email" now; "sms" once SMS is connected.
+  channel   String
+  sentAt    DateTime @default(now())
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, mark, channel])
+  @@index([teacherId, sentAt])
+  @@index([sentAt])
 }
