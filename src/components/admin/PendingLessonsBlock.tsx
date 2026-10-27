@@ -92,7 +92,7 @@ export function PendingLessonsBlock() {
     apiJson<{ ok?: boolean; error?: string }>(`/api/lessons/${id}/reject`, { method: "POST" })
       .then((r) => {
         if (r.ok) {
-          setRejectedMessage("השיעור לא אושר");
+          setRejectedMessage("הבקשה לא אושרה והשיעור בוטל.");
           setTimeout(() => setRejectedMessage(null), 4000);
           fetchPending();
         } else {
@@ -104,87 +104,85 @@ export function PendingLessonsBlock() {
       .finally(() => setRejectingId(null));
   }
 
-  if (loading) {
-    return (
-      <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 shadow-sm" dir="rtl">
-        <h2 className="text-xl font-bold text-[var(--color-text)] mb-3">שיעורים בהמתנה לאישור</h2>
-        <p className="text-sm text-[var(--color-text-muted)]">טוען…</p>
-      </section>
-    );
-  }
-  if (lessons.length === 0) return null;
+  const now = Date.now();
+  const timeLeft = (iso: string | null | undefined) => {
+    if (!iso) return null;
+    const h = (new Date(iso).getTime() - now) / 3_600_000;
+    if (h <= 0) return { text: "פג הזמן, תבוטל בדקות הקרובות", urgent: true };
+    if (h < 1) return { text: "מתבטלת בפחות משעה", urgent: true };
+    return { text: `מתבטלת אוטומטית בעוד ${Math.floor(h)} שעות`, urgent: h <= 6 };
+  };
+  const dateLabel = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("he-IL", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
+  const expiredCount = lessons.filter((l) => l.approvalExpiresAt && new Date(l.approvalExpiresAt).getTime() < now).length;
+
+  if (loading) return <p className="text-sm text-[var(--color-text-muted)]">טוען…</p>;
 
   return (
-    <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 shadow-sm" dir="rtl">
-      <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
-        <h2 className="text-xl font-bold text-[var(--color-text)]">שיעורים בהמתנה לאישור</h2>
-        {lessons.some((l) => l.approvalExpiresAt && new Date(l.approvalExpiresAt) < new Date()) && (
-          <button
-            type="button"
-            disabled={rejectingAll || !!rejectingId || !!approvingId}
-            onClick={handleRejectAllExpired}
-            className="rounded-[var(--radius-input)] border border-red-400 bg-red-50 px-3 py-2 text-sm font-medium text-red-800 hover:bg-red-100 disabled:opacity-50"
-          >
-            {rejectingAll ? "מבטל…" : "בטל את כל שפג תוקפם"}
-          </button>
-        )}
-      </div>
+    <div className="space-y-4" dir="rtl">
       {rejectedMessage && (
-        <p
-          role="status"
-          className="mb-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-[var(--radius-input)] px-3 py-2 text-right"
-        >
-          {rejectedMessage}
-        </p>
+        <p role="status" className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-800">{rejectedMessage}</p>
       )}
       {errorMessage && (
-        <p
-          role="alert"
-          className="mb-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-[var(--radius-input)] px-3 py-2 text-right"
-        >
-          שגיאה: {errorMessage}
-        </p>
+        <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{errorMessage}</p>
       )}
-      <ul className="space-y-3">
-        {lessons.map((l) => (
-          <li
-            key={l.id}
-            className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-2 rounded-[var(--radius-input)] border border-[var(--color-border)] p-3"
-          >
-            <span className="text-[var(--color-text)] text-sm sm:text-base min-w-0">
-              {l.isWorkshop && (
-                <span className="inline-block rounded bg-teal-100 text-teal-900 text-xs font-medium px-2 py-0.5 ml-2 mb-1">
-                  סדנה{l.workshopName ? `: ${l.workshopName}` : ""}
-                </span>
-              )}
-              {l.approvalExpiresAt && new Date(l.approvalExpiresAt) < new Date() && (
-                <span className="inline-block rounded bg-red-100 text-red-800 text-xs font-medium px-2 py-0.5 ml-2 mb-1">
-                  פג תוקף
-                </span>
-              )}{" "}
-              {l.teacher.name || l.teacher.email} ↔ {l.student.name || l.student.email} — {l.date} {l.startTime}–{l.endTime}
-            </span>
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <button
-                type="button"
-                disabled={!!approvingId || !!rejectingId}
-                onClick={() => handleApprove(l.id)}
-                className="rounded-[var(--radius-input)] bg-[var(--color-primary)] px-3 py-2 min-h-[44px] text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
-              >
-                {approvingId === l.id ? "מאשר…" : "אשר"}
-              </button>
-              <button
-                type="button"
-                disabled={!!approvingId || !!rejectingId}
-                onClick={() => handleReject(l.id)}
-                className="rounded-[var(--radius-input)] border border-amber-500 bg-amber-50 px-3 py-2 min-h-[44px] text-sm font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-50"
-              >
-                {rejectingId === l.id ? "דוחה…" : "לא לאשר"}
+
+      {lessons.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-[var(--color-border)] bg-white px-5 py-8 text-center text-[var(--color-text)]">
+          אין בקשות שממתינות לאישור.
+          <span className="mt-1 block text-sm text-[var(--color-text-muted)]">בקשה חדשה מתלמיד תופיע כאן, והמדריך מקבל עליה מייל.</span>
+        </p>
+      ) : (
+        <>
+          {expiredCount > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <span>{expiredCount === 1 ? "בקשה אחת עברה" : `${expiredCount} בקשות עברו`} את 24 השעות לאישור.</span>
+              <button type="button" disabled={rejectingAll || !!rejectingId || !!approvingId} onClick={handleRejectAllExpired} className="font-medium underline disabled:opacity-50">
+                {rejectingAll ? "מבטל…" : "לבטל אותן עכשיו"}
               </button>
             </div>
-          </li>
-        ))}
-      </ul>
-    </section>
+          )}
+          <ul className="divide-y divide-[var(--color-border)] rounded-lg border border-[var(--color-border)] bg-white">
+            {lessons.map((l) => {
+              const left = timeLeft(l.approvalExpiresAt);
+              return (
+                <li key={l.id} className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0 space-y-0.5">
+                    <p className="font-medium text-[var(--color-text)]">
+                      {dateLabel(l.date)}, <span className="tabular-nums">{l.startTime}–{l.endTime}</span>
+                    </p>
+                    <p className="text-sm text-[var(--color-text)]">
+                      {l.student.name || l.student.email}
+                      <span className="text-[var(--color-text-muted)]"> עם {l.teacher.name || l.teacher.email}</span>
+                      {l.isWorkshop && <span className="text-[var(--color-text-muted)]">, סדנה{l.workshopName ? ` ${l.workshopName}` : ""}</span>}
+                    </p>
+                    {left && <p className={`text-xs ${left.urgent ? "font-medium text-amber-800" : "text-[var(--color-text-muted)]"}`}>{left.text}</p>}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <button
+                      type="button"
+                      disabled={!!approvingId || !!rejectingId}
+                      onClick={() => handleApprove(l.id)}
+                      className="min-h-[40px] rounded-md bg-[var(--color-primary)] px-5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                    >
+                      {approvingId === l.id ? "מאשר…" : "אישור"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!!approvingId || !!rejectingId}
+                      onClick={() => {
+                        if (confirm("לא לאשר את הבקשה? השיעור יבוטל והמשבצת תחזור לזמינות.")) handleReject(l.id);
+                      }}
+                      className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:underline disabled:opacity-50"
+                    >
+                      {rejectingId === l.id ? "מבטל…" : "לא לאשר"}
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
+    </div>
   );
 }

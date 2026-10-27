@@ -14,7 +14,6 @@ type Teacher = {
 export function TeachersListBlock() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   function fetchTeachers() {
     setLoading(true);
@@ -30,70 +29,46 @@ export function TeachersListBlock() {
     fetchTeachers();
   }, []);
 
-  function handleDelete(t: Teacher) {
-    const label = t.name || t.email;
-    if (!confirm(`למחוק את המורה ${label}? פעולה זו תמחק גם את כל השיעורים והזמינות שלו.`)) return;
-    setDeletingId(t.id);
-    apiJson<{ ok?: boolean }>(`/api/admin/teachers/${t.id}`, { method: "DELETE" })
-      .then((r) => {
-        if (r.ok) fetchTeachers();
-        else alert(r.error || "שגיאה במחיקה");
-      })
-      .finally(() => setDeletingId(null));
-  }
-
-  if (loading) {
-    return (
-      <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 shadow-sm" dir="rtl">
-        <p className="text-sm text-[var(--color-text-muted)]">טוען…</p>
-      </section>
-    );
-  }
+  if (loading) return <p className="text-sm text-[var(--color-text-muted)]">טוען…</p>;
 
   if (teachers.length === 0) {
     return (
-      <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 shadow-sm" dir="rtl">
-        <p className="text-sm text-[var(--color-text-muted)]">אין מורים במערכת.</p>
-      </section>
+      <p className="rounded-lg border border-dashed border-[var(--color-border)] bg-white px-5 py-8 text-center" dir="rtl">
+        אין עדיין מדריכים במערכת.
+        <Link href="/admin/teachers/new" className="mt-2 block text-sm font-medium text-[var(--color-primary)] hover:underline">
+          הוספת המדריך הראשון
+        </Link>
+      </p>
     );
   }
 
   return (
-    <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 shadow-sm" dir="rtl">
-      <ul className="space-y-3">
-        {teachers.map((t) => (
-          <li
-            key={t.id}
-            className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 rounded-[var(--radius-input)] border border-[var(--color-border)] p-3"
-          >
-            <div className="flex-1 min-w-0">
-              <span className="font-medium text-[var(--color-text)] block">
-                {t.name || t.email}
-              </span>
-              <span className="text-sm text-[var(--color-text-muted)] block">
-                {t.email}
-                {t.phone ? ` · ${t.phone}` : ""}
-              </span>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <Link
-                href={`/admin/teachers/${t.id}`}
-                className="px-3 py-2 rounded-[var(--radius-input)] border border-[var(--color-border)] text-[var(--color-text)] text-sm font-medium hover:bg-[var(--color-bg-muted)]"
-              >
-                ערוך
-              </Link>
-              <button
-                type="button"
-                onClick={() => handleDelete(t)}
-                disabled={!!deletingId}
-                className="shrink-0 px-3 py-2 rounded-[var(--radius-input)] border border-red-300 text-red-600 text-sm font-medium hover:bg-red-50 disabled:opacity-50"
-              >
-              {deletingId === t.id ? "מוחק…" : "מחק"}
-            </button>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </section>
+    <div className="overflow-hidden rounded-lg border border-[var(--color-border)] bg-white" dir="rtl">
+      <table className="w-full text-right text-sm">
+        <thead className="bg-[var(--color-bg-muted)] text-[var(--color-text-muted)]">
+          <tr>
+            <th className="px-4 py-2.5 font-medium">שם</th>
+            <th className="hidden px-4 py-2.5 font-medium sm:table-cell">אימייל</th>
+            <th className="hidden px-4 py-2.5 font-medium sm:table-cell">טלפון</th>
+          </tr>
+        </thead>
+        <tbody>
+          {teachers.map((t) => (
+            <tr key={t.id} className="border-t border-[var(--color-border)] hover:bg-[var(--color-bg-muted)]/50">
+              <td className="px-4 py-3">
+                <Link href={`/admin/teachers/${t.id}`} className="font-medium text-[var(--color-text)] hover:text-[var(--color-primary)] hover:underline">
+                  {t.name || t.email}
+                </Link>
+                <span className="block text-xs text-[var(--color-text-muted)] sm:hidden">{t.email}</span>
+              </td>
+              <td className="hidden px-4 py-3 text-[var(--color-text-muted)] sm:table-cell">{t.email}</td>
+              <td className="hidden px-4 py-3 tabular-nums text-[var(--color-text-muted)] sm:table-cell" dir="ltr">
+                {t.phone || "—"}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
