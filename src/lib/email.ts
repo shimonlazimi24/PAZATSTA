@@ -416,6 +416,10 @@ function buildFullPdfUrl(pdfUrl: string | undefined, lessonId?: string): string 
   return null;
 }
 
+/** Shown in the lesson-completed email wherever a link is included. Matches LINK_TTL_DAYS. */
+export const SUMMARY_LINK_VALIDITY_NOTE =
+  "שימו לב: הקישור לדוח תקף לחודש אחד בלבד. מומלץ להוריד את הדוח ולשמור אותו אצלכם.";
+
 /** Build lesson-completed email content (short + CTA link). Prefers publicPdfUrl (no auth). */
 export function getLessonCompletedContent(params: {
   studentName: string;
@@ -432,7 +436,7 @@ export function getLessonCompletedContent(params: {
     `דוח סיום שיעור: ${params.studentName} עם ${params.teacherName} — ${params.date}`,
     "",
     "הדוח זמין לצפייה ולהורדה בקישור.",
-    ...(fullUrl ? ["לצפייה ולהורדת דוח שיעור לחץ כאן: " + fullUrl] : []),
+    ...(fullUrl ? ["לצפייה ולהורדת דוח שיעור לחץ כאן: " + fullUrl, "", `*** ${SUMMARY_LINK_VALIDITY_NOTE} ***`] : []),
   ];
   return {
     subject: "דוח סיום שיעור – פזצט״א",
@@ -454,7 +458,8 @@ function getLessonCompletedHtml(params: {
     params.publicPdfUrl ??
     buildFullPdfUrl(params.pdfUrl, params.lessonId);
   const downloadCta = fullUrl
-    ? `<p style="margin-top:24px"><a href="${esc(fullUrl)}" style="background:#4a7c59;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:600;display:inline-block">לצפייה ולהורדת דוח שיעור לחץ כאן</a></p>`
+    ? `<p style="margin-top:24px"><a href="${esc(fullUrl)}" style="background:#4a7c59;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:600;display:inline-block">לצפייה ולהורדת דוח שיעור לחץ כאן</a></p>
+  <p style="margin-top:20px;padding:12px 16px;background:#fff4e5;border:1px solid #f0b46a;border-radius:6px;font-size:16px;font-weight:700;color:#8a4b00">${esc(SUMMARY_LINK_VALIDITY_NOTE)}</p>`
     : "";
   return `<div dir="rtl" style="font-family:Heebo,sans-serif;max-width:600px">
   <h2>דוח שיעור: ${esc(params.studentName)} עם ${esc(params.teacherName)} — ${esc(params.date)}</h2>
@@ -797,4 +802,204 @@ export async function sendLessonCanceled(params: {
     return;
   }
   await sendToMany("sendLessonCanceled", params.to, { subject, text });
+}
+
+/** Reminder to a teacher that a lesson request is still waiting for approval. */
+export function getApprovalReminderContent(params: {
+  teacherName: string;
+  studentName: string;
+  date: string;
+  timeRange: string;
+  topic?: string | null;
+  hoursLeft: number;
+  expiresAtLabel: string;
+}) {
+  const subject = `תזכורת: בקשת שיעור ממתינה לאישורך – נותרו ${params.hoursLeft} שעות`;
+  const base = getAppBaseUrl();
+  const lines = [
+    `שלום ${params.teacherName},`,
+    "",
+    `בקשת השיעור של ${params.studentName} עדיין ממתינה לאישורך.`,
+    `מועד השיעור: ${params.date} ${params.timeRange}`,
+    ...(params.topic ? [`סוג המיון: ${params.topic}`] : []),
+    "",
+    `אם הבקשה לא תאושר עד ${params.expiresAtLabel} (בעוד כ-${params.hoursLeft} שעות), היא תבוטל אוטומטית והתלמיד יצטרך לקבוע מחדש.`,
+    ...(base ? ["", `לאישור או דחייה: ${base}/teacher/dashboard`] : []),
+  ];
+  return { subject, text: lines.join("\n") };
+}
+
+function getApprovalReminderHtml(params: Parameters<typeof getApprovalReminderContent>[0]): string {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const base = getAppBaseUrl();
+  const cta = base
+    ? `<p style="margin:20px 0"><a href="${esc(base)}/teacher/dashboard" style="background:#4a7c59;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:600;display:inline-block">לאישור או דחייה של הבקשה</a></p>`
+    : "";
+  return `<div dir="rtl" style="font-family:Heebo,sans-serif;max-width:600px">
+  <h2 style="font-size:18px;margin:0 0 8px">בקשת שיעור ממתינה לאישורך</h2>
+  <p style="margin:0 0 12px">שלום ${esc(params.teacherName)}, בקשת השיעור של <strong>${esc(params.studentName)}</strong> עדיין ממתינה לאישורך.</p>
+  <table style="border-collapse:collapse;font-size:15px">
+    <tr><td style="padding:4px 0;font-weight:600;padding-left:12px">מועד השיעור</td><td>${esc(params.date)} ${esc(params.timeRange)}</td></tr>
+    ${params.topic ? `<tr><td style="padding:4px 0;font-weight:600;padding-left:12px">סוג המיון</td><td>${esc(params.topic)}</td></tr>` : ""}
+  </table>
+  <p style="margin-top:16px;padding:12px 16px;background:#fff4e5;border:1px solid #f0b46a;border-radius:6px;font-weight:700;color:#8a4b00">אם הבקשה לא תאושר עד ${esc(params.expiresAtLabel)} (בעוד כ-${params.hoursLeft} שעות), היא תבוטל אוטומטית.</p>
+  ${cta}
+</div>`;
+}
+
+export async function sendApprovalReminder(
+  params: Parameters<typeof getApprovalReminderContent>[0] & { to: string }
+): Promise<void> {
+  const { subject, text } = getApprovalReminderContent(params);
+  if (isDev && noRealKey()) {
+    console.log("[DEV] Approval reminder to", params.to, "-", subject);
+    return;
+  }
+  await sendMessages("sendApprovalReminder", [{ to: params.to, subject, text, html: getApprovalReminderHtml(params) }]);
+}
+
+// ---------------------------------------------------------------------------
+// Group lessons
+// ---------------------------------------------------------------------------
+
+const escHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+/** Plain, consistent layout for the group-lesson emails: heading, paragraphs, optional button. */
+function simpleEmailHtml(heading: string, paragraphs: string[], cta?: { label: string; path: string }): string {
+  const base = getAppBaseUrl();
+  const button =
+    cta && base
+      ? `<p style="margin:20px 0"><a href="${escHtml(base + cta.path)}" style="background:#4a7c59;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:600;display:inline-block">${escHtml(cta.label)}</a></p>`
+      : "";
+  return `<div dir="rtl" style="font-family:Heebo,sans-serif;max-width:600px">
+  <h2 style="font-size:18px;margin:0 0 12px">${escHtml(heading)}</h2>
+  ${paragraphs.map((p) => `<p style="margin:0 0 10px;white-space:pre-line">${escHtml(p)}</p>`).join("\n  ")}
+  ${button}
+</div>`;
+}
+
+function simpleEmailText(paragraphs: string[], cta?: { label: string; path: string }): string {
+  const base = getAppBaseUrl();
+  return [...paragraphs, ...(cta && base ? ["", `${cta.label}: ${base}${cta.path}`] : [])].join("\n\n");
+}
+
+/** Plain notice email (heading, paragraphs, optional button), sent to each recipient separately. */
+export async function sendNotice(
+  label: string,
+  to: string[],
+  subject: string,
+  heading: string,
+  paragraphs: string[],
+  cta?: { label: string; path: string }
+): Promise<void> {
+  if (to.length === 0) return;
+  if (isDev && noRealKey()) {
+    console.log(`[DEV] ${label} to`, to, "-", subject);
+    return;
+  }
+  const text = simpleEmailText(paragraphs, cta);
+  const html = simpleEmailHtml(heading, paragraphs, cta);
+  await sendMessages(label, to.map((addr) => ({ to: addr, subject, text, html })));
+}
+
+const GROUP_CTA = { label: "לשיעורים הקבוצתיים", path: "/teacher/group-lessons" };
+
+export function sendGroupSignupOpen(to: string[], p: { monthLabel: string; lessonCount: number }) {
+  return sendNotice(
+    "sendGroupSignupOpen",
+    to,
+    `ההרשמה לשיעורים הקבוצתיים של ${p.monthLabel} נפתחה`,
+    `שיעורים קבוצתיים, ${p.monthLabel}`,
+    [
+      `ההרשמה לשיעורים הקבוצתיים של ${p.monthLabel} פתוחה. יש ${p.lessonCount} שיעורים לבחירה.`,
+      "כל מדריך מעביר לפחות שיעור קבוצתי אחד בחודש. מומלץ להירשם מוקדם, כל עוד יש מקום בשיעורים שנוחים לכם.",
+    ],
+    GROUP_CTA
+  );
+}
+
+export function sendGroupMissingSignup(to: string[], p: { monthLabel: string }) {
+  return sendNotice(
+    "sendGroupMissingSignup",
+    to,
+    `עוד לא נרשמת לשיעור קבוצתי ב${p.monthLabel}`,
+    `תזכורת: שיעור קבוצתי ב${p.monthLabel}`,
+    [`עדיין לא נרשמת לשיעור קבוצתי ב${p.monthLabel}. כל מדריך מעביר לפחות שיעור קבוצתי אחד בחודש.`],
+    GROUP_CTA
+  );
+}
+
+type GroupLessonEmailInfo = { typeLabel: string; dateLabel: string; timeRange: string; location?: string | null; details?: string | null };
+
+function groupLessonLines(p: GroupLessonEmailInfo): string[] {
+  return [
+    `שיעור: ${p.typeLabel}`,
+    `מועד: ${p.dateLabel}, ${p.timeRange}`,
+    ...(p.location ? [`מיקום: ${p.location}`] : []),
+    ...(p.details ? [`פרטים: ${p.details}`] : []),
+  ];
+}
+
+export function sendGroupLessonDayBefore(to: string, p: GroupLessonEmailInfo) {
+  return sendNotice(
+    "sendGroupLessonDayBefore",
+    [to],
+    `מחר: שיעור קבוצתי, ${p.typeLabel}`,
+    "תזכורת לשיעור הקבוצתי של מחר",
+    [groupLessonLines(p).join("\n"), "אחרי השיעור, מלאו דוח קצר: כמה משתתפים הגיעו והערות."],
+    GROUP_CTA
+  );
+}
+
+export function sendGroupLessonAssigned(to: string, p: GroupLessonEmailInfo) {
+  return sendNotice(
+    "sendGroupLessonAssigned",
+    [to],
+    `שובצת לשיעור קבוצתי, ${p.dateLabel}`,
+    "שובצת לשיעור קבוצתי",
+    [groupLessonLines(p).join("\n")],
+    GROUP_CTA
+  );
+}
+
+export function sendGroupLessonRemoved(to: string, p: GroupLessonEmailInfo) {
+  return sendNotice(
+    "sendGroupLessonRemoved",
+    [to],
+    `הוסרת משיעור קבוצתי, ${p.dateLabel}`,
+    "הוסרת משיעור קבוצתי",
+    [groupLessonLines(p).join("\n"), "אם זו טעות, פנו לשחר."],
+    GROUP_CTA
+  );
+}
+
+export function sendGroupLessonCanceled(to: string[], p: GroupLessonEmailInfo) {
+  return sendNotice(
+    "sendGroupLessonCanceled",
+    to,
+    `השיעור הקבוצתי בוטל, ${p.dateLabel}`,
+    "השיעור הקבוצתי בוטל",
+    [groupLessonLines(p).join("\n"), "אם ההרשמה הזו הייתה השיעור הקבוצתי שלכם החודש, בחרו שיעור אחר."],
+    GROUP_CTA
+  );
+}
+
+export function sendGroupLessonReportToAdmins(
+  to: string[],
+  p: GroupLessonEmailInfo & { teacherName: string; reportedType: string; participants: number; notes: string }
+) {
+  return sendNotice(
+    "sendGroupLessonReportToAdmins",
+    to,
+    `דוח שיעור קבוצתי: ${p.teacherName}, ${p.dateLabel}`,
+    "דוח שיעור קבוצתי",
+    [
+      `מדריך: ${p.teacherName}`,
+      groupLessonLines(p).join("\n"),
+      `סוג השיעור לפי הדוח: ${p.reportedType}`,
+      `משתתפים שהגיעו: ${p.participants}`,
+      `הערות: ${p.notes.trim() || "אין"}`,
+    ],
+    { label: "לשיעורים הקבוצתיים בניהול", path: "/admin/group-lessons" }
+  );
 }

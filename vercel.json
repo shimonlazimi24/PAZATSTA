@@ -15,6 +15,18 @@
     {
       "path": "/api/cron/lesson-reminders-24h",
       "schedule": "30 8 * * *"
+    },
+    {
+      "path": "/api/cron/approval-reminders",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/group-lessons",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/frontal-days",
+      "schedule": "10 7 * * *"
     }
   ]
 }

@@ -110,8 +110,8 @@ export function AdminTeacherEdit({ teacherId }: { teacherId: string }) {
     return (
       <div className="max-w-2xl" dir="rtl">
         <p className="text-sm text-red-600">מורה לא נמצא.</p>
-        <Link href="/admin?section=teachers" className="text-[var(--color-primary)] hover:underline mt-2 inline-block">
-          חזרה לרשימת מורים
+        <Link href="/admin/teachers" className="text-[var(--color-primary)] hover:underline mt-2 inline-block">
+          חזרה לרשימת מדריכים
         </Link>
       </div>
     );
@@ -121,10 +121,10 @@ export function AdminTeacherEdit({ teacherId }: { teacherId: string }) {
     <div className="max-w-2xl space-y-8" dir="rtl">
       <div className="flex items-center gap-2">
         <Link
-          href="/admin?section=teachers"
+          href="/admin/teachers"
           className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
         >
-          ← רשימת מורים
+          ← רשימת מדריכים
         </Link>
       </div>
 

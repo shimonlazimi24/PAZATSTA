@@ -2,24 +2,47 @@
 
 import { useState, useCallback } from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { LogoutButton } from "../LogoutButton";
 import { BackLink } from "@/components/design/BackLink";
 import { NavDrawer } from "@/components/layout/NavDrawer";
+import { ADMIN_NAV, activeAdminHref } from "./admin-nav";
 
-const MENU_ITEMS = [
-  { id: "weekly", label: "לוח שבועי", href: "/admin" },
-  { id: "pending", label: "שיעורים בהמתנה לאישור", href: "/admin?section=pending" },
-  { id: "teacher", label: "הגדרת מורה", href: "/admin?section=teacher" },
-  { id: "teachers", label: "רשימת מורים", href: "/admin?section=teachers" },
-  { id: "summary", label: "סיכום שעות לתשלום", href: "/admin?section=summary" },
-  { id: "tips", label: "טיפים לדוח", href: "/admin?section=tips" },
-  { id: "report-fields", label: "שדות דוח הסיכום", href: "/admin?section=report-fields" },
-  { id: "statistics", label: "סטטיסטיקות", href: "/admin/statistics" },
-  { id: "workshop", label: "יצירת מפגש סדנה", href: "/admin/workshop" },
-] as const;
+/** Grouped admin menu; shared by the desktop sidebar and the mobile drawer. */
+function AdminNavList({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+  const active = activeAdminHref(pathname);
+  return (
+    <nav className="p-3 space-y-4" aria-label="תפריט ניהול">
+      {ADMIN_NAV.map((group, gi) => (
+        <div key={group.title ?? gi} className="space-y-1">
+          {group.title && (
+            <p className="px-3 pt-1 text-xs font-semibold text-[var(--color-text-muted)]">{group.title}</p>
+          )}
+          {group.items.map((item) => {
+            const isActive = item.href === active;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onNavigate}
+                aria-current={isActive ? "page" : undefined}
+                className={`flex items-center px-3 py-2 rounded-[var(--radius-input)] text-sm font-medium transition-colors min-h-[40px] ${
+                  isActive
+                    ? "bg-[var(--color-primary)] text-white"
+                    : "text-[var(--color-text)] hover:bg-[var(--color-bg-muted)]"
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      ))}
+    </nav>
+  );
+}
 
 interface AdminShellProps {
   email: string;
@@ -28,8 +51,6 @@ interface AdminShellProps {
 
 export function AdminShell({ email, children }: AdminShellProps) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const section = searchParams.get("section") || "weekly";
   const [drawerOpen, setDrawerOpen] = useState(false);
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
 
@@ -39,32 +60,8 @@ export function AdminShell({ email, children }: AdminShellProps) {
     <div className="min-h-screen bg-[var(--color-bg)] flex" dir="rtl">
       {/* Desktop sidebar - hidden on mobile */}
       {showAdminNav && (
-        <aside className="hidden w-56 shrink-0 border-s border-[var(--color-border)] bg-white md:flex md:flex-col">
-          <nav className="p-4 space-y-1">
-            {MENU_ITEMS.map((item) => {
-              const isActive =
-                item.href === "/admin/statistics"
-                  ? pathname === "/admin/statistics"
-                  : item.href === "/admin/workshop"
-                    ? pathname === "/admin/workshop"
-                    : pathname === "/admin" &&
-                      ((item.id === "weekly" && !searchParams.get("section")) ||
-                        searchParams.get("section") === item.id);
-              return (
-                <Link
-                  key={item.id}
-                  href={item.href}
-                  className={`block px-3 py-2 rounded-[var(--radius-input)] text-sm font-medium transition-colors min-h-[44px] flex items-center ${
-                    isActive
-                      ? "bg-[var(--color-primary)] text-white"
-                      : "text-[var(--color-text)] hover:bg-[var(--color-bg-muted)]"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
+        <aside className="hidden w-60 shrink-0 border-s border-[var(--color-border)] bg-white md:flex md:flex-col">
+          <AdminNavList pathname={pathname} />
         </aside>
       )}
 
@@ -110,32 +107,7 @@ export function AdminShell({ email, children }: AdminShellProps) {
       {/* Mobile drawer - admin nav */}
       {showAdminNav && (
         <NavDrawer open={drawerOpen} onClose={closeDrawer} title="תפריט ניהול">
-          <nav className="p-4 space-y-1">
-            {MENU_ITEMS.map((item) => {
-              const isActive =
-                item.href === "/admin/statistics"
-                  ? pathname === "/admin/statistics"
-                  : item.href === "/admin/workshop"
-                    ? pathname === "/admin/workshop"
-                    : pathname === "/admin" &&
-                      ((item.id === "weekly" && !searchParams.get("section")) ||
-                        searchParams.get("section") === item.id);
-              return (
-                <Link
-                  key={item.id}
-                  href={item.href}
-                  onClick={closeDrawer}
-                  className={`block px-3 py-2 rounded-[var(--radius-input)] text-sm font-medium transition-colors min-h-[44px] flex items-center ${
-                    isActive
-                      ? "bg-[var(--color-primary)] text-white"
-                      : "text-[var(--color-text)] hover:bg-[var(--color-bg-muted)]"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
+          <AdminNavList pathname={pathname} onNavigate={closeDrawer} />
         </NavDrawer>
       )}
     </div>

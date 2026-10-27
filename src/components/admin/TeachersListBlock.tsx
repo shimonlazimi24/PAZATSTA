@@ -77,7 +77,7 @@ export function TeachersListBlock() {
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <Link
-                href={`/admin?section=teacher-edit&id=${t.id}`}
+                href={`/admin/teachers/${t.id}`}
                 className="px-3 py-2 rounded-[var(--radius-input)] border border-[var(--color-border)] text-[var(--color-text)] text-sm font-medium hover:bg-[var(--color-bg-muted)]"
               >
                 ערוך

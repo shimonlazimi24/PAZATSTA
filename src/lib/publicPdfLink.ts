@@ -3,8 +3,12 @@ import { prisma } from "@/lib/db";
 
 const TOKEN_BYTES = 48; // 48 bytes = 64 base64url chars
 const BASE = "base64url";
-/** How long an emailed lesson-summary link stays valid. */
-export const LINK_TTL_DAYS = 90;
+/**
+ * How long an emailed lesson-summary link stays valid. The email tells families
+ * the link lasts one month, so this must stay 30. Links already sent keep the
+ * expiry they were created with.
+ */
+export const LINK_TTL_DAYS = 30;
 
 function generateToken(): string {
   return randomBytes(TOKEN_BYTES).toString(BASE);

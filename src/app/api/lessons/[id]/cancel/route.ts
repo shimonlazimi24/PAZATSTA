@@ -55,7 +55,7 @@ export async function POST(
   await prisma.$transaction(async (tx) => {
     await tx.lesson.update({
       where: { id: lessonId },
-      data: { status: "canceled" },
+      data: { status: "canceled", canceledAt: new Date() },
     });
     await restoreAvailabilityForLesson(tx, lesson);
   });
