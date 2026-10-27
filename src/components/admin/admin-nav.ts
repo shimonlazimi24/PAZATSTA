@@ -17,36 +17,23 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     ],
   },
   {
-    title: "שיעורים פרטיים",
+    title: "שיעורים",
     items: [
       { href: "/admin/pending", label: "ממתינים לאישור" },
       { href: "/admin/workshop", label: "סדנאות" },
-    ],
-  },
-  {
-    title: "שיעורים קבוצתיים",
-    items: [
-      { href: "/admin/group-lessons", label: "לוח חודשי" },
-      { href: "/admin/group-lessons/types", label: "סוגי שיעורים" },
-    ],
-  },
-  {
-    title: "ימים פרונטליים",
-    items: [
-      { href: "/admin/frontal-days", label: "כל הימים" },
-      { href: "/admin/frontal-days/settings", label: "הודעות ודוח" },
+      { href: "/admin/group-lessons", label: "שיעורים קבוצתיים" },
+      { href: "/admin/frontal-days", label: "ימים פרונטליים" },
     ],
   },
   {
     title: "מדריכים",
     items: [
-      { href: "/admin/teachers", label: "רשימת מדריכים" },
-      { href: "/admin/teachers/new", label: "הוספת מדריך" },
+      { href: "/admin/teachers", label: "מדריכים" },
       { href: "/admin/reminders", label: "תזכורות אישור" },
     ],
   },
   {
-    title: "דוחות ותשלום",
+    title: "דוחות",
     items: [
       { href: "/admin/hours", label: "סיכום שעות לתשלום" },
       { href: "/admin/statistics", label: "סטטיסטיקות" },
@@ -56,7 +43,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     title: "הגדרות",
     items: [
       { href: "/admin/settings/tips", label: "טיפים לדוח" },
-      { href: "/admin/settings/report-fields", label: "שדות דוח הסיכום" },
+      { href: "/admin/settings/report-fields", label: "שדות דוח השיעור" },
     ],
   },
 ];
@@ -65,7 +52,7 @@ const ALL_HREFS = ADMIN_NAV.flatMap((g) => g.items.map((i) => i.href));
 
 /**
  * The menu item to highlight: the longest href that is the path itself or a
- * parent of it. /admin/teachers/abc highlights "רשימת מדריכים"; /admin only
+ * parent of it. /admin/teachers/abc highlights "מדריכים"; /admin only
  * highlights the home item on exactly /admin.
  */
 export function activeAdminHref(pathname: string): string | null {

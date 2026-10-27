@@ -186,7 +186,7 @@ export function AdminWeeklyCalendar() {
           onClick={goPrev}
           className="rounded-[var(--radius-input)] border border-[var(--color-border)] px-3 py-2 min-h-[44px] text-sm hover:bg-[var(--color-bg-muted)] shrink-0"
         >
-          ← שבוע קודם
+          השבוע הקודם
         </button>
         <span className="text-sm font-medium text-[var(--color-text)] truncate text-center">
           {weekStart.start} – {weekStart.end}
@@ -196,7 +196,7 @@ export function AdminWeeklyCalendar() {
           onClick={goNext}
           className="rounded-[var(--radius-input)] border border-[var(--color-border)] px-3 py-2 min-h-[44px] text-sm hover:bg-[var(--color-bg-muted)] shrink-0"
         >
-          שבוע הבא →
+          השבוע הבא
         </button>
       </div>
 
