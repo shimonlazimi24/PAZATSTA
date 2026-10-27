@@ -857,3 +857,148 @@ export async function sendApprovalReminder(
   }
   await sendMessages("sendApprovalReminder", [{ to: params.to, subject, text, html: getApprovalReminderHtml(params) }]);
 }
+
+// ---------------------------------------------------------------------------
+// Group lessons
+// ---------------------------------------------------------------------------
+
+const escHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+/** Plain, consistent layout for the group-lesson emails: heading, paragraphs, optional button. */
+function simpleEmailHtml(heading: string, paragraphs: string[], cta?: { label: string; path: string }): string {
+  const base = getAppBaseUrl();
+  const button =
+    cta && base
+      ? `<p style="margin:20px 0"><a href="${escHtml(base + cta.path)}" style="background:#4a7c59;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:600;display:inline-block">${escHtml(cta.label)}</a></p>`
+      : "";
+  return `<div dir="rtl" style="font-family:Heebo,sans-serif;max-width:600px">
+  <h2 style="font-size:18px;margin:0 0 12px">${escHtml(heading)}</h2>
+  ${paragraphs.map((p) => `<p style="margin:0 0 10px;white-space:pre-line">${escHtml(p)}</p>`).join("\n  ")}
+  ${button}
+</div>`;
+}
+
+function simpleEmailText(paragraphs: string[], cta?: { label: string; path: string }): string {
+  const base = getAppBaseUrl();
+  return [...paragraphs, ...(cta && base ? ["", `${cta.label}: ${base}${cta.path}`] : [])].join("\n\n");
+}
+
+async function sendSimple(
+  label: string,
+  to: string[],
+  subject: string,
+  heading: string,
+  paragraphs: string[],
+  cta?: { label: string; path: string }
+): Promise<void> {
+  if (to.length === 0) return;
+  if (isDev && noRealKey()) {
+    console.log(`[DEV] ${label} to`, to, "-", subject);
+    return;
+  }
+  const text = simpleEmailText(paragraphs, cta);
+  const html = simpleEmailHtml(heading, paragraphs, cta);
+  await sendMessages(label, to.map((addr) => ({ to: addr, subject, text, html })));
+}
+
+const GROUP_CTA = { label: "לשיעורים הקבוצתיים", path: "/teacher/group-lessons" };
+
+export function sendGroupSignupOpen(to: string[], p: { monthLabel: string; lessonCount: number }) {
+  return sendSimple(
+    "sendGroupSignupOpen",
+    to,
+    `ההרשמה לשיעורים הקבוצתיים של ${p.monthLabel} נפתחה`,
+    `שיעורים קבוצתיים, ${p.monthLabel}`,
+    [
+      `ההרשמה לשיעורים הקבוצתיים של ${p.monthLabel} פתוחה. יש ${p.lessonCount} שיעורים לבחירה.`,
+      "כל מדריך מעביר לפחות שיעור קבוצתי אחד בחודש. מומלץ להירשם מוקדם, כל עוד יש מקום בשיעורים שנוחים לכם.",
+    ],
+    GROUP_CTA
+  );
+}
+
+export function sendGroupMissingSignup(to: string[], p: { monthLabel: string }) {
+  return sendSimple(
+    "sendGroupMissingSignup",
+    to,
+    `עוד לא נרשמת לשיעור קבוצתי ב${p.monthLabel}`,
+    `תזכורת: שיעור קבוצתי ב${p.monthLabel}`,
+    [`עדיין לא נרשמת לשיעור קבוצתי ב${p.monthLabel}. כל מדריך מעביר לפחות שיעור קבוצתי אחד בחודש.`],
+    GROUP_CTA
+  );
+}
+
+type GroupLessonEmailInfo = { typeLabel: string; dateLabel: string; timeRange: string; location?: string | null; details?: string | null };
+
+function groupLessonLines(p: GroupLessonEmailInfo): string[] {
+  return [
+    `שיעור: ${p.typeLabel}`,
+    `מועד: ${p.dateLabel}, ${p.timeRange}`,
+    ...(p.location ? [`מיקום: ${p.location}`] : []),
+    ...(p.details ? [`פרטים: ${p.details}`] : []),
+  ];
+}
+
+export function sendGroupLessonDayBefore(to: string, p: GroupLessonEmailInfo) {
+  return sendSimple(
+    "sendGroupLessonDayBefore",
+    [to],
+    `מחר: שיעור קבוצתי, ${p.typeLabel}`,
+    "תזכורת לשיעור הקבוצתי של מחר",
+    [groupLessonLines(p).join("\n"), "אחרי השיעור, מלאו דוח קצר: כמה משתתפים הגיעו והערות."],
+    GROUP_CTA
+  );
+}
+
+export function sendGroupLessonAssigned(to: string, p: GroupLessonEmailInfo) {
+  return sendSimple(
+    "sendGroupLessonAssigned",
+    [to],
+    `שובצת לשיעור קבוצתי, ${p.dateLabel}`,
+    "שובצת לשיעור קבוצתי",
+    [groupLessonLines(p).join("\n")],
+    GROUP_CTA
+  );
+}
+
+export function sendGroupLessonRemoved(to: string, p: GroupLessonEmailInfo) {
+  return sendSimple(
+    "sendGroupLessonRemoved",
+    [to],
+    `הוסרת משיעור קבוצתי, ${p.dateLabel}`,
+    "הוסרת משיעור קבוצתי",
+    [groupLessonLines(p).join("\n"), "אם זו טעות, פנו לשחר."],
+    GROUP_CTA
+  );
+}
+
+export function sendGroupLessonCanceled(to: string[], p: GroupLessonEmailInfo) {
+  return sendSimple(
+    "sendGroupLessonCanceled",
+    to,
+    `השיעור הקבוצתי בוטל, ${p.dateLabel}`,
+    "השיעור הקבוצתי בוטל",
+    [groupLessonLines(p).join("\n"), "אם ההרשמה הזו הייתה השיעור הקבוצתי שלכם החודש, בחרו שיעור אחר."],
+    GROUP_CTA
+  );
+}
+
+export function sendGroupLessonReportToAdmins(
+  to: string[],
+  p: GroupLessonEmailInfo & { teacherName: string; reportedType: string; participants: number; notes: string }
+) {
+  return sendSimple(
+    "sendGroupLessonReportToAdmins",
+    to,
+    `דוח שיעור קבוצתי: ${p.teacherName}, ${p.dateLabel}`,
+    "דוח שיעור קבוצתי",
+    [
+      `מדריך: ${p.teacherName}`,
+      groupLessonLines(p).join("\n"),
+      `סוג השיעור לפי הדוח: ${p.reportedType}`,
+      `משתתפים שהגיעו: ${p.participants}`,
+      `הערות: ${p.notes.trim() || "אין"}`,
+    ],
+    { label: "לשיעורים הקבוצתיים בניהול", path: "/admin/group-lessons" }
+  );
+}

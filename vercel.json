@@ -19,6 +19,10 @@
     {
       "path": "/api/cron/approval-reminders",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/group-lessons",
+      "schedule": "0 7 * * *"
     }
   ]
 }

@@ -24,6 +24,13 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     ],
   },
   {
+    title: "שיעורים קבוצתיים",
+    items: [
+      { href: "/admin/group-lessons", label: "לוח חודשי" },
+      { href: "/admin/group-lessons/types", label: "סוגי שיעורים" },
+    ],
+  },
+  {
     title: "מדריכים",
     items: [
       { href: "/admin/teachers", label: "רשימת מדריכים" },

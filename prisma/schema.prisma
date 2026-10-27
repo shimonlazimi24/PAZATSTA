@@ -295,3 +295,83 @@ model ApprovalReminder {
   @@index([teacherId, sentAt])
   @@index([sentAt])
 }
+
+/// A kind of group lesson, managed by the admin: a category ("יום המאה", "צו ראשון") and a sub-type.
+model GroupLessonType {
+  id        String   @id @default(cuid())
+  category  String
+  name      String
+  sortOrder Int      @default(0)
+  /// Hidden from new lessons when false; existing lessons keep it.
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  lessons GroupLesson[]
+
+  @@unique([category, name])
+}
+
+/// A group lesson the admin schedules and teachers sign up to lead.
+model GroupLesson {
+  id             String   @id @default(cuid())
+  typeId         String
+  /// UTC midnight of the Israeli calendar date, like Lesson.date.
+  date           DateTime
+  startTime      String
+  endTime        String
+  location       String?
+  details        String?
+  teachersNeeded Int      @default(1)
+  /// "open" | "canceled"
+  status         String   @default("open")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  type    GroupLessonType     @relation(fields: [typeId], references: [id])
+  signups GroupLessonSignup[]
+  reports GroupLessonReport[]
+
+  @@index([date])
+  @@index([status, date])
+}
+
+/// A teacher signed up to lead a group lesson.
+model GroupLessonSignup {
+  id               String    @id @default(cuid())
+  groupLessonId    String
+  teacherId        String
+  createdAt        DateTime  @default(now())
+  /// Set when the day-before reminder went out.
+  reminderSentAt   DateTime?
+
+  groupLesson GroupLesson @relation(fields: [groupLessonId], references: [id], onDelete: Cascade)
+
+  @@unique([groupLessonId, teacherId])
+  @@index([teacherId])
+}
+
+/// The teacher's report after a group lesson. Frozen once submitted.
+model GroupLessonReport {
+  id            String   @id @default(cuid())
+  groupLessonId String
+  teacherId     String
+  /// The lesson type as the teacher reported it, stored as text so later renames do not change it.
+  typeLabel     String
+  participants  Int
+  notes         String   @default("")
+  submittedAt   DateTime @default(now())
+
+  groupLesson GroupLesson @relation(fields: [groupLessonId], references: [id], onDelete: Cascade)
+
+  @@unique([groupLessonId, teacherId])
+}
+
+/// Monthly announcements already sent, so each goes out once ("2026-12" + "signup_open").
+model GroupLessonNotice {
+  id       String   @id @default(cuid())
+  monthKey String
+  kind     String
+  sentAt   DateTime @default(now())
+
+  @@unique([monthKey, kind])
+}
