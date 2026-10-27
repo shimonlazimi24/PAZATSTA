@@ -92,6 +92,23 @@ export function AdminWeeklyCalendar() {
     }
   }
 
+  /** A completed lesson that did not really happen: keep the report, drop it from the hours. */
+  async function handleNotHeld(lessonId: string) {
+    if (!confirm("להוציא את השיעור מסיכום השעות? הוא יסומן כמבוטל. הדוח שנשלח נשמר.")) return;
+    setCancelingId(lessonId);
+    setActionError(null);
+    try {
+      const res = await fetch(`/api/lessons/${lessonId}/not-held`, { method: "POST", credentials: "include" });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (res.ok) fetchLessons();
+      else setActionError(data.error ?? "לא הצלחנו לעדכן את השיעור");
+    } catch {
+      setActionError("אין חיבור לאינטרנט. בדקו את החיבור ונסו שוב");
+    } finally {
+      setCancelingId(null);
+    }
+  }
+
   async function handleReject(lessonId: string) {
     if (!confirm("האם לדחות את הבקשה? השיעור יבוטל והמשבצת תחזור לזמינות.")) return;
     setRejectingId(lessonId);
@@ -233,6 +250,17 @@ export function AdminWeeklyCalendar() {
                             {cancelingId === l.id ? "מבטל…" : "בטל"}
                           </button>
                         )}
+                        {l.status === "completed" && (
+                          <button
+                            type="button"
+                            onClick={() => handleNotHeld(l.id)}
+                            disabled={!!cancelingId || !!rejectingId}
+                            className="text-[10px] text-amber-700 hover:underline disabled:opacity-50"
+                            title="השיעור לא התקיים בפועל: יוסר מסיכום השעות"
+                          >
+                            {cancelingId === l.id ? "מעדכן…" : "לא התקיים"}
+                          </button>
+                        )}
                         {l.status === "pending_approval" && (
                           <button
                             type="button"
@@ -342,6 +370,17 @@ export function AdminWeeklyCalendar() {
                                   className="text-[10px] text-amber-700 hover:underline disabled:opacity-50"
                                 >
                                   {cancelingId === lesson.id ? "מבטל…" : "בטל"}
+                                </button>
+                              )}
+                              {lesson.status === "completed" && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleNotHeld(lesson.id)}
+                                  disabled={!!cancelingId || !!rejectingId}
+                                  className="text-[10px] text-amber-700 hover:underline disabled:opacity-50"
+                                  title="השיעור לא התקיים בפועל: יוסר מסיכום השעות"
+                                >
+                                  {cancelingId === lesson.id ? "מעדכן…" : "לא התקיים"}
                                 </button>
                               )}
                               {lesson.status === "pending_approval" && (

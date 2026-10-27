@@ -416,6 +416,10 @@ function buildFullPdfUrl(pdfUrl: string | undefined, lessonId?: string): string 
   return null;
 }
 
+/** Shown in the lesson-completed email wherever a link is included. Matches LINK_TTL_DAYS. */
+export const SUMMARY_LINK_VALIDITY_NOTE =
+  "שימו לב: הקישור לדוח תקף לחודש אחד בלבד. מומלץ להוריד את הדוח ולשמור אותו אצלכם.";
+
 /** Build lesson-completed email content (short + CTA link). Prefers publicPdfUrl (no auth). */
 export function getLessonCompletedContent(params: {
   studentName: string;
@@ -432,7 +436,7 @@ export function getLessonCompletedContent(params: {
     `דוח סיום שיעור: ${params.studentName} עם ${params.teacherName} — ${params.date}`,
     "",
     "הדוח זמין לצפייה ולהורדה בקישור.",
-    ...(fullUrl ? ["לצפייה ולהורדת דוח שיעור לחץ כאן: " + fullUrl] : []),
+    ...(fullUrl ? ["לצפייה ולהורדת דוח שיעור לחץ כאן: " + fullUrl, "", `*** ${SUMMARY_LINK_VALIDITY_NOTE} ***`] : []),
   ];
   return {
     subject: "דוח סיום שיעור – פזצט״א",
@@ -454,7 +458,8 @@ function getLessonCompletedHtml(params: {
     params.publicPdfUrl ??
     buildFullPdfUrl(params.pdfUrl, params.lessonId);
   const downloadCta = fullUrl
-    ? `<p style="margin-top:24px"><a href="${esc(fullUrl)}" style="background:#4a7c59;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:600;display:inline-block">לצפייה ולהורדת דוח שיעור לחץ כאן</a></p>`
+    ? `<p style="margin-top:24px"><a href="${esc(fullUrl)}" style="background:#4a7c59;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:600;display:inline-block">לצפייה ולהורדת דוח שיעור לחץ כאן</a></p>
+  <p style="margin-top:20px;padding:12px 16px;background:#fff4e5;border:1px solid #f0b46a;border-radius:6px;font-size:16px;font-weight:700;color:#8a4b00">${esc(SUMMARY_LINK_VALIDITY_NOTE)}</p>`
     : "";
   return `<div dir="rtl" style="font-family:Heebo,sans-serif;max-width:600px">
   <h2>דוח שיעור: ${esc(params.studentName)} עם ${esc(params.teacherName)} — ${esc(params.date)}</h2>
