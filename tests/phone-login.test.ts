@@ -36,3 +36,9 @@ test("each phone failure gets its own plain message", () => {
   assert.equal(requestPhoneCodeErrorMessage(429), LOGIN_MESSAGES.rateLimited);
   assert.equal(requestPhoneCodeErrorMessage(0), LOGIN_MESSAGES.offline);
 });
+
+test("phone login turns on in production once 019 is fully configured, not before", () => {
+  const prod = { VERCEL_ENV: "production", NODE_ENV: "production", SMS_PROVIDER: "019" };
+  assert.equal(smsMode({ ...prod, SMS_019_USERNAME: "u", SMS_019_TOKEN: "t" }), "off");
+  assert.equal(smsMode({ ...prod, SMS_019_USERNAME: "u", SMS_019_TOKEN: "t", SMS_SENDER: "Pazatsta" }), "provider");
+});
