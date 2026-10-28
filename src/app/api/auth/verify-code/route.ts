@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { normalizeEmailInput } from "@/lib/login-messages";
-import { z } from "zod";
+import { VerifyCodeSchema } from "@/lib/auth-schemas";
 import { prisma } from "@/lib/db";
 import { verifyOTP } from "@/lib/otp";
 import {
@@ -13,14 +12,7 @@ import { canAccessAdmin } from "@/lib/admin";
 
 const MAX_ATTEMPTS = 5;
 
-const VerifyCodeSchema = z.object({
-  // Must clean exactly as request-code does, or the stored code would never match.
-  email: z.unknown().transform((s) => (typeof s === "string" ? normalizeEmailInput(s) : "")),
-  code: z.unknown().transform((s) => (typeof s === "string" ? s.replace(/\D/g, "") : "")),
-  role: z.unknown().transform((s) => (s === "teacher" || s === "admin" ? s : "student")),
-  phone: z.unknown().transform((s) => (typeof s === "string" ? s.trim() : "")),
-  next: z.unknown().optional().transform((s) => (typeof s === "string" ? s.trim() : "")),
-});
+
 
 export async function POST(req: Request) {
   try {
