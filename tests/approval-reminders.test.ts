@@ -62,7 +62,7 @@ test("the admin summary counts reminders, approvals after them, expiries and app
   const t1 = stats.find((s) => s.teacherId === "t1")!;
   assert.deepEqual(
     { ...t1 },
-    { teacherId: "t1", remindersSent: 3, lessonsReminded: 2, approvedAfterReminder: 1, expiredUnapproved: 1, medianHoursToApprove: 14 }
+    { teacherId: "t1", remindersSent: 3, lessonsReminded: 2, approvedAfterReminder: 1, expiredUnapproved: 1, ignoredFirstReminder: 2, medianHoursToApprove: 14 }
   );
   const t2 = stats.find((s) => s.teacherId === "t2")!;
   assert.equal(t2.remindersSent, 0);
@@ -89,4 +89,15 @@ test("rows canceled before canceledAt existed fall back to the closed window", (
     now
   );
   assert.equal(stats[0].expiredUnapproved, 1);
+});
+
+test("a request approved right after the first reminder is not counted as ignoring it", () => {
+  const created = new Date(now.getTime() - 20 * H);
+  const stats = summarizeReminders(
+    [{ lessonId: "q", teacherId: "t", mark: 18, sentAt: new Date(created.getTime() + 6 * H) }],
+    [{ id: "q", teacherId: "t", status: "scheduled", createdAt: created, approvedByTeacherAt: new Date(created.getTime() + 7 * H), approvedByAdminAt: null, approvalExpiresAt: new Date(created.getTime() + 24 * H), canceledAt: null }],
+    now
+  );
+  assert.equal(stats[0].ignoredFirstReminder, 0);
+  assert.equal(stats[0].approvedAfterReminder, 1);
 });

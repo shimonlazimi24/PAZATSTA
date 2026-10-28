@@ -73,6 +73,7 @@ export function FrontalDayForm({
   onSubmit: (v: FrontalDayValues) => Promise<string | null>;
 }) {
   const [v, setV] = useState(initial);
+  const [withCourse, setWithCourse] = useState(Boolean(initial.courseUrl || initial.courseCode));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const set = <K extends keyof FrontalDayValues>(k: K) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -83,6 +84,10 @@ export function FrontalDayForm({
       noValidate
       onSubmit={async (e) => {
         e.preventDefault();
+        if (withCourse && !v.courseUrl.trim() && !v.courseCode.trim()) {
+          setError("סימנתם שהיום כולל קורס מתנה. הוסיפו קישור לקורס או קוד גישה, או בטלו את הסימון.");
+          return;
+        }
         setSaving(true);
         setError(null);
         const err = await onSubmit(v);
@@ -140,14 +145,33 @@ export function FrontalDayForm({
         <Field id="fd-feedback" label="קישור לטופס המשוב לתלמידים" hint="ממנו נוצר קוד ה-QR שהמדריך מציג בסוף היום.">
           <input id="fd-feedback" dir="ltr" className={input} value={v.feedbackUrl} onChange={set("feedbackUrl")} placeholder="https://" />
         </Field>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field id="fd-course-url" label="קישור לקורס המתנה" hint="אם היום כולל קורס מתנה.">
-            <input id="fd-course-url" dir="ltr" className={input} value={v.courseUrl} onChange={set("courseUrl")} placeholder="https://" />
-          </Field>
-          <Field id="fd-course-code" label="קוד גישה לקורס">
-            <input id="fd-course-code" dir="ltr" className={input} value={v.courseCode} onChange={set("courseCode")} />
-          </Field>
-        </div>
+        <label className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            className="mt-1 h-4 w-4 accent-[var(--color-primary)]"
+            checked={withCourse}
+            onChange={(e) => {
+              setWithCourse(e.target.checked);
+              if (!e.target.checked) setV((x) => ({ ...x, courseUrl: "", courseCode: "" }));
+            }}
+          />
+          <span>
+            <span className="block text-sm font-medium text-[var(--color-text)]">היום כולל גישה לקורס מתנה לתלמידים</span>
+            <span className="block text-xs text-[var(--color-text-muted)]">
+              בסוף היום המדריך יציג לתלמידים QR לקורס ואת קוד הגישה. בלי הסימון, לא יופיע קורס.
+            </span>
+          </span>
+        </label>
+        {withCourse && (
+          <div className="grid gap-4 border-r-2 border-[var(--color-border)] pr-4 sm:grid-cols-2">
+            <Field id="fd-course-url" label="קישור לקורס" hint="ממנו נוצר קוד ה-QR לקורס.">
+              <input id="fd-course-url" dir="ltr" className={input} value={v.courseUrl} onChange={set("courseUrl")} placeholder="https://" />
+            </Field>
+            <Field id="fd-course-code" label="קוד גישה לקורס" hint="אותו קוד לכל התלמידים ביום הזה.">
+              <input id="fd-course-code" dir="ltr" className={input} value={v.courseCode} onChange={set("courseCode")} />
+            </Field>
+          </div>
+        )}
       </Group>
 
       <Group title="למי נשלח דוח הסיום">

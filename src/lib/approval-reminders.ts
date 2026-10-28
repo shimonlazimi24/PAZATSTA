@@ -56,6 +56,8 @@ export type TeacherReminderStats = {
   lessonsReminded: number;
   approvedAfterReminder: number;
   expiredUnapproved: number;
+  /** Requests still not approved after the first reminder: a second reminder went out, or the request expired. */
+  ignoredFirstReminder: number;
   /** Median hours from request to approval across all requests in the period. */
   medianHoursToApprove: number | null;
 };
@@ -69,7 +71,7 @@ export function summarizeReminders(
   lessons: ReminderLesson[],
   now: Date
 ): TeacherReminderStats[] {
-  const byTeacher = new Map<string, TeacherReminderStats & { _hours: number[]; _reminded: Set<string> }>();
+  const byTeacher = new Map<string, TeacherReminderStats & { _hours: number[]; _reminded: Set<string>; _ignored: Set<string> }>();
   const row = (teacherId: string) => {
     let r = byTeacher.get(teacherId);
     if (!r) {
@@ -79,9 +81,11 @@ export function summarizeReminders(
         lessonsReminded: 0,
         approvedAfterReminder: 0,
         expiredUnapproved: 0,
+        ignoredFirstReminder: 0,
         medianHoursToApprove: null,
         _hours: [],
         _reminded: new Set(),
+        _ignored: new Set(),
       };
       byTeacher.set(teacherId, r);
     }
@@ -93,6 +97,7 @@ export function summarizeReminders(
     const r = row(rem.teacherId);
     r.remindersSent++;
     r._reminded.add(rem.lessonId);
+    if (rem.mark < Math.max(...REMINDER_MARKS_HOURS_LEFT)) r._ignored.add(rem.lessonId);
     const prev = firstReminder.get(rem.lessonId);
     if (!prev || rem.sentAt < prev) firstReminder.set(rem.lessonId, rem.sentAt);
   }
@@ -106,16 +111,18 @@ export function summarizeReminders(
       if (first && approvedAt >= first) r.approvedAfterReminder++;
     } else if (expiredUnapproved(l, now)) {
       r.expiredUnapproved++;
+      if (r._reminded.has(l.id)) r._ignored.add(l.id);
     }
   }
 
   return Array.from(byTeacher.values())
-    .map(({ _hours, _reminded, ...r }) => ({
+    .map(({ _hours, _reminded, _ignored, ...r }) => ({
       ...r,
       lessonsReminded: _reminded.size,
+      ignoredFirstReminder: _ignored.size,
       medianHoursToApprove: median(_hours),
     }))
-    .sort((a, b) => b.remindersSent - a.remindersSent || b.expiredUnapproved - a.expiredUnapproved);
+    .sort((a, b) => b.ignoredFirstReminder - a.ignoredFirstReminder || b.remindersSent - a.remindersSent || b.expiredUnapproved - a.expiredUnapproved);
 }
 
 /**

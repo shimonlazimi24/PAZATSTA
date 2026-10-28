@@ -119,12 +119,13 @@ export default async function AdminRemindersPage({ searchParams }: { searchParam
         ) : (
           <>
             <div className="overflow-x-auto rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white">
-              <table className="w-full min-w-[640px] text-right text-sm">
+              <table className="w-full min-w-[760px] text-right text-sm">
                 <thead className="bg-[var(--color-bg-muted)] text-[var(--color-text-muted)]">
                   <tr>
                     <th className="px-4 py-2.5 font-medium">מדריך</th>
                     <th className="px-4 py-2.5 font-medium">תזכורות</th>
                     <th className="px-4 py-2.5 font-medium">אישר אחרי תזכורת</th>
+                    <th className="px-4 py-2.5 font-medium">לא אישר גם אחרי התזכורת הראשונה</th>
                     <th className="px-4 py-2.5 font-medium">בקשות שבוטלו כי לא אישר</th>
                     <th className="px-4 py-2.5 font-medium">זמן אישור רגיל</th>
                   </tr>
@@ -137,6 +138,7 @@ export default async function AdminRemindersPage({ searchParams }: { searchParam
                         <td className="px-4 py-3 font-medium">{nameOf.get(x.teacherId) ?? "—"}</td>
                         <td className="px-4 py-3 tabular-nums">{x.remindersSent}</td>
                         <td className="px-4 py-3 tabular-nums">{x.approvedAfterReminder}</td>
+                        <td className={`px-4 py-3 tabular-nums ${x.ignoredFirstReminder > 0 ? "font-semibold text-amber-800" : ""}`}>{x.ignoredFirstReminder}</td>
                         <td className={`px-4 py-3 tabular-nums ${x.expiredUnapproved > 0 ? "font-semibold text-red-700" : ""}`}>{x.expiredUnapproved}</td>
                         <td className="px-4 py-3">
                           {x.medianHoursToApprove === null ? "—" : x.medianHoursToApprove < 1 ? "פחות משעה" : `כ-${Math.round(x.medianHoursToApprove)} שעות`}
