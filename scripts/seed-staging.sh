@@ -17,4 +17,6 @@ read -r -p "Email you will log in to the staging admin with: " ADMIN_EMAIL
 # The session pooler (5432) is reachable over IPv4 from a laptop; the transaction
 # pooler (6543) the app uses may be IPv6-only from here.
 DATABASE_URL="${URI/:6543\//:5432/}" SEED_ADMIN_EMAIL="$ADMIN_EMAIL" npx tsx scripts/seed-staging.ts
+echo "Adding test scenarios (lessons, group lessons, frontal days)…"
+DATABASE_URL="${URI/:6543\//:5432/}" npx tsx --tsconfig tsconfig.json scripts/seed-staging-scenarios.ts
 unset DB_PASSWORD ENC URI
