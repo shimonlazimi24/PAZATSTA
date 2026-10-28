@@ -33,6 +33,10 @@ export const LOGIN_MESSAGES = {
   rateLimited: "ביקשתם יותר מדי קודים. אפשר לנסות שוב בעוד 15 דקות",
   temporary: "יש תקלה זמנית. נסו שוב בעוד דקה",
   offline: "אין חיבור לאינטרנט. בדקו את החיבור ונסו שוב",
+  invalidPhone: "מספר הנייד לא תקין. כתבו אותו כמו 050-1234567",
+  phoneNotFound: "המספר הזה לא שמור אצלנו. התחברו עם המייל, או פנו אלינו כדי להוסיף את המספר",
+  phoneSeveral: "המספר הזה שמור אצלנו בכמה חשבונות. התחברו עם המייל",
+  phoneOff: "התחברות עם טלפון לא זמינה כרגע. התחברו עם המייל",
 } as const;
 
 /** The message for a failed code request, from its HTTP status (0 = no network). */
@@ -65,6 +69,30 @@ export async function requestLoginCode(
   });
   if (result.ok) return { ok: true, email };
   return { ok: false, message: requestCodeErrorMessage(result.status) };
+}
+
+/** The message for a failed code request by phone, from its HTTP status. */
+export function requestPhoneCodeErrorMessage(status: number): string {
+  if (status === 400) return LOGIN_MESSAGES.invalidPhone;
+  if (status === 404) return LOGIN_MESSAGES.phoneNotFound;
+  if (status === 409) return LOGIN_MESSAGES.phoneSeveral;
+  if (status === 403) return LOGIN_MESSAGES.phoneOff;
+  return requestCodeErrorMessage(status);
+}
+
+/** Asks the server to text a login code to the account with this mobile number. */
+export async function requestPhoneLoginCode(
+  rawPhone: string,
+  role: "student" | "teacher" | "admin"
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  if (!rawPhone.trim()) return { ok: false, message: LOGIN_MESSAGES.invalidPhone };
+  const result = await apiJson<{ ok?: boolean }>("/api/auth/request-code", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ loginPhone: rawPhone, role }),
+  });
+  if (result.ok) return { ok: true };
+  return { ok: false, message: requestPhoneCodeErrorMessage(result.status) };
 }
 
 /** Network or unexpected failure while verifying a code. */

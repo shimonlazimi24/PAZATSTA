@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
-import { requestLoginCode } from "@/lib/login-messages";
+import { CodeLogin } from "@/components/auth/CodeLogin";
 
 type LoginMode = "student" | "teacher" | "admin" | null;
 
@@ -15,41 +15,14 @@ const MODES: { value: LoginMode; label: string; desc: string }[] = [
 ];
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const nextAdmin = searchParams.get("next") === "/admin";
   const [mode, setMode] = useState<LoginMode>(null);
-  const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
-  const [message, setMessage] = useState("");
 
   // When next=/admin, only teacher/admin are valid — hide student for clean UX.
   const modesToShow = nextAdmin
     ? MODES.filter((m) => m.value !== "student")
     : MODES;
-
-  async function handleSendCode(e: React.FormEvent) {
-    e.preventDefault();
-    if (status === "loading") return;
-    if (mode === null) {
-      setMessage("נא לבחור סוג התחברות");
-      setStatus("error");
-      return;
-    }
-    if (!email.trim()) return;
-    setStatus("loading");
-    setMessage("");
-    // Wait for the answer: moving on first left people waiting for a code the
-    // server had refused to send, with nothing on screen to say so.
-    const result = await requestLoginCode(email);
-    if (!result.ok) {
-      setStatus("error");
-      setMessage(result.message);
-      return;
-    }
-    const baseVerify = `/verify?email=${encodeURIComponent(result.email)}&role=${mode}&sent=1`;
-    router.push(nextAdmin ? `${baseVerify}&next=/admin` : baseVerify);
-  }
 
   return (
     <div className="w-full max-w-md space-y-8">
@@ -105,55 +78,14 @@ function LoginForm() {
             <p className="text-center text-[var(--color-text-muted)]">
               {MODES.find((m) => m.value === mode)?.label}
             </p>
-            <form onSubmit={handleSendCode} className="space-y-4">
-              <div>
-                <label
-                  htmlFor="login-email"
-                  className="block text-sm font-medium text-[var(--color-text)] mb-1"
-                >
-                  אימייל
-                </label>
-                <input
-                  id="login-email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    if (status === "error") {
-                      setStatus("idle");
-                      setMessage("");
-                    }
-                  }}
-                  required
-                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-input)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:border-[var(--color-primary)]"
-                  disabled={status === "loading"}
-                />
-              </div>
-              {message && (
-                <p className="text-sm text-red-600" role="alert">{message}</p>
-              )}
-              <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMode(null);
-                      setStatus("idle");
-                      setMessage("");
-                    }}
-                    className="px-4 py-2 rounded-[var(--radius-input)] border border-[var(--color-border)] text-[var(--color-text)]"
-                  >
-                    חזרה
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={status === "loading"}
-                    className="flex-1 py-2.5 rounded-[var(--radius-input)] bg-[var(--color-primary)] text-white font-medium hover:opacity-90 disabled:opacity-50"
-                  >
-                    {status === "loading" ? "שולח…" : "שלח קוד"}
-                  </button>
-                </div>
-            </form>
+            <CodeLogin role={mode} next={nextAdmin ? "/admin" : undefined} askStudentPhone={mode === "student"} />
+            <button
+              type="button"
+              onClick={() => setMode(null)}
+              className="block w-full text-center text-sm text-[var(--color-text-muted)] underline hover:no-underline"
+            >
+              חזרה לבחירת סוג כניסה
+            </button>
           </>
         )}
 

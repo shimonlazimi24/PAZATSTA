@@ -12,5 +12,7 @@ export const VerifyCodeSchema = z.object({
   code: z.unknown().optional().transform((s) => (typeof s === "string" ? s.replace(/\D/g, "") : "")),
   role: z.unknown().optional().transform((s) => (s === "teacher" || s === "admin" ? s : "student")),
   phone: z.unknown().optional().transform((s) => (typeof s === "string" ? s.trim() : "")),
+  // Set when logging in by phone: the account is found by this number instead of email.
+  loginPhone: z.unknown().optional().transform((s) => (typeof s === "string" ? s.trim() : "")),
   next: z.unknown().optional().transform((s) => (typeof s === "string" ? s.trim() : "")),
 });

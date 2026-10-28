@@ -9,6 +9,8 @@ import {
   sign,
 } from "@/lib/auth";
 import { canAccessAdmin } from "@/lib/admin";
+import { normalizeIsraeliMobile } from "@/lib/phone";
+import { findAccountByPhone } from "@/lib/phone-login";
 
 const MAX_ATTEMPTS = 5;
 
@@ -24,7 +26,16 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-    const { email, code, role, phone } = parsed.data;
+    const { code, role, phone, loginPhone } = parsed.data;
+    let email = parsed.data.email;
+    if (loginPhone) {
+      const normalized = normalizeIsraeliMobile(loginPhone);
+      const account = normalized ? await findAccountByPhone(normalized, role) : null;
+      if (!account || account.kind !== "found") {
+        return NextResponse.json({ error: "לא נשלח קוד או שפג תוקף. נא לבקש קוד חדש." }, { status: 400 });
+      }
+      email = account.email;
+    }
     if (!email || code.length !== 6) {
       return NextResponse.json(
         { error: "נא להזין אימייל וקוד בן 6 ספרות" },
