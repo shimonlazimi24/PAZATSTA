@@ -2,13 +2,12 @@ import { NextResponse } from "next/server";
 import { VerifyCodeSchema } from "@/lib/auth-schemas";
 import { prisma } from "@/lib/db";
 import { verifyOTP } from "@/lib/otp";
+import { completeLogin } from "@/lib/complete-login";
 import {
-  createSession,
   getSessionCookieConfig,
   SESSION_COOKIE,
   sign,
 } from "@/lib/auth";
-import { canAccessAdmin } from "@/lib/admin";
 import { normalizeIsraeliMobile } from "@/lib/phone";
 import { findAccountByPhone } from "@/lib/phone-login";
 
@@ -80,83 +79,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "קוד שגוי" }, { status: 400 });
     }
 
-    let user = await prisma.user.findUnique({ where: { email } });
-
-    if (role === "teacher" || role === "admin") {
-      if (!user || user.role !== role) {
-        return NextResponse.json(
-          {
-            error:
-              role === "teacher"
-                ? "חשבון מורה לא קיים עבור אימייל זה. נא לפנות לאדמין להגדרת מורה."
-                : "לכתובת הזו אין הרשאת ניהול. ודאו שזו הכתובת הנכונה",
-          },
-          { status: 403 }
-        );
-      }
-    } else {
-      // role === "student"
-      if (user && user.role === "teacher") {
-        return NextResponse.json(
-          {
-            error:
-              "חשבון זה רשום כמורה. נא להתחבר דרך \"התחבר כמורה\" או להשתמש באימייל אחר לכניסה כתלמיד.",
-          },
-          { status: 403 }
-        );
-      }
-      if (!user) {
-        const result = await prisma.$transaction(async (tx) => {
-          const created = await tx.user.create({
-            data: {
-              email,
-              role: "student",
-              ...(phone ? { phone } : {}),
-            },
-          });
-          try {
-            await tx.studentProfile.upsert({
-              where: { userId: created.id },
-              create: { userId: created.id },
-              update: {},
-            });
-          } catch (profileErr) {
-            console.error("[verify-code] StudentProfile upsert failed (run migrations?):", profileErr);
-          }
-          await tx.loginCode.delete({ where: { id: loginCode.id } });
-          return created;
-        });
-        user = result;
-      } else {
-        await prisma.$transaction(async (tx) => {
-          if (phone) {
-            await tx.user.update({
-              where: { id: user!.id },
-              data: { phone },
-            });
-          }
-          await tx.loginCode.delete({ where: { id: loginCode.id } });
-        });
-      }
+    const outcome = await completeLogin({
+      email,
+      role,
+      phone,
+      next: parsed.data.next,
+      consume: async () => {
+        await prisma.loginCode.deleteMany({ where: { id: loginCode.id } });
+      },
+    });
+    if (!outcome.ok) {
+      return NextResponse.json({ error: outcome.error }, { status: outcome.status });
     }
-
-    if (role === "teacher" || role === "admin") {
-      await prisma.loginCode.delete({ where: { id: loginCode.id } });
-    }
-    const sessionId = await createSession(user.id);
+    const { sessionId, redirect } = outcome;
     const cookieCfg = getSessionCookieConfig();
-    const nextPath = parsed.data.next || "";
-    const wantAdmin = nextPath === "/admin" && canAccessAdmin(user);
-    const redirect = wantAdmin
-      ? "/admin"
-      : user.role === "student"
-        ? "/book"
-        : user.role === "teacher"
-          ? "/teacher/dashboard"
-          : user.role === "admin"
-            ? "/admin"
-            : "/";
-    const res = NextResponse.json({ ok: true, role: user.role, redirect });
+    const res = NextResponse.json({ ok: true, role: outcome.role, redirect });
     res.cookies.set(SESSION_COOKIE, sign(sessionId), {
       ...cookieCfg,
       maxAge: cookieCfg.maxAge,
