@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import {
   buildTipsSnapshot,
   getReportFields,
   parseStoredSlugs,
-  MAX_TIP_SELECTION,
 } from "@/lib/report-template";
+import { MAX_FIELD_LENGTH, ReportSchema } from "@/lib/report-schema";
 import { prisma } from "@/lib/db";
 import { getUserFromSession } from "@/lib/auth";
 import { sendLessonCompleted } from "@/lib/email";
@@ -16,33 +15,6 @@ import { isValidEmail, isValidDeliveryEmail } from "@/lib/validation";
 import { resolveAdminRecipients } from "@/lib/admin";
 
 export const runtime = "nodejs";
-
-/** Report fields are free text; bound them so a single request cannot store megabytes. */
-const MAX_FIELD_LENGTH = 5000;
-
-const text = () =>
-  z.unknown().transform((v) => (typeof v === "string" ? v.trim() : "")).pipe(z.string().max(MAX_FIELD_LENGTH));
-
-const ReportSchema = z.object({
-  summaryText: text(),
-  homeworkText: text(),
-  pointsToKeep: text(),
-  pointsToImprove: text(),
-  /** Legacy shape: a comma-separated slug list. Still accepted so a client that
-   *  has not reloaded across the deploy keeps working. */
-  tips: text(),
-  /** Current shape: the selected tip slugs. */
-  tipIds: z
-    .unknown()
-    .transform((v) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []))
-    .pipe(z.array(z.string().trim().max(120)).max(MAX_TIP_SELECTION)),
-  /** Free text the teacher added alongside the selection. */
-  tipsCustom: text(),
-  recommendations: text(),
-  screeningType: text().transform((v) => v || null),
-  parentEmail: text().transform((v) => v || null),
-  screeningDate: text().transform((v) => (/^\d{4}-\d{2}-\d{2}$/.test(v) ? v : "")),
-});
 
 export async function POST(
   req: Request,
@@ -69,8 +41,12 @@ export async function POST(
     const body = await req.json().catch(() => null);
     const parsed = ReportSchema.safeParse(body);
     if (!parsed.success) {
+      // Say what actually failed: a generic "too long" message once hid a
+      // validation-library change that rejected every report.
+      const tooLong = parsed.error.issues.some((i) => i.code === "too_big");
+      console.warn("[complete] invalid report body:", JSON.stringify(parsed.error.issues.map((i) => ({ path: i.path, code: i.code }))));
       return NextResponse.json(
-        { error: `כל שדה מוגבל ל-${MAX_FIELD_LENGTH} תווים` },
+        { error: tooLong ? `כל שדה מוגבל ל-${MAX_FIELD_LENGTH} תווים` : "הדוח לא נשלח בגלל תקלה בטופס. רעננו את הדף ונסו שוב" },
         { status: 400 }
       );
     }
