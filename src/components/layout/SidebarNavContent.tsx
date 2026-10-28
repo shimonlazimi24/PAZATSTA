@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Logo } from "@/components/Logo";
-import { LayoutDashboard, Calendar, Settings, LogOut, BookOpen, User, Users, School } from "lucide-react";
+import { LayoutDashboard, Calendar, Settings, LogOut, BookOpen, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type NavItem = { href: string; label: string; icon: React.ComponentType<{ className?: string }> };
@@ -11,8 +11,6 @@ export type NavItem = { href: string; label: string; icon: React.ComponentType<{
 export const TEACHER_NAV: NavItem[] = [
   { href: "/teacher/dashboard", label: "לוח מורה", icon: LayoutDashboard },
   { href: "/teacher/availability", label: "הגדרת זמינות", icon: Calendar },
-  { href: "/teacher/group-lessons", label: "שיעורים קבוצתיים", icon: Users },
-  { href: "/teacher/frontal-days", label: "ימים פרונטליים", icon: School },
   { href: "/teacher/profile", label: "פרטיים אישיים", icon: User },
 ];
 export const STUDENT_NAV: NavItem[] = [

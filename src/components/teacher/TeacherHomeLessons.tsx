@@ -24,8 +24,6 @@ export function TeacherHomeLessons() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [followUpLoadingId, setFollowUpLoadingId] = useState<string | null>(null);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
-  const [notHeldId, setNotHeldId] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
   const [rescheduleLesson, setRescheduleLesson] = useState<Lesson | null>(null);
   const retryingRef = useRef(false);
 
@@ -149,34 +147,6 @@ export function TeacherHomeLessons() {
     }
   }
 
-  /** A lesson that already passed without happening: take it out of the hours. */
-  async function handleNotHeld(lessonId: string) {
-    if (!confirm("לסמן שהשיעור לא התקיים? הוא יוסר מסיכום השעות ולא יהיה צורך במילוי דוח.")) return;
-    setNotHeldId(lessonId);
-    setActionError(null);
-    try {
-      const res = await fetch(`/api/lessons/${lessonId}/not-held`, { method: "POST", credentials: "include" });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      if (res.ok) load();
-      else setActionError(data.error ?? "לא הצלחנו לעדכן את השיעור. נסו שוב");
-    } catch {
-      setActionError("אין חיבור לאינטרנט. בדקו את החיבור ונסו שוב");
-    } finally {
-      setNotHeldId(null);
-    }
-  }
-
-  const notHeldButton = (lessonId: string) => (
-    <button
-      type="button"
-      onClick={() => handleNotHeld(lessonId)}
-      disabled={!!notHeldId}
-      className="px-3 py-1.5 rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white text-sm font-medium text-[var(--color-text)] hover:bg-[var(--color-bg-muted)] disabled:opacity-50"
-    >
-      {notHeldId === lessonId ? "מעדכן…" : "השיעור לא התקיים"}
-    </button>
-  );
-
   if (loading) {
     return (
       <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-8 shadow-[var(--shadow-card)] text-center">
@@ -221,11 +191,6 @@ export function TeacherHomeLessons() {
 
   return (
     <div className="space-y-8" dir="rtl">
-      {actionError && (
-        <p className="rounded-[var(--radius-input)] bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
-          {actionError}
-        </p>
-      )}
       {hasUpcoming && (
         <section>
           <h3 className="text-lg font-semibold text-[var(--color-text)] mb-3">
@@ -284,8 +249,7 @@ export function TeacherHomeLessons() {
                           מלא דוח שיעור
                         </Link>
                       )}
-                      {l.status === "scheduled" && isLessonStarted(l.date, l.startTime) && !l.summary && notHeldButton(l.id)}
-                      {l.status === "scheduled" && !isLessonStarted(l.date, l.startTime) && (
+                      {l.status === "scheduled" && (
                         <button
                           type="button"
                           onClick={() => handleCancel(l.id)}
@@ -424,21 +388,6 @@ export function TeacherHomeLessons() {
                           )}
                         </>
                       ) : (() => {
-                        if (l.status === "canceled") {
-                          return (
-                            <span className="text-sm text-[var(--color-text-muted)]">
-                              <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">בוטל</span>{" "}
-                              לא נספר בשעות
-                            </span>
-                          );
-                        }
-                        if (l.status === "completed") {
-                          return (
-                            <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-                              הושלם
-                            </span>
-                          );
-                        }
                         const isApproved = l.status === "scheduled";
                         const lessonStarted = isLessonStarted(l.date, l.startTime);
                         const canFillReport = isApproved && lessonStarted;
@@ -463,7 +412,6 @@ export function TeacherHomeLessons() {
                             >
                               מלא דוח שיעור
                             </Link>
-                            {notHeldButton(l.id)}
                           </>
                         );
                       })()}
