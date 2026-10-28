@@ -25,7 +25,6 @@ export function BackLink({ href, label = "חזרה", className, refreshOnNavigat
           className
         )}
       >
-        <span aria-hidden>←</span>
         {label}
       </button>
     );
@@ -39,7 +38,6 @@ export function BackLink({ href, label = "חזרה", className, refreshOnNavigat
         className
       )}
     >
-      <span aria-hidden>←</span>
       {label}
     </Link>
   );

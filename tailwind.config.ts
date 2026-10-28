@@ -41,9 +41,9 @@ const config: Config = {
         card: "var(--radius-card)",
         button: "var(--radius-button)",
         input: "var(--radius-input)",
-        xl: "1rem",
-        "2xl": "1.25rem",
-        "3xl": "1.5rem",
+        xl: "0.5rem",
+        "2xl": "0.5rem",
+        "3xl": "0.75rem",
       },
       boxShadow: {
         card: "var(--shadow-card)",

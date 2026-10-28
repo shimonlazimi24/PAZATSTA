@@ -50,18 +50,22 @@ export function TeacherFrontalDays() {
   const open = rows.filter((r) => !r.mine && r.status === "open" && !r.past);
 
   return (
-    <div className="space-y-8" dir="rtl">
+    <div className="max-w-3xl space-y-8" dir="rtl">
+      <header>
+        <h1 className="text-2xl font-bold text-[var(--color-text)]">ימים פרונטליים</h1>
+        <p className="mt-1 text-sm text-[var(--color-text-muted)]">ימי הדרכה בבתי ספר. אחרי ההרשמה תקבלו את כל הפרטים ורשימת הכנות.</p>
+      </header>
       <section aria-labelledby="mine-h" className="space-y-3">
         <h2 id="mine-h" className="text-lg font-semibold">הימים שלי</h2>
         {mine.length === 0 ? (
           <p className="text-[var(--color-text-muted)]">עוד לא נרשמת ליום פרונטלי.</p>
         ) : (
-          <ul className="divide-y divide-[var(--color-border)] rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white">
+          <ul className="divide-y divide-[var(--color-border)] border-y border-[var(--color-border)]">
             {mine.map((r) => {
               const step = nextStep(r);
               return (
                 <li key={r.id}>
-                  <Link href={`/teacher/frontal-days/${r.id}`} className="flex flex-col gap-1 px-4 py-4 hover:bg-[var(--color-bg-muted)]/60 sm:flex-row sm:items-center sm:justify-between">
+                  <Link href={`/teacher/frontal-days/${r.id}`} className="flex flex-col gap-1 py-4 hover:bg-[var(--color-bg-muted)]/40 sm:flex-row sm:items-center sm:justify-between">
                     <span>
                       <span className="block font-semibold">{r.title}</span>
                       <span className="block text-sm text-[var(--color-text-muted)]">
@@ -82,10 +86,10 @@ export function TeacherFrontalDays() {
         {open.length === 0 ? (
           <p className="text-[var(--color-text-muted)]">אין כרגע ימים פתוחים. כשייפתח יום חדש הוא יופיע כאן.</p>
         ) : (
-          <ul className="divide-y divide-[var(--color-border)] rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white">
+          <ul className="divide-y divide-[var(--color-border)] border-y border-[var(--color-border)]">
             {open.map((r) => (
               <li key={r.id}>
-                <Link href={`/teacher/frontal-days/${r.id}`} className="flex flex-col gap-1 px-4 py-4 hover:bg-[var(--color-bg-muted)]/60 sm:flex-row sm:items-center sm:justify-between">
+                <Link href={`/teacher/frontal-days/${r.id}`} className="flex flex-col gap-1 py-4 hover:bg-[var(--color-bg-muted)]/40 sm:flex-row sm:items-center sm:justify-between">
                   <span>
                     <span className="block font-semibold">{r.title}</span>
                     <span className="block text-sm text-[var(--color-text-muted)]">

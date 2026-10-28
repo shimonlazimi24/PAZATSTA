@@ -3,10 +3,10 @@
 import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CalendarDays, CalendarPlus } from "lucide-react";
+import { CalendarPlus } from "lucide-react";
 import { addToCalendar } from "@/lib/calendar";
 import { isLessonStarted } from "@/lib/dates";
-import { formatLessonDate, getStatusLabel } from "@/lib/lesson-utils";
+import { formatLessonDate } from "@/lib/lesson-utils";
 import { RescheduleLessonModal } from "./RescheduleLessonModal";
 import type { DisplayLesson } from "@/types";
 
@@ -205,17 +205,13 @@ export function TeacherHomeLessons() {
 
   if (!hasUpcoming && !hasPast) {
     return (
-      <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-8 sm:p-10 shadow-[var(--shadow-card)] text-center" dir="rtl">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-highlight)] text-[var(--color-primary)]">
-          <CalendarDays className="h-7 w-7" aria-hidden />
-        </div>
-        <h3 className="mt-4 text-lg font-semibold text-[var(--color-text)]">
-          אין שיעורים כרגע
-        </h3>
-        <p className="mt-2 max-w-sm mx-auto text-[var(--color-text-muted)]">
-          השיעורים הקרובים והעבר יופיעו כאן אחרי שתגדירו זמינות ותלמידים יבחרו מועדים.
-        </p>
-      </div>
+      <p className="border-y border-[var(--color-border)] py-8 text-center text-[var(--color-text)]" dir="rtl">
+        אין שיעורים כרגע.
+        <span className="mt-1 block text-sm text-[var(--color-text-muted)]">
+          כשתלמידים יקבעו שיעורים במועדים שפתחתם, הם יופיעו כאן.{" "}
+          <Link href="/teacher/availability" className="text-[var(--color-primary)] underline">פתיחת זמינות</Link>
+        </span>
+      </p>
     );
   }
 
@@ -228,10 +224,10 @@ export function TeacherHomeLessons() {
       )}
       {hasUpcoming && (
         <section>
-          <h3 className="text-lg font-semibold text-[var(--color-text)] mb-3">
+          <h2 className="mb-3 text-lg font-semibold text-[var(--color-text)]">
             השיעורים הקרובים
-          </h3>
-          <ul className="divide-y divide-[var(--color-border)] rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white overflow-hidden shadow-[var(--shadow-card)]">
+          </h2>
+          <ul className="divide-y divide-[var(--color-border)] border-y border-[var(--color-border)]">
             {sortedUpcoming.map((l, idx) => {
               const prev = sortedUpcoming[idx - 1];
               const showWorkshopHeader = Boolean(l.workshopId && l.workshopId !== prev?.workshopId);
@@ -260,7 +256,7 @@ export function TeacherHomeLessons() {
                     <span className="font-normal text-teal-800 mr-2"> — דוח נפרד לכל משתתף</span>
                   </li>
                 )}
-                <li className="p-4 hover:bg-[var(--color-bg-muted)]/50 transition-colors">
+                <li className="py-4">
                   <div className="flex flex-wrap justify-between items-start gap-2">
                     <div>
                       <p className="font-medium text-[var(--color-text)]">
@@ -275,11 +271,11 @@ export function TeacherHomeLessons() {
                         </p>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-4 flex-wrap">
                       {l.status === "scheduled" && isLessonStarted(l.date, l.startTime) && !l.summary && (
                         <Link
                           href={`/teacher/lesson/${l.id}/report`}
-                          className="inline-flex items-center gap-1.5 rounded-[var(--radius-input)] bg-[var(--color-primary)] px-2.5 py-1.5 text-xs font-medium text-white hover:opacity-90"
+                          className="inline-flex min-h-[32px] items-center rounded-md bg-[var(--color-primary)] px-3 text-sm font-medium text-white hover:opacity-90"
                         >
                           מלא דוח שיעור
                         </Link>
@@ -290,18 +286,18 @@ export function TeacherHomeLessons() {
                           type="button"
                           onClick={() => handleCancel(l.id)}
                           disabled={!!cancelingId}
-                          className="inline-flex items-center gap-1.5 rounded-[var(--radius-input)] border border-amber-500 bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+                          className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:underline disabled:opacity-50"
                         >
-                          {cancelingId === l.id ? "מבטל…" : "בטל שיעור"}
+                          {cancelingId === l.id ? "מבטל…" : "ביטול"}
                         </button>
                       )}
                       {l.status === "scheduled" && !isLessonStarted(l.date, l.startTime) && (
                         <button
                           type="button"
                           onClick={() => setRescheduleLesson(l)}
-                          className="inline-flex items-center gap-1.5 rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs font-medium text-[var(--color-text)] hover:bg-[var(--color-bg-muted)]"
+                          className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:underline disabled:opacity-50"
                         >
-                          שנה מועד
+                          שינוי מועד
                         </button>
                       )}
                       {l.status === "scheduled" && !isLessonStarted(l.date, l.startTime) && (
@@ -317,10 +313,10 @@ export function TeacherHomeLessons() {
                               attendees: [l.student.email, "admin@pazatsta.co.il"],
                             })
                           }
-                          className="inline-flex items-center gap-1.5 rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs font-medium text-[var(--color-text)] hover:bg-[var(--color-bg-muted)]"
+                          className="inline-flex items-center gap-1 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:underline disabled:opacity-50"
                         >
                           <CalendarPlus className="h-3.5 w-3.5" aria-hidden />
-                          הוסף ללוח השנה
+                          ליומן
                         </button>
                       )}
                       {l.status === "scheduled" && isLessonStarted(l.date, l.startTime) && l.summary && (
@@ -333,15 +329,6 @@ export function TeacherHomeLessons() {
                           צפייה ב-PDF
                         </a>
                       )}
-                      <span
-                        className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          l.status === "pending_approval"
-                            ? "bg-amber-100 text-amber-800"
-                            : "bg-[var(--color-primary)]/15 text-[var(--color-primary)]"
-                        }`}
-                      >
-                        {getStatusLabel(l.status)}
-                      </span>
                     </div>
                   </div>
                 </li>
@@ -365,14 +352,14 @@ export function TeacherHomeLessons() {
 
       {hasPast && (
         <section>
-          <h3 className="text-lg font-semibold text-[var(--color-text)] mb-3">
+          <h2 className="mb-3 text-lg font-semibold text-[var(--color-text)]">
             שיעורים שעברו
-          </h3>
-          <ul className="divide-y divide-[var(--color-border)] rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white overflow-hidden shadow-[var(--shadow-card)]">
+          </h2>
+          <ul className="divide-y divide-[var(--color-border)] border-y border-[var(--color-border)]">
             {past.map((l) => {
               const hasReport = !!l.summary;
               return (
-                <li key={l.id} className="p-4 hover:bg-[var(--color-bg-muted)]/50 transition-colors">
+                <li key={l.id} className="py-4">
                   <div className="flex flex-wrap justify-between items-start gap-2">
                     <div>
                       <p className="font-medium text-[var(--color-text)]">

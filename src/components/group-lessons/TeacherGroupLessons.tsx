@@ -36,7 +36,7 @@ function LessonAction({ l, busy, onSignUp, onWithdraw }: { l: Lesson; busy: bool
       return l.reported ? (
         <p className="text-sm text-[var(--color-text-muted)]">הדוח נשלח</p>
       ) : (
-        <Link href={`/teacher/group-lessons/${l.id}/report`} className="inline-flex min-h-[40px] items-center rounded-[var(--radius-input)] bg-[var(--color-primary)] px-4 text-sm font-medium text-white">
+        <Link href={`/teacher/group-lessons/${l.id}/report`} className="inline-flex min-h-[34px] items-center rounded-md bg-[var(--color-primary)] px-3 text-sm font-medium text-white hover:opacity-90">
           מילוי דוח
         </Link>
       );
@@ -57,7 +57,7 @@ function LessonAction({ l, busy, onSignUp, onWithdraw }: { l: Lesson; busy: bool
   if (l.started) return <p className="text-sm text-[var(--color-text-muted)]">השיעור עבר</p>;
   if (l.placesLeft === 0) return <p className="text-sm text-[var(--color-text-muted)]">השיעור מלא</p>;
   return (
-    <button type="button" disabled={busy} onClick={onSignUp} className="min-h-[40px] rounded-[var(--radius-input)] border border-[var(--color-primary)] bg-white px-4 text-sm font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white disabled:opacity-50">
+    <button type="button" disabled={busy} onClick={onSignUp} className="min-h-[34px] rounded-md border border-[var(--color-primary)] bg-white px-4 text-sm font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white disabled:opacity-50">
       הרשמה
     </button>
   );
@@ -95,16 +95,19 @@ export function TeacherGroupLessons() {
   }
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="max-w-3xl space-y-8" dir="rtl">
+      <header>
+        <h1 className="text-2xl font-bold text-[var(--color-text)]">שיעורים קבוצתיים</h1>
+        <p className="mt-1 text-sm text-[var(--color-text-muted)]">כל מדריך מעביר לפחות שיעור קבוצתי אחד בחודש. בחרו שיעור והירשמו.</p>
+      </header>
       {data && (
-        <section aria-label="החובה החודשית" className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5">
-          <h2 className="font-semibold text-[var(--color-text)]">שיעור קבוצתי אחד בכל חודש</h2>
-          <ul className="mt-3 space-y-2">
+        <section aria-label="החובה החודשית">
+          <ul className="divide-y divide-[var(--color-border)] border-y border-[var(--color-border)]">
             {data.requirement.map((r) => (
-              <li key={r.month} className="flex flex-wrap items-center justify-between gap-2">
+              <li key={r.month} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
                 <span>{monthLabel(r.month)}</span>
                 {r.met ? (
-                  <span className="text-sm font-medium text-[var(--color-primary)]">נרשמת</span>
+                  <span className="text-sm font-medium text-[var(--color-primary)]">נרשמת לשיעור</span>
                 ) : (
                   <button type="button" onClick={() => setMonth(r.month)} className="text-sm font-medium text-amber-800 underline">
                     עוד לא נרשמת, לבחירת שיעור
@@ -117,15 +120,15 @@ export function TeacherGroupLessons() {
       )}
 
       {data && data.awaitingReport.length > 0 && (
-        <section aria-label="דוחות שחסרים" className="rounded-[var(--radius-card)] border border-amber-300 bg-amber-50 p-5">
-          <h2 className="font-semibold text-amber-900">מחכים לדוח שלך</h2>
-          <ul className="mt-3 space-y-2">
+        <section aria-label="דוחות שחסרים" className="rounded-md bg-amber-50 px-4 py-3">
+          <h2 className="text-sm font-semibold text-amber-900">מחכים לדוח שלך</h2>
+          <ul className="mt-2 space-y-2">
             {data.awaitingReport.map((r) => (
               <li key={r.id} className="flex flex-wrap items-center justify-between gap-2">
                 <span>
                   {r.typeLabel}, {dayLabel(r.date)}
                 </span>
-                <Link href={`/teacher/group-lessons/${r.id}/report`} className="inline-flex min-h-[40px] items-center rounded-[var(--radius-input)] bg-[var(--color-primary)] px-4 text-sm font-medium text-white">
+                <Link href={`/teacher/group-lessons/${r.id}/report`} className="inline-flex min-h-[34px] items-center rounded-md bg-[var(--color-primary)] px-3 text-sm font-medium text-white hover:opacity-90">
                   מילוי דוח
                 </Link>
               </li>
@@ -151,7 +154,7 @@ export function TeacherGroupLessons() {
       {!data ? (
         <p className="text-sm text-[var(--color-text-muted)]">טוען…</p>
       ) : data.lessons.length === 0 ? (
-        <p className="rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-white px-5 py-8 text-center text-[var(--color-text)]">
+        <p className="border-y border-[var(--color-border)] py-8 text-center text-[var(--color-text)]">
           עוד לא פורסמו שיעורים קבוצתיים ל{monthLabel(month)}. כשההרשמה תיפתח תקבלו מייל.
         </p>
       ) : (
@@ -159,9 +162,9 @@ export function TeacherGroupLessons() {
           {groupByDate(data.lessons).map(([date, lessons]) => (
             <li key={date}>
               <h3 className={`mb-2 text-sm font-semibold ${date < today ? "text-[var(--color-text-muted)]" : "text-[var(--color-text)]"}`}>{dayLabel(date)}</h3>
-              <ul className="divide-y divide-[var(--color-border)] rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white">
+              <ul className="divide-y divide-[var(--color-border)] border-y border-[var(--color-border)]">
                 {lessons.map((l) => (
-                  <li key={l.id} className={`flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:justify-between ${l.mine ? "border-r-4 border-r-[var(--color-primary)]" : ""}`}>
+                  <li key={l.id} className={`flex flex-col gap-3 py-4 sm:flex-row sm:items-start sm:justify-between ${l.mine ? "border-r-[3px] border-r-[var(--color-primary)] pr-3" : ""}`}>
                     <div className="space-y-1">
                       <p className="font-medium text-[var(--color-text)]">{l.typeLabel}</p>
                       <p className="text-sm tabular-nums text-[var(--color-text-muted)]">

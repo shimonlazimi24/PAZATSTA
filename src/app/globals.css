@@ -33,11 +33,11 @@
     --color-text: #1c1917;
     --color-text-muted: #57534e;
     --color-border: #e7e5e4;
-    --radius-card: 1rem;
-    --radius-button: 9999px;
-    --radius-input: 0.75rem;
-    --shadow-card: 0 2px 15px -3px rgb(0 0 0 / 0.07), 0 10px 20px -2px rgb(0 0 0 / 0.04);
-    --shadow-hover: 0 10px 40px -15px rgb(0 0 0 / 0.1);
+    --radius-card: 0.5rem;
+    --radius-button: 0.375rem;
+    --radius-input: 0.375rem;
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.04);
+    --shadow-hover: 0 2px 6px rgb(0 0 0 / 0.06);
     /* Legacy compatibility */
     --background: 0 0% 100%;
     --foreground: 24 10% 10%;

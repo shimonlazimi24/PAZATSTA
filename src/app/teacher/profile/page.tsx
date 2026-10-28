@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { AppShell } from "@/components/layout/AppShell";
-import { Card } from "@/components/design/Card";
 import { Button } from "@/components/design/Button";
 import { FormField } from "@/components/design/FormField";
 import { apiJson } from "@/lib/api";
@@ -87,20 +86,24 @@ export default function TeacherProfilePage() {
 
   if (loading) {
     return (
-      <AppShell title="פרטיים אישיים">
+      <AppShell title="הפרטים שלי">
         <p className="text-[var(--color-text-muted)] text-right">טוען…</p>
       </AppShell>
     );
   }
 
   return (
-    <AppShell title="פרטיים אישיים">
-      <div className="max-w-xl mx-auto space-y-6" dir="rtl">
-        <Card>
+    <AppShell title="הפרטים שלי">
+      <div className="max-w-xl space-y-6" dir="rtl">
+        <header>
+          <h1 className="text-2xl font-bold text-[var(--color-text)]">הפרטים שלי</h1>
+          <p className="mt-1 text-sm text-[var(--color-text-muted)]">כך התלמידים רואים אותך כשהם בוחרים מדריך.</p>
+        </header>
+        <div>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="flex flex-col sm:flex-row gap-6 items-start">
               <div className="shrink-0">
-                <TeacherAvatar avatarType={avatarType || null} profileImageUrl={profileImageUrl || null} className="w-28 h-28 rounded-2xl" />
+                <TeacherAvatar avatarType={avatarType || null} profileImageUrl={profileImageUrl || null} className="h-20 w-20 rounded-lg" />
               </div>
               <div className="flex-1 w-full min-w-0 text-right">
                 <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
@@ -226,7 +229,7 @@ export default function TeacherProfilePage() {
               {saving ? "שומר…" : "שמור פרטים"}
             </Button>
           </form>
-        </Card>
+        </div>
       </div>
     </AppShell>
   );

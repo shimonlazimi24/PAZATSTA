@@ -63,60 +63,54 @@ export function PendingApprovalsBlock() {
       .finally(() => setRejectingId(null));
   }
 
-  if (loading) {
-    return (
-      <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 shadow-[var(--shadow-card)]" dir="rtl">
-        <h2 className="text-lg font-semibold text-[var(--color-text)] mb-3">שיעורים בהמתנה לאישור</h2>
-        <p className="text-sm text-[var(--color-text-muted)]">טוען…</p>
-      </section>
-    );
-  }
+  if (loading) return null;
+  if (lessons.length === 0 && !rejectedMessage) return null;
+
+  const dateLabel = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("he-IL", { weekday: "long", day: "numeric", month: "long" });
 
   return (
-    <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 shadow-[var(--shadow-card)]" dir="rtl">
-      <h2 className="text-lg font-semibold text-[var(--color-text)] mb-3">שיעורים בהמתנה לאישור</h2>
+    <section aria-labelledby="pending-h" dir="rtl">
+      <h2 id="pending-h" className="mb-3 text-lg font-semibold text-[var(--color-text)]">
+        מחכים לאישור שלך
+        {lessons.length > 0 && <span className="mr-2 text-sm font-normal text-[var(--color-text-muted)]">{lessons.length}</span>}
+      </h2>
       {rejectedMessage && (
-        <p
-          role="status"
-          className="mb-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-[var(--radius-input)] px-3 py-2 text-right"
-        >
+        <p role="status" className="mb-3 rounded-md bg-green-50 px-3 py-2 text-sm text-green-800">
           {rejectedMessage}
         </p>
       )}
-      {lessons.length === 0 ? (
-        <p className="text-sm text-[var(--color-text-muted)]">אין שיעורים בהמתנה. שיעורים שאושרו מופיעים בשיעורים הקרובים למטה.</p>
-      ) : (
-      <ul className="space-y-3">
+      <ul className="divide-y divide-[var(--color-border)] border-y border-[var(--color-border)]">
         {lessons.map((l) => (
-          <li
-            key={l.id}
-            className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-input)] border border-[var(--color-border)] p-3"
-          >
-            <span className="text-[var(--color-text)]">
-              {l.student.name || l.student.email} — {l.date} {l.startTime}–{l.endTime}
+          <li key={l.id} className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              <span className="block font-medium text-[var(--color-text)]">
+                {dateLabel(l.date)}, <span className="tabular-nums">{l.startTime}–{l.endTime}</span>
+              </span>
+              <span className="block text-sm text-[var(--color-text-muted)]">{l.student.name || l.student.email}</span>
             </span>
-            <div className="flex gap-2">
+            <span className="flex items-center gap-4">
               <button
                 type="button"
                 disabled={!!approvingId || !!rejectingId}
                 onClick={() => handleApprove(l.id)}
-                className="rounded-[var(--radius-input)] bg-[var(--color-primary)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                className="min-h-[36px] rounded-md bg-[var(--color-primary)] px-4 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
               >
-                {approvingId === l.id ? "מאשר…" : "אשר"}
+                {approvingId === l.id ? "מאשר…" : "אישור"}
               </button>
               <button
                 type="button"
                 disabled={!!approvingId || !!rejectingId}
-                onClick={() => handleReject(l.id)}
-                className="rounded-[var(--radius-input)] border border-amber-500 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+                onClick={() => {
+                  if (confirm("לא לאשר את הבקשה? השיעור יבוטל והתלמיד יוכל לבחור מועד אחר.")) handleReject(l.id);
+                }}
+                className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:underline disabled:opacity-50"
               >
-                {rejectingId === l.id ? "דוחה…" : "לא לאשר"}
+                {rejectingId === l.id ? "מבטל…" : "לא לאשר"}
               </button>
-            </div>
+            </span>
           </li>
         ))}
       </ul>
-      )}
     </section>
   );
 }

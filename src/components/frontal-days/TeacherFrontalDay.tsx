@@ -35,8 +35,8 @@ type Day = {
 };
 
 const dateLabel = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("he-IL", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
-const card = "rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5";
-const bigLink = "flex min-h-[48px] items-center justify-center rounded-[var(--radius-input)] px-4 text-center font-medium";
+const card = "border-t border-[var(--color-border)] pt-6";
+const bigLink = "inline-flex min-h-[40px] items-center justify-center rounded-md px-4 text-center text-sm font-medium";
 
 function FullscreenQr({ title, value, code, onClose }: { title: string; value: string; code?: string; onClose: () => void }) {
   useEffect(() => {
@@ -138,8 +138,8 @@ export function TeacherFrontalDay({ id }: { id: string }) {
 
   const header = (
     <header className="space-y-1">
-      <h2 className={`text-2xl font-bold ${canceled ? "line-through" : ""}`}>{day.title}</h2>
-      <p className="text-lg">
+      <h1 className={`text-2xl font-bold ${canceled ? "line-through" : ""}`}>{day.title}</h1>
+      <p className="text-[var(--color-text)]">
         {dateLabel(day.date)}, {day.startTime}–{day.endTime}
       </p>
       {day.topic && <p className="text-[var(--color-text-muted)]">{day.topic}</p>}
@@ -179,56 +179,60 @@ export function TeacherFrontalDay({ id }: { id: string }) {
   const canFillReport = dayOfOrAfter && !canceled && !day.otherTeacherReported && (!report || report.status === "returned");
 
   return (
-    <div className="max-w-2xl space-y-5" dir="rtl">
+    <div className="max-w-2xl space-y-6" dir="rtl">
       {back}
       {header}
       {status}
 
       {!canceled && (
         <section className={`${card} space-y-4`} aria-label="פרטי ההגעה">
-          <div>
-            <p className="text-sm text-[var(--color-text-muted)]">כתובת</p>
-            <p className="text-lg">{day.address}</p>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <h3 className="text-base font-semibold">הגעה</h3>
+          <dl className="grid grid-cols-[6rem_1fr] gap-y-1 text-sm">
+            <dt className="text-[var(--color-text-muted)]">כתובת</dt>
+            <dd>{day.address}</dd>
+            {day.contactName && (
+              <>
+                <dt className="text-[var(--color-text-muted)]">איש קשר</dt>
+                <dd>
+                  {day.contactName}
+                  {day.contactPhone && (
+                    <>
+                      , <bdi dir="ltr">{day.contactPhone}</bdi>
+                    </>
+                  )}
+                </dd>
+              </>
+            )}
+          </dl>
+          <div className="flex flex-wrap gap-2">
             {day.wazeUrl && (
-              <a href={day.wazeUrl} target="_blank" rel="noopener noreferrer" className={`${bigLink} bg-[var(--color-primary)] text-white`}>
+              <a href={day.wazeUrl} target="_blank" rel="noopener noreferrer" className={`${bigLink} bg-[var(--color-primary)] text-white hover:opacity-90`}>
                 ניווט בוויז
               </a>
             )}
             {day.whatsappUrl && (
-              <a href={day.whatsappUrl} target="_blank" rel="noopener noreferrer" className={`${bigLink} border border-[var(--color-border)]`}>
+              <a href={day.whatsappUrl} target="_blank" rel="noopener noreferrer" className={`${bigLink} border border-[var(--color-border)] bg-white hover:bg-[var(--color-bg-muted)]`}>
                 הצטרפות לקבוצת הוואטסאפ
               </a>
             )}
             {day.presentationUrl && (
-              <a href={day.presentationUrl} target="_blank" rel="noopener noreferrer" className={`${bigLink} border border-[var(--color-border)]`}>
+              <a href={day.presentationUrl} target="_blank" rel="noopener noreferrer" className={`${bigLink} border border-[var(--color-border)] bg-white hover:bg-[var(--color-bg-muted)]`}>
                 פתיחת המצגת
               </a>
             )}
             {day.contactPhone && (
-              <a href={`tel:${day.contactPhone}`} className={`${bigLink} border border-[var(--color-border)]`}>
-                התקשרות ל{day.contactName || "איש הקשר"}
+              <a href={`tel:${day.contactPhone}`} className={`${bigLink} border border-[var(--color-border)] bg-white hover:bg-[var(--color-bg-muted)]`}>
+                התקשרות לאיש הקשר
               </a>
             )}
           </div>
-          {day.contactName && (
-            <p className="text-sm text-[var(--color-text-muted)]">
-              איש קשר במקום: {day.contactName}
-              {day.contactPhone && (
-                <>
-                  , <bdi dir="ltr">{day.contactPhone}</bdi>
-                </>
-              )}
-            </p>
-          )}
         </section>
       )}
 
       {!canceled && checklist.length > 0 && (
         <section className={card} aria-labelledby="cl-h">
           <div className="flex items-baseline justify-between gap-2">
-            <h3 id="cl-h" className="text-lg font-semibold">הכנות לפני היום</h3>
+            <h3 id="cl-h" className="text-base font-semibold">הכנות לפני היום</h3>
             <p className={`text-sm tabular-nums ${done.length < checklist.length ? "text-amber-800" : "text-[var(--color-primary)]"}`}>
               {done.length === checklist.length ? "הכול מוכן" : `${done.length} מתוך ${checklist.length}`}
             </p>
@@ -236,8 +240,8 @@ export function TeacherFrontalDay({ id }: { id: string }) {
           <ul className="mt-3 space-y-1">
             {checklist.map((item) => (
               <li key={item}>
-                <label className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-[var(--radius-input)] px-2 hover:bg-[var(--color-bg-muted)]/60">
-                  <input type="checkbox" className="h-5 w-5 accent-[var(--color-primary)]" checked={done.includes(item)} onChange={() => toggle(item)} />
+                <label className="flex min-h-[40px] cursor-pointer items-center gap-3 rounded-md px-1 hover:bg-[var(--color-bg-muted)]/60">
+                  <input type="checkbox" className="h-4 w-4 accent-[var(--color-primary)]" checked={done.includes(item)} onChange={() => toggle(item)} />
                   <span className={done.includes(item) ? "text-[var(--color-text-muted)] line-through" : ""}>{item}</span>
                 </label>
               </li>
@@ -248,16 +252,16 @@ export function TeacherFrontalDay({ id }: { id: string }) {
 
       {!canceled && dayOfOrAfter && (day.feedbackUrl || day.courseUrl || day.courseCode) && (
         <section className={card} aria-labelledby="end-h">
-          <h3 id="end-h" className="text-lg font-semibold">סוף היום</h3>
+          <h3 id="end-h" className="text-base font-semibold">סוף היום</h3>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">הציגו לתלמידים על המסך המלא, כדי שיסרקו.</p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <div className="mt-3 flex flex-wrap gap-2">
             {day.feedbackUrl && (
-              <button type="button" onClick={() => setQr("feedback")} className={`${bigLink} border border-[var(--color-border)]`}>
+              <button type="button" onClick={() => setQr("feedback")} className={`${bigLink} border border-[var(--color-border)] bg-white hover:bg-[var(--color-bg-muted)]`}>
                 QR למשוב התלמידים
               </button>
             )}
             {(day.courseUrl || day.courseCode) && (
-              <button type="button" onClick={() => setQr("course")} className={`${bigLink} border border-[var(--color-border)]`}>
+              <button type="button" onClick={() => setQr("course")} className={`${bigLink} border border-[var(--color-border)] bg-white hover:bg-[var(--color-bg-muted)]`}>
                 QR וקוד לקורס המתנה
               </button>
             )}
@@ -267,7 +271,7 @@ export function TeacherFrontalDay({ id }: { id: string }) {
 
       {!canceled && dayOfOrAfter && (
         <section className={card} aria-labelledby="rep-h">
-          <h3 id="rep-h" className="text-lg font-semibold">דוח סיום</h3>
+          <h3 id="rep-h" className="text-base font-semibold">דוח סיום</h3>
           {day.otherTeacherReported && !report?.byMe ? (
             <p className="mt-2 text-[var(--color-text-muted)]">מדריך אחר כבר הגיש את דוח הסיום של היום.</p>
           ) : report && report.status !== "returned" ? (
@@ -290,7 +294,7 @@ export function TeacherFrontalDay({ id }: { id: string }) {
                   )}
                 </div>
               ))}
-              <button type="submit" disabled={busy} className="min-h-[48px] rounded-[var(--radius-input)] bg-[var(--color-primary)] px-6 font-medium text-white disabled:opacity-50">
+              <button type="submit" disabled={busy} className="min-h-[40px] rounded-md bg-[var(--color-primary)] px-5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50">
                 {busy ? "שולח…" : "שליחה לאישור"}
               </button>
             </form>

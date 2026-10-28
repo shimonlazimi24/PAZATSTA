@@ -5,9 +5,9 @@
 /** Format a YYYY-MM-DD date string for display (e.g. "14 במרץ 2026"). */
 export function formatLessonDate(dateStr: string): string {
   return new Date(dateStr + "T12:00:00").toLocaleDateString("he-IL", {
+    weekday: "long",
     day: "numeric",
-    month: "short",
-    year: "numeric",
+    month: "long",
   });
 }
 

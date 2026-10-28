@@ -9,7 +9,7 @@ export default function NotFound() {
         href="/"
         className="mt-6 text-[var(--color-primary)] underline hover:no-underline"
       >
-        ← חזרה להתחברות
+        חזרה להתחברות
       </Link>
     </div>
   );

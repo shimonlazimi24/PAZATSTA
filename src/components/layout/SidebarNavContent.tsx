@@ -9,18 +9,18 @@ import { cn } from "@/lib/utils";
 export type NavItem = { href: string; label: string; icon: React.ComponentType<{ className?: string }> };
 
 export const TEACHER_NAV: NavItem[] = [
-  { href: "/teacher/dashboard", label: "לוח מורה", icon: LayoutDashboard },
-  { href: "/teacher/availability", label: "הגדרת זמינות", icon: Calendar },
+  { href: "/teacher/dashboard", label: "השיעורים שלי", icon: LayoutDashboard },
+  { href: "/teacher/availability", label: "זמינות", icon: Calendar },
   { href: "/teacher/group-lessons", label: "שיעורים קבוצתיים", icon: Users },
   { href: "/teacher/frontal-days", label: "ימים פרונטליים", icon: School },
-  { href: "/teacher/profile", label: "פרטיים אישיים", icon: User },
+  { href: "/teacher/profile", label: "הפרטים שלי", icon: User },
 ];
 export const STUDENT_NAV: NavItem[] = [
   { href: "/student", label: "השיעורים שלי", icon: Calendar },
   { href: "/book", label: "קביעת שיעור", icon: BookOpen },
 ];
 export const ADMIN_NAV: NavItem[] = [
-  { href: "/admin", label: "ניהול", icon: Settings },
+  { href: "/admin", label: "מעבר לניהול", icon: Settings },
 ];
 
 interface SidebarNavContentProps {

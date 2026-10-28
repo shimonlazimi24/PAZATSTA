@@ -41,9 +41,12 @@ export default function TeacherAvailabilityPage() {
   return (
     <AppShell title="הגדרת זמינות">
       <div className="max-w-2xl space-y-6" dir="rtl">
-        <p className="text-sm text-[var(--color-text-muted)]">
-          הוסיפו משבצות זמן שבהן אתם פנויים לשיעורים. תלמידים יוכלו לבחור מהמשבצות האלה.
-        </p>
+        <header>
+          <h1 className="text-2xl font-bold text-[var(--color-text)]">הזמינות שלי</h1>
+          <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+            בחרו יום ולחצו על השעות שבהן אתם פנויים. תלמידים יוכלו לקבוע שיעור רק במשבצות האלה. השינויים נשמרים מיד.
+          </p>
+        </header>
         <TeacherAvailability weekDates={weekDates} onSlotsChange={setSlots} />
         <div className="flex flex-col gap-3">
           {!loading && !hasSlots && (

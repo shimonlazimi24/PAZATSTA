@@ -270,7 +270,7 @@ export default function TeacherLessonReportPage() {
     return (
       <AppShell title="דוח סיום שיעור">
         <p className="text-sm text-[var(--color-text-muted)]">שיעור לא נמצא.</p>
-        <BackLink href="/teacher/dashboard" label="חזרה ללוח המורה" refreshOnNavigate className="text-[var(--color-primary)] hover:underline mt-2 inline-block" />
+        <BackLink href="/teacher/dashboard" label="חזרה לשיעורים שלי" refreshOnNavigate className="text-[var(--color-primary)] hover:underline mt-2 inline-block" />
       </AppShell>
     );
   }
@@ -285,7 +285,7 @@ export default function TeacherLessonReportPage() {
   return (
     <AppShell title="דוח סיום שיעור">
       <div className="max-w-xl space-y-6" dir="rtl">
-        <BackLink href="/teacher/dashboard" label="חזרה ללוח המורה" refreshOnNavigate />
+        <BackLink href="/teacher/dashboard" label="חזרה לשיעורים שלי" refreshOnNavigate />
 
         {/* Standalone title - not concatenated with LTR content */}
         <header>
@@ -295,7 +295,7 @@ export default function TeacherLessonReportPage() {
         {/* Meta info in separate section - LTR values isolated to prevent bidi corruption */}
         <section>
           <h2 className="text-sm font-semibold text-[var(--color-text-muted)] mb-2">פרטי השיעור</h2>
-          <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-4 space-y-2 text-sm">
+          <div className="space-y-2 border-y border-[var(--color-border)] py-4 text-sm">
             <p>
               <span className="text-[var(--color-text-muted)]">שם המורה:</span>{" "}
               <bdi>{teacherDisplay}</bdi>
@@ -364,7 +364,7 @@ export default function TeacherLessonReportPage() {
                 ? "השיעור לא אושר"
                 : "אפשר למלא דוח רק אחרי תחילת השיעור"}
             </p>
-            <BackLink href="/teacher/dashboard" label="חזרה ללוח המורה" refreshOnNavigate className="text-[var(--color-primary)] hover:underline mt-2 inline-block" />
+            <BackLink href="/teacher/dashboard" label="חזרה לשיעורים שלי" refreshOnNavigate className="text-[var(--color-primary)] hover:underline mt-2 inline-block" />
           </div>
         ) : alreadyCompleted ? (
           <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-bg-muted)] p-4 space-y-4">
