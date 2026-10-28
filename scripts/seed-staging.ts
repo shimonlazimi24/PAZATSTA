@@ -25,14 +25,14 @@ if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail)) {
 const prisma = new PrismaClient();
 
 const TEACHERS = [
-  { email: "dana.cohen@pazatsta-qa.com", name: "דנה כהן", avatarType: "female", specialties: ["צו ראשון - מבחן דפ\"ר", "צו ראשון - ראיון אישי"] },
-  { email: "yossi.levi@pazatsta-qa.com", name: "יוסי לוי", avatarType: "male", specialties: ["יום המא\"ה - תחנות קבוצתיות", "יום המא\"ה - מבחנים פסיכוטכניים"] },
-  { email: "maya.shani@pazatsta-qa.com", name: "מאיה שני", avatarType: "female", specialties: ["צו ראשון - מבחן דפ\"ר", "יום המא\"ה - תחנות קבוצתיות"] },
-  { email: "omer.bar@pazatsta-qa.com", name: "עומר בר", avatarType: "male", specialties: ["צו ראשון - ראיון אישי"] },
+  { email: "dana.cohen@pazatsta-qa.com", phone: "050-0000001", name: "דנה כהן", avatarType: "female", specialties: ["צו ראשון - מבחן דפ\"ר", "צו ראשון - ראיון אישי"] },
+  { email: "yossi.levi@pazatsta-qa.com", phone: "050-0000002", name: "יוסי לוי", avatarType: "male", specialties: ["יום המא\"ה - תחנות קבוצתיות", "יום המא\"ה - מבחנים פסיכוטכניים"] },
+  { email: "maya.shani@pazatsta-qa.com", phone: "050-0000003", name: "מאיה שני", avatarType: "female", specialties: ["צו ראשון - מבחן דפ\"ר", "יום המא\"ה - תחנות קבוצתיות"] },
+  { email: "omer.bar@pazatsta-qa.com", phone: "050-0000004", name: "עומר בר", avatarType: "male", specialties: ["צו ראשון - ראיון אישי"] },
 ];
 const STUDENTS = [
-  { email: "student.noa@pazatsta-qa.com", name: "נועה אברהם" },
-  { email: "student.itay@pazatsta-qa.com", name: "איתי מזרחי" },
+  { email: "student.noa@pazatsta-qa.com", phone: "050-0000005", name: "נועה אברהם" },
+  { email: "student.itay@pazatsta-qa.com", phone: "050-0000006", name: "איתי מזרחי" },
 ];
 
 function israelDate(offsetDays: number): Date {
@@ -46,7 +46,7 @@ async function main() {
   await prisma.user.upsert({ where: { email: adminEmail }, create: { email: adminEmail, role: "admin", name: "מנהל בדיקות" }, update: { role: "admin" } });
 
   for (const t of TEACHERS) {
-    const user = await prisma.user.upsert({ where: { email: t.email }, create: { email: t.email, name: t.name, role: "teacher" }, update: {} });
+    const user = await prisma.user.upsert({ where: { email: t.email }, create: { email: t.email, name: t.name, role: "teacher", phone: t.phone }, update: { phone: t.phone } });
     await prisma.teacherProfile.upsert({
       where: { userId: user.id },
       create: { userId: user.id, displayName: t.name, avatarType: t.avatarType, specialties: t.specialties, bio: "מדריך/ה לבדיקות" },
@@ -63,7 +63,7 @@ async function main() {
   }
 
   for (const s of STUDENTS) {
-    const user = await prisma.user.upsert({ where: { email: s.email }, create: { email: s.email, name: s.name, role: "student" }, update: {} });
+    const user = await prisma.user.upsert({ where: { email: s.email }, create: { email: s.email, name: s.name, role: "student", phone: s.phone }, update: { phone: s.phone } });
     await prisma.studentProfile.upsert({ where: { userId: user.id }, create: { userId: user.id }, update: {} });
   }
 
