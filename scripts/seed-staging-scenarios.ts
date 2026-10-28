@@ -139,7 +139,7 @@ async function main() {
   }
 
   // Group lessons
-  const types = await prisma.groupLessonType.findMany();
+  const types = await prisma.groupLessonType.findMany({ where: { active: true } });
   const typeId = (name: string) => types.find((x) => x.name === name)?.id ?? types[0].id;
   const thisM = monthKey(0);
   const nextM = monthKey(1);
@@ -163,14 +163,14 @@ async function main() {
       await prisma.groupLessonReport.create({ data: { groupLessonId: g.id, teacherId: t[opts.report].id, typeLabel: `${type2.category} – ${type2.name}`, participants: 18, notes: "קבוצה מגובשת, התחנה השלישית ארכה יותר מהמתוכנן." } });
     }
   };
-  await gl(inMonth(thisM, pastDay), "מבחן דפ״ר", "09:00", 1, ["dana"]); // past, Dana still owes a report
-  await gl(inMonth(thisM, Math.max(1, pastDay - 1)), "תחנות קבוצתיות", "10:00", 2, ["yossi", "maya"], { report: "yossi" }); // report in
-  await gl(day(2), "ראיון אישי", "16:00", 2, ["maya"]); // upcoming, one place left
-  await gl(day(4), "מבחנים פסיכוטכניים", "09:00", 1, [], { canceled: true });
-  await gl(inMonth(nextM, 5), "מבחן דפ״ר", "09:00", 2, ["dana"]);
-  await gl(inMonth(nextM, 12), "תחנות קבוצתיות", "10:00", 2, []);
-  await gl(inMonth(nextM, 19), "ראיון אישי", "16:00", 1, ["yossi"]);
-  await gl(inMonth(nextM, 26), "מבחנים פסיכוטכניים", "09:00", 3, []);
+  await gl(inMonth(thisM, pastDay), "שברים", "09:00", 1, ["dana"]); // past, Dana still owes a report
+  await gl(inMonth(thisM, Math.max(1, pastDay - 1)), "תחנת דינמיקה קבוצתית", "10:00", 2, ["yossi", "maya"], { report: "yossi" }); // report in
+  await gl(day(2), "אחוזים", "16:00", 2, ["maya"]); // upcoming, one place left
+  await gl(day(4), "תחנת הדרכה", "09:00", 1, [], { canceled: true });
+  await gl(inMonth(nextM, 5), "הסתברות", "09:00", 2, ["dana"]);
+  await gl(inMonth(nextM, 12), "תחנת סימולציה אישית", "10:00", 2, []);
+  await gl(inMonth(nextM, 19), "אנלוגיות מילוליות", "16:00", 1, ["yossi"]);
+  await gl(inMonth(nextM, 26), "גאומטריה", "09:00", 3, []);
 
   // Frontal days
   const fd = async (o: {
