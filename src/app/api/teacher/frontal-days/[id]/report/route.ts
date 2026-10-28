@@ -31,7 +31,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const body = (await req.json().catch(() => null)) as { answers?: Record<string, unknown> } | null;
   const built = buildReportAnswers(fields, body?.answers ?? {});
   if (!built.ok) return NextResponse.json({ error: built.message }, { status: 400 });
-  const answers = built.answers as unknown as Prisma.InputJsonValue;
+  // Known facts are filled in, not asked: who taught, where, and when.
+  const answers = [
+    { label: "שם המדריך", value: me.name || me.email },
+    { label: "מיקום", value: `${day.title}, ${day.address}` },
+    { label: "תאריך", value: hebrewDateLabel(day.date) },
+    ...built.answers,
+  ] as unknown as Prisma.InputJsonValue;
 
   try {
     if (day.report) {

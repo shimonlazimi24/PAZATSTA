@@ -4,8 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { apiJson } from "@/lib/api";
 import { QrCode } from "./QrCode";
+import { ReportFieldInput, type AnswerValue } from "./ReportFieldInput";
+import { isFieldVisible } from "@/lib/frontal-days";
 
-type Field = { id: string; label: string; kind: "short" | "long" | "number"; required: boolean };
+type Field = { id: string; label: string; kind: string; required: boolean; help?: string; options?: string[]; showIfFieldId?: string | null; showIfValues?: string[] };
 type Day = {
   id: string;
   title: string;
@@ -67,7 +69,7 @@ export function TeacherFrontalDay({ id }: { id: string }) {
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string[]>([]);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
   const [qr, setQr] = useState<"feedback" | "course" | null>(null);
 
   const load = useCallback(async () => {
@@ -78,6 +80,15 @@ export function TeacherFrontalDay({ id }: { id: string }) {
     }
     setDay(r.data);
     setDone(r.data.checklistDone ?? []);
+    // A returned report reopens with its previous answers, matched by question.
+    if (r.data.report?.status === "returned") {
+      const prevAnswers: Record<string, AnswerValue> = {};
+      for (const f of r.data.reportFields ?? []) {
+        const v = r.data.report.answers.find((a) => a.label === f.label)?.value ?? "";
+        if (v) prevAnswers[f.id] = f.kind === "multi" ? v.split(", ") : v;
+      }
+      setAnswers(prevAnswers);
+    }
   }, [id]);
 
   useEffect(() => {
@@ -281,19 +292,11 @@ export function TeacherFrontalDay({ id }: { id: string }) {
               {report?.status === "returned" && (
                 <p className="rounded-[var(--radius-input)] bg-amber-50 px-3 py-2 text-sm text-amber-900">שחר החזיר את הדוח לתיקון: {report.adminNote}</p>
               )}
-              {(day.reportFields ?? []).map((f) => (
-                <div key={f.id}>
-                  <label htmlFor={`rf-${f.id}`} className="mb-1 block text-sm font-medium">
-                    {f.label}
-                    {!f.required && <span className="font-normal text-[var(--color-text-muted)]"> (רשות)</span>}
-                  </label>
-                  {f.kind === "long" ? (
-                    <textarea id={`rf-${f.id}`} rows={4} maxLength={4000} className="w-full resize-y rounded-[var(--radius-input)] border border-[var(--color-border)] px-3 py-2" value={answers[f.id] ?? prev(report, f.label)} onChange={(e) => setAnswers({ ...answers, [f.id]: e.target.value })} />
-                  ) : (
-                    <input id={`rf-${f.id}`} type={f.kind === "number" ? "number" : "text"} inputMode={f.kind === "number" ? "numeric" : undefined} min={f.kind === "number" ? 0 : undefined} className={`min-h-[44px] rounded-[var(--radius-input)] border border-[var(--color-border)] px-3 ${f.kind === "number" ? "w-40" : "w-full"}`} value={answers[f.id] ?? prev(report, f.label)} onChange={(e) => setAnswers({ ...answers, [f.id]: e.target.value })} />
-                  )}
-                </div>
-              ))}
+              {(day.reportFields ?? [])
+                .filter((f) => isFieldVisible(f, answers))
+                .map((f) => (
+                  <ReportFieldInput key={f.id} field={f} value={answers[f.id]} onChange={(v) => setAnswers((a) => ({ ...a, [f.id]: v }))} />
+                ))}
               <button type="submit" disabled={busy} className="min-h-[40px] rounded-md bg-[var(--color-primary)] px-5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50">
                 {busy ? "שולח…" : "שליחה לאישור"}
               </button>
@@ -314,7 +317,3 @@ export function TeacherFrontalDay({ id }: { id: string }) {
   );
 }
 
-/** When a returned report is reopened, its previous answers fill the form by label. */
-function prev(report: Day["report"], label: string): string {
-  return report?.status === "returned" ? report.answers.find((a) => a.label === label)?.value ?? "" : "";
-}

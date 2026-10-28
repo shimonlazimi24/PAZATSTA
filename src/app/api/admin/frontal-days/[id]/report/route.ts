@@ -3,8 +3,8 @@ import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin-api";
 import { hebrewDateLabel } from "@/lib/group-lessons-server";
 import { sendNotice } from "@/lib/email";
+import { answersForRecipient, type ReportAnswer } from "@/lib/frontal-days";
 
-type Answer = { label: string; value: string };
 
 /**
  * Approve the closing report and send it to the school, or return it to the
@@ -42,7 +42,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
   if (report.sentToRecipientAt) return NextResponse.json({ ok: true, alreadySent: true });
 
-  const answers = (Array.isArray(report.answers) ? report.answers : []) as Answer[];
+  // Internal answers (the instructor's self-review, notes on the school's teacher,
+  // suggestions for Pazatsta) stay with Pazatsta.
+  const answers = answersForRecipient((Array.isArray(report.answers) ? report.answers : []) as ReportAnswer[]);
   const greeting = day.recipientName ? `שלום ${day.recipientName},` : "שלום,";
   await sendNotice(
     "sendFrontalReportToRecipient",

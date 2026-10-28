@@ -57,7 +57,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       checklist: day.checklist,
       checklistDone: mine.checklistDone.filter((x) => day.checklist.includes(x)),
       canWithdraw: !base.past && canWithdraw({ dateStr: date, todayStr: today }).ok,
-      reportFields: fields.map((f) => ({ id: f.id, label: f.label, kind: f.kind, required: f.required })),
+      reportFields: fields.map((f) => ({ id: f.id, label: f.label, kind: f.kind, required: f.required, help: f.help, options: f.options, showIfFieldId: f.showIfFieldId, showIfValues: f.showIfValues })),
       report: report
         ? {
             byMe: report.teacherId === me.id,

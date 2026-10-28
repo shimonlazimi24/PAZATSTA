@@ -164,10 +164,10 @@ export function FrontalDayForm({
         </label>
         {withCourse && (
           <div className="grid gap-4 border-r-2 border-[var(--color-border)] pr-4 sm:grid-cols-2">
-            <Field id="fd-course-url" label="קישור לקורס" hint="ממנו נוצר קוד ה-QR לקורס.">
-              <input id="fd-course-url" dir="ltr" className={input} value={v.courseUrl} onChange={set("courseUrl")} placeholder="https://" />
+            <Field id="fd-course-url" label="קישור לקורס בחינם" hint="מדביקים כאן את הקישור לקורס, וממנו נוצר קוד ה-QR שהתלמידים סורקים.">
+              <input id="fd-course-url" dir="ltr" className={input} value={v.courseUrl} onChange={set("courseUrl")} placeholder="https://pazatsta.co.il/share-cart/…" />
             </Field>
-            <Field id="fd-course-code" label="קוד גישה לקורס" hint="אותו קוד לכל התלמידים ביום הזה.">
+            <Field id="fd-course-code" label="קוד גישה לקורס (רשות)" hint="רק אם הקישור לבד לא מספיק. אותו קוד לכל התלמידים ביום הזה.">
               <input id="fd-course-code" dir="ltr" className={input} value={v.courseCode} onChange={set("courseCode")} />
             </Field>
           </div>

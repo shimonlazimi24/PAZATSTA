@@ -18,7 +18,7 @@ type Detail = FrontalDayValues & {
   signups: { teacherId: string; name: string; phone: string; checklistDone: string[] }[];
   report: {
     teacherName: string;
-    answers: { label: string; value: string }[];
+    answers: { label: string; value: string; internal?: boolean }[];
     status: "submitted" | "returned" | "approved";
     adminNote: string;
     sentToRecipientAt: string | null;
@@ -160,7 +160,10 @@ export function AdminFrontalDayDetail({ id }: { id: string }) {
           <dl className="mt-4 space-y-3">
             {day.report.answers.map((a) => (
               <div key={a.label}>
-                <dt className="text-sm text-[var(--color-text-muted)]">{a.label}</dt>
+                <dt className="text-sm text-[var(--color-text-muted)]">
+                  {a.label}
+                  {a.internal && <span className="ms-2 text-xs font-medium text-amber-800">פנימי, לא נשלח לבית הספר</span>}
+                </dt>
                 <dd className="whitespace-pre-wrap">{a.value || "לא מולא"}</dd>
               </div>
             ))}

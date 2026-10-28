@@ -11,6 +11,7 @@ import {
   renderTemplate,
   unknownPlaceholders,
   wazeUrl,
+  answersForRecipient,
 } from "../src/lib/frontal-days";
 
 test("placeholders are filled", () => {
@@ -91,4 +92,43 @@ test("report answers follow the admin's fields", () => {
   });
   assert.equal(buildReportAnswers(fields, { n: "30" }).ok, false);
   assert.equal(buildReportAnswers(fields, { n: "שלושים", s: "x" }).ok, false);
+});
+
+// The team's real form (Google Forms) as fields.
+const form = [
+  { id: "count", label: "מספר משתתפים", kind: "choice", required: true, options: ["בין 5-10", "בין 10-20", "30+"] },
+  { id: "teacher", label: "המורה המלווה", kind: "multi", required: true, options: ["נוכח לאורך הסדנה", "הפריע להתנהלות הסדנה", "אחר"], internal: true },
+  { id: "teacherOther", label: "מה עוד לגבי המורה?", kind: "short", required: false, showIfFieldId: "teacher", showIfValues: ["אחר"], internal: true },
+  { id: "discipline", label: "האם היו בעיות משמעת?", kind: "choice", required: true, options: ["לא", "כן - קלות", "כן - משמעותיות"] },
+  { id: "disciplineDetail", label: "פירוט", kind: "short", required: true, showIfFieldId: "discipline", showIfValues: ["כן - קלות", "כן - משמעותיות"] },
+];
+
+test("single and multiple choice answers are stored as text, internal ones marked", () => {
+  const r = buildReportAnswers(form, { count: "בין 10-20", teacher: ["נוכח לאורך הסדנה", "אחר"], teacherOther: "יצא באמצע", discipline: "לא" });
+  assert.equal(r.ok, true);
+  if (r.ok) {
+    assert.deepEqual(r.answers, [
+      { label: "מספר משתתפים", value: "בין 10-20" },
+      { label: "המורה המלווה", value: "נוכח לאורך הסדנה, אחר", internal: true },
+      { label: "מה עוד לגבי המורה?", value: "יצא באמצע", internal: true },
+      { label: "האם היו בעיות משמעת?", value: "לא" },
+    ]);
+  }
+});
+
+test("a follow-up is skipped while hidden, and required once it shows", () => {
+  const hidden = buildReportAnswers(form, { count: "30+", teacher: ["נוכח לאורך הסדנה"], discipline: "לא" });
+  assert.equal(hidden.ok && hidden.answers.some((a) => a.label === "פירוט"), false);
+  const shown = buildReportAnswers(form, { count: "30+", teacher: ["נוכח לאורך הסדנה"], discipline: "כן - קלות" });
+  assert.deepEqual(shown, { ok: false, message: "נא למלא: פירוט" });
+});
+
+test("an option that is not on the list is refused", () => {
+  assert.equal(buildReportAnswers(form, { count: "מאה", teacher: ["אחר"], discipline: "לא" }).ok, false);
+});
+
+test("the school receives everything except internal answers", () => {
+  const r = buildReportAnswers(form, { count: "30+", teacher: ["הפריע להתנהלות הסדנה"], discipline: "לא" });
+  assert.ok(r.ok);
+  if (r.ok) assert.deepEqual(answersForRecipient(r.answers).map((a) => a.label), ["מספר משתתפים", "האם היו בעיות משמעת?"]);
 });

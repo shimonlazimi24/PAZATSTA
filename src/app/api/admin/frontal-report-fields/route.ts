@@ -6,11 +6,20 @@ import { firstZodMessage } from "@/lib/group-lessons-server";
 
 export const dynamic = "force-dynamic";
 
-const FieldInput = z.object({
-  label: z.string().trim().min(1, "הזינו את שם השדה").max(200),
-  kind: z.enum(["short", "long", "number"]),
-  required: z.boolean(),
-});
+const FieldInput = z
+  .object({
+    label: z.string().trim().min(1, "הזינו את השאלה").max(300),
+    kind: z.enum(["short", "long", "number", "date", "choice", "multi"]),
+    required: z.boolean(),
+    help: z.string().trim().max(300).optional().default(""),
+    options: z.array(z.string().trim().min(1).max(200)).max(30).optional().default([]),
+    showIfFieldId: z.string().trim().max(60).nullable().optional().default(null),
+    showIfValues: z.array(z.string().trim().min(1).max(200)).max(30).optional().default([]),
+    internal: z.boolean().optional().default(false),
+  })
+  .refine((v) => (v.kind !== "choice" && v.kind !== "multi") || v.options.length >= 2, {
+    message: "לשאלת בחירה צריך לפחות שתי אפשרויות",
+  });
 
 export async function GET() {
   const auth = await requireAdmin();
