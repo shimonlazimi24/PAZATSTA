@@ -139,7 +139,7 @@ async function main() {
   }
 
   // Group lessons
-  const types = await prisma.groupLessonType.findMany();
+  const types = await prisma.groupLessonType.findMany({ where: { active: true } });
   const typeId = (name: string) => types.find((x) => x.name === name)?.id ?? types[0].id;
   const thisM = monthKey(0);
   const nextM = monthKey(1);
@@ -163,14 +163,14 @@ async function main() {
       await prisma.groupLessonReport.create({ data: { groupLessonId: g.id, teacherId: t[opts.report].id, typeLabel: `${type2.category} – ${type2.name}`, participants: 18, notes: "קבוצה מגובשת, התחנה השלישית ארכה יותר מהמתוכנן." } });
     }
   };
-  await gl(inMonth(thisM, pastDay), "מבחן דפ״ר", "09:00", 1, ["dana"]); // past, Dana still owes a report
-  await gl(inMonth(thisM, Math.max(1, pastDay - 1)), "תחנות קבוצתיות", "10:00", 2, ["yossi", "maya"], { report: "yossi" }); // report in
-  await gl(day(2), "ראיון אישי", "16:00", 2, ["maya"]); // upcoming, one place left
-  await gl(day(4), "מבחנים פסיכוטכניים", "09:00", 1, [], { canceled: true });
-  await gl(inMonth(nextM, 5), "מבחן דפ״ר", "09:00", 2, ["dana"]);
-  await gl(inMonth(nextM, 12), "תחנות קבוצתיות", "10:00", 2, []);
-  await gl(inMonth(nextM, 19), "ראיון אישי", "16:00", 1, ["yossi"]);
-  await gl(inMonth(nextM, 26), "מבחנים פסיכוטכניים", "09:00", 3, []);
+  await gl(inMonth(thisM, pastDay), "שברים", "09:00", 1, ["dana"]); // past, Dana still owes a report
+  await gl(inMonth(thisM, Math.max(1, pastDay - 1)), "תחנת דינמיקה קבוצתית", "10:00", 2, ["yossi", "maya"], { report: "yossi" }); // report in
+  await gl(day(2), "אחוזים", "16:00", 2, ["maya"]); // upcoming, one place left
+  await gl(day(4), "תחנת הדרכה", "09:00", 1, [], { canceled: true });
+  await gl(inMonth(nextM, 5), "הסתברות", "09:00", 2, ["dana"]);
+  await gl(inMonth(nextM, 12), "תחנת סימולציה אישית", "10:00", 2, []);
+  await gl(inMonth(nextM, 19), "אנלוגיות מילוליות", "16:00", 1, ["yossi"]);
+  await gl(inMonth(nextM, 26), "גאומטריה", "09:00", 3, []);
 
   // Frontal days
   const fd = async (o: {
@@ -215,10 +215,18 @@ async function main() {
           status: o.report.status,
           adminNote: o.report.note ?? "",
           answers: [
-            { label: "כמה תלמידים השתתפו", value: "64" },
-            { label: "סיכום היום", value: "יום מוצלח. התלמידים היו מעורבים מאוד בתחנות ובתרגול הראיון האישי." },
-            { label: "מה עבד טוב", value: "התרגול בזוגות והסימולציה של יום המא״ה" },
-            { label: "בעיות או דברים לשיפור", value: "המקרן בכיתה השנייה לא עבד בהתחלה" },
+            { label: "שם המדריך", value: o.report.k === "dana" ? "דנה" : "יוסי" },
+            { label: "מיקום", value: `${o.title}, ${o.address}` },
+            { label: "נושא הסדנה", value: "הכנה לצו ראשון: שאלון דפ״ר וראיון אישי" },
+            { label: "כמות המשתתפים", value: "30+" },
+            { label: "איך הייתה הסדנה באופן כללי?", value: "יום מוצלח. התלמידים היו מעורבים מאוד בתחנות ובתרגול הראיון האישי." },
+            { label: "המורה בכיתה", value: "נוכח לאורך הסדנה, סייע למדריך במהלך הסדנה", internal: true },
+            { label: "היו בעיות משמעת?", value: "כן - קלות" },
+            { label: "פרט על בעיות המשמעת", value: "שני תלמידים דיברו בטלפון, הסתדר אחרי הערה." },
+            { label: "האם הספקת את כל התכנים?", value: "כן" },
+            { label: "האם הסדנה חרגה מהזמן?", value: "לא" },
+            { label: "מה כדאי לשמר?", value: "התרגול בזוגות והסימולציה של יום המא״ה", internal: true },
+            { label: "מה כדאי לשפר?", value: "המקרן בכיתה השנייה לא עבד בהתחלה", internal: true },
           ],
           approvedAt: o.report.status === "approved" ? new Date(now - 48 * H) : null,
           sentToRecipientAt: o.report.status === "approved" ? new Date(now - 48 * H) : null,

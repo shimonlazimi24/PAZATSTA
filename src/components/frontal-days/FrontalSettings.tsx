@@ -6,25 +6,47 @@ import { TemplateEditor } from "./TemplateEditor";
 import { ChecklistEditor } from "./ChecklistEditor";
 
 type Defaults = { messageTemplate: string; reminderTemplate: string; checklist: string[] };
-type Field = { id: string; label: string; kind: "short" | "long" | "number"; required: boolean; sortOrder: number; active: boolean };
+type Kind = "short" | "long" | "number" | "date" | "choice" | "multi";
+type Field = {
+  id: string;
+  label: string;
+  kind: Kind;
+  required: boolean;
+  sortOrder: number;
+  active: boolean;
+  help: string;
+  options: string[];
+  showIfFieldId: string | null;
+  showIfValues: string[];
+  internal: boolean;
+};
 
-const KIND_LABEL: Record<Field["kind"], string> = { short: "שורה אחת", long: "טקסט חופשי", number: "מספר" };
+const KIND_LABEL: Record<Kind, string> = {
+  short: "שורה אחת",
+  long: "טקסט חופשי",
+  number: "מספר",
+  date: "תאריך",
+  choice: "בחירה של תשובה אחת",
+  multi: "בחירה של כמה תשובות",
+};
 const card = "rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5";
-const input = "min-h-[40px] rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-3";
+const input = "min-h-[40px] rounded-md border border-[var(--color-border)] bg-white px-3";
 
 function Status({ message }: { message: { ok: boolean; text: string } | null }) {
   if (!message) return null;
   return (
-    <p className={`rounded-[var(--radius-input)] px-3 py-2 text-sm ${message.ok ? "bg-green-50 text-green-800" : "bg-red-50 text-red-700"}`} role={message.ok ? "status" : "alert"}>
+    <p className={`rounded-md px-3 py-2 text-sm ${message.ok ? "bg-green-50 text-green-800" : "bg-red-50 text-red-700"}`} role={message.ok ? "status" : "alert"}>
       {message.text}
     </p>
   );
 }
 
+const EMPTY_DRAFT = { label: "", kind: "long" as Kind, required: true, help: "", optionsText: "", internal: false, showIfFieldId: "", showIfValues: [] as string[] };
+
 function ReportFields() {
   const [fields, setFields] = useState<Field[] | null>(null);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
-  const [draft, setDraft] = useState<{ label: string; kind: Field["kind"]; required: boolean }>({ label: "", kind: "long", required: true });
+  const [draft, setDraft] = useState(EMPTY_DRAFT);
 
   const load = useCallback(async () => {
     const r = await apiJson<Field[]>("/api/admin/frontal-report-fields");
@@ -43,19 +65,33 @@ function ReportFields() {
   if (!fields) return <p className="text-sm text-[var(--color-text-muted)]">טוען…</p>;
   const active = fields.filter((f) => f.active);
   const hidden = fields.filter((f) => !f.active);
+  const labelOf = new Map(fields.map((f) => [f.id, f.label]));
+  const choiceFields = active.filter((f) => f.kind === "choice" || f.kind === "multi");
+  const parent = choiceFields.find((f) => f.id === draft.showIfFieldId);
+  const needsOptions = draft.kind === "choice" || draft.kind === "multi";
 
   return (
     <div className="space-y-4">
       <Status message={message} />
-      <ol className="divide-y divide-[var(--color-border)]">
+      <p className="text-sm text-[var(--color-text-muted)]">
+        שם המדריך, המיקום והתאריך נוספים לדוח אוטומטית, ולא צריך לשאול עליהם.
+      </p>
+      <ol className="divide-y divide-[var(--color-border)] border-y border-[var(--color-border)]">
         {active.map((f, i) => (
-          <li key={f.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center">
-            <span className="w-6 text-sm tabular-nums text-[var(--color-text-muted)]">{i + 1}</span>
-            <div className="flex-1">
+          <li key={f.id} className={`flex flex-col gap-2 py-3 sm:flex-row sm:items-start ${f.showIfFieldId ? "pr-6" : ""}`}>
+            <span className="w-6 pt-0.5 text-sm tabular-nums text-[var(--color-text-muted)]">{f.showIfFieldId ? "" : i + 1}</span>
+            <div className="min-w-0 flex-1">
               <p className="font-medium">{f.label}</p>
               <p className="text-xs text-[var(--color-text-muted)]">
-                {KIND_LABEL[f.kind]}, {f.required ? "חובה" : "רשות"}
+                {KIND_LABEL[f.kind] ?? f.kind}, {f.required ? "חובה" : "רשות"}
+                {f.options.length > 0 && `: ${f.options.join(" / ")}`}
               </p>
+              {f.showIfFieldId && (
+                <p className="text-xs text-[var(--color-text-muted)]">
+                  מופיע רק אם ב&quot;{labelOf.get(f.showIfFieldId) ?? "שאלה שהוסרה"}&quot; נבחר: {f.showIfValues.join(" או ")}
+                </p>
+              )}
+              {f.internal && <p className="mt-0.5 text-xs font-medium text-amber-800">פנימי: לא נשלח לבית הספר</p>}
             </div>
             <div className="flex flex-wrap gap-3 text-sm">
               {i > 0 && (
@@ -66,55 +102,120 @@ function ReportFields() {
                   למעלה
                 </button>
               )}
-              <button type="button" className="text-[var(--color-text-muted)] hover:text-[var(--color-text)]" onClick={() => patch(f, { required: !f.required }, f.required ? "השדה הפך לרשות." : "השדה הפך לחובה.")}>
+              <button type="button" className="text-[var(--color-text-muted)] hover:text-[var(--color-text)]" onClick={() => patch(f, { required: !f.required }, f.required ? "השאלה הפכה לרשות." : "השאלה הפכה לחובה.")}>
                 {f.required ? "להפוך לרשות" : "להפוך לחובה"}
               </button>
-              <button type="button" className="text-red-700 hover:underline" onClick={() => patch(f, { active: false }, `"${f.label}" הוסר מהדוח.`)}>
-                הסרה מהדוח
+              <button type="button" className="text-[var(--color-text-muted)] hover:text-[var(--color-text)]" onClick={() => patch(f, { internal: !f.internal }, f.internal ? "התשובה תישלח גם לבית הספר." : "התשובה תישאר פנימית.")}>
+                {f.internal ? "לשלוח גם לבית הספר" : "להשאיר פנימי"}
+              </button>
+              <button type="button" className="text-red-700 hover:underline" onClick={() => patch(f, { active: false }, `"${f.label}" הוסרה מהדוח.`)}>
+                הסרה
               </button>
             </div>
           </li>
         ))}
       </ol>
+
       <form
-        className="flex flex-col gap-2 border-t border-[var(--color-border)] pt-4 sm:flex-row sm:items-end"
+        className="space-y-3 rounded-md bg-[var(--color-bg-muted)] p-4"
         onSubmit={async (e) => {
           e.preventDefault();
-          const r = await apiJson("/api/admin/frontal-report-fields", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(draft) });
+          const options = draft.optionsText.split("\n").map((x) => x.trim()).filter(Boolean);
+          const body = {
+            label: draft.label,
+            kind: draft.kind,
+            required: draft.required,
+            help: draft.help,
+            options: needsOptions ? options : [],
+            internal: draft.internal,
+            showIfFieldId: draft.showIfFieldId || null,
+            showIfValues: draft.showIfFieldId ? draft.showIfValues : [],
+          };
+          const r = await apiJson("/api/admin/frontal-report-fields", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
           if (!r.ok) return setMessage({ ok: false, text: r.error });
-          setMessage({ ok: true, text: `"${draft.label}" נוסף לדוח.` });
-          setDraft({ label: "", kind: "long", required: true });
+          setMessage({ ok: true, text: `"${draft.label}" נוספה לדוח.` });
+          setDraft(EMPTY_DRAFT);
           load();
         }}
       >
-        <div className="flex-1">
-          <label htmlFor="nf-label" className="mb-1 block text-sm">שדה חדש</label>
-          <input id="nf-label" className={`${input} w-full`} value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} placeholder="למשל: האם ההנהלה הייתה מעורבת" />
+        <p className="text-sm font-semibold">שאלה חדשה</p>
+        <div className="grid gap-3 sm:grid-cols-[1fr_14rem]">
+          <div>
+            <label htmlFor="nf-label" className="mb-1 block text-sm">השאלה</label>
+            <input id="nf-label" className={`${input} w-full`} value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} />
+          </div>
+          <div>
+            <label htmlFor="nf-kind" className="mb-1 block text-sm">סוג התשובה</label>
+            <select id="nf-kind" className={`${input} w-full`} value={draft.kind} onChange={(e) => setDraft({ ...draft, kind: e.target.value as Kind })}>
+              {(Object.keys(KIND_LABEL) as Kind[]).map((k) => (
+                <option key={k} value={k}>{KIND_LABEL[k]}</option>
+              ))}
+            </select>
+          </div>
         </div>
+        {needsOptions && (
+          <div>
+            <label htmlFor="nf-options" className="mb-1 block text-sm">האפשרויות, אחת בכל שורה</label>
+            <textarea id="nf-options" rows={4} className={`${input} w-full py-2`} value={draft.optionsText} onChange={(e) => setDraft({ ...draft, optionsText: e.target.value })} />
+          </div>
+        )}
         <div>
-          <label htmlFor="nf-kind" className="mb-1 block text-sm">סוג</label>
-          <select id="nf-kind" className={input} value={draft.kind} onChange={(e) => setDraft({ ...draft, kind: e.target.value as Field["kind"] })}>
-            <option value="long">טקסט חופשי</option>
-            <option value="short">שורה אחת</option>
-            <option value="number">מספר</option>
-          </select>
+          <label htmlFor="nf-help" className="mb-1 block text-sm">הסבר קצר מתחת לשאלה (רשות)</label>
+          <input id="nf-help" className={`${input} w-full`} value={draft.help} onChange={(e) => setDraft({ ...draft, help: e.target.value })} />
         </div>
-        <label className="flex min-h-[40px] items-center gap-2 text-sm">
-          <input type="checkbox" checked={draft.required} onChange={(e) => setDraft({ ...draft, required: e.target.checked })} />
-          חובה
-        </label>
-        <button type="submit" disabled={!draft.label.trim()} className="min-h-[40px] rounded-[var(--radius-input)] bg-[var(--color-primary)] px-4 text-sm font-medium text-white disabled:opacity-50">
-          הוספה
-        </button>
+        {choiceFields.length > 0 && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label htmlFor="nf-parent" className="mb-1 block text-sm">להציג רק אחרי תשובה מסוימת (רשות)</label>
+              <select id="nf-parent" className={`${input} w-full`} value={draft.showIfFieldId} onChange={(e) => setDraft({ ...draft, showIfFieldId: e.target.value, showIfValues: [] })}>
+                <option value="">תמיד להציג</option>
+                {choiceFields.map((f) => (
+                  <option key={f.id} value={f.id}>{f.label}</option>
+                ))}
+              </select>
+            </div>
+            {parent && (
+              <fieldset>
+                <legend className="mb-1 text-sm">כשנבחר:</legend>
+                <div className="flex flex-wrap gap-2">
+                  {parent.options.map((o) => (
+                    <label key={o} className="inline-flex items-center gap-1.5 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={draft.showIfValues.includes(o)}
+                        onChange={(e) => setDraft({ ...draft, showIfValues: e.target.checked ? [...draft.showIfValues, o] : draft.showIfValues.filter((x) => x !== o) })}
+                      />
+                      {o}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            )}
+          </div>
+        )}
+        <div className="flex flex-wrap items-center gap-5">
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={draft.required} onChange={(e) => setDraft({ ...draft, required: e.target.checked })} />
+            חובה
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={draft.internal} onChange={(e) => setDraft({ ...draft, internal: e.target.checked })} />
+            פנימי, לא לשלוח לבית הספר
+          </label>
+          <button type="submit" disabled={!draft.label.trim() || (draft.showIfFieldId !== "" && draft.showIfValues.length === 0)} className="min-h-[36px] rounded-md bg-[var(--color-primary)] px-4 text-sm font-medium text-white disabled:opacity-50">
+            הוספת השאלה
+          </button>
+        </div>
       </form>
+
       {hidden.length > 0 && (
         <details className="text-sm">
-          <summary className="cursor-pointer text-[var(--color-text-muted)]">שדות שהוסרו ({hidden.length})</summary>
+          <summary className="cursor-pointer text-[var(--color-text-muted)]">שאלות שהוסרו ({hidden.length})</summary>
           <ul className="mt-2 space-y-1">
             {hidden.map((f) => (
               <li key={f.id} className="flex justify-between gap-2">
                 <span>{f.label}</span>
-                <button type="button" className="text-[var(--color-primary)] underline" onClick={() => patch(f, { active: true }, `"${f.label}" חזר לדוח.`)}>
+                <button type="button" className="text-[var(--color-primary)] underline" onClick={() => patch(f, { active: true }, `"${f.label}" חזרה לדוח.`)}>
                   החזרה
                 </button>
               </li>
@@ -122,7 +223,7 @@ function ReportFields() {
           </ul>
         </details>
       )}
-      <p className="text-xs text-[var(--color-text-muted)]">דוחות שכבר הוגשו נשמרים כפי שהוגשו, גם אם משנים כאן את השדות.</p>
+      <p className="text-xs text-[var(--color-text-muted)]">דוחות שכבר הוגשו נשמרים כפי שהוגשו, גם אם משנים כאן את השאלות.</p>
     </div>
   );
 }

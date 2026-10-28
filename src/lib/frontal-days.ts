@@ -168,21 +168,67 @@ export function dayStatus(p: {
   return { label: "כל המדריכים רשומים", tone: "ok" };
 }
 
-export type ReportField = { id: string; label: string; kind: string; required: boolean };
+export type ReportFieldKind = "short" | "long" | "number" | "date" | "choice" | "multi";
 
-/** Checks a submitted report against the fields; returns the answers to store, or the first problem. */
+export type ReportField = {
+  id: string;
+  label: string;
+  kind: string;
+  required: boolean;
+  options?: string[];
+  showIfFieldId?: string | null;
+  showIfValues?: string[];
+  internal?: boolean;
+};
+
+export type ReportAnswer = { label: string; value: string; internal?: boolean };
+
+/** Normalises one raw answer: multi-select answers are arrays, everything else a trimmed string. */
+function rawValues(raw: unknown): string[] {
+  if (Array.isArray(raw)) return raw.filter((x): x is string => typeof x === "string").map((x) => x.trim()).filter(Boolean);
+  if (typeof raw === "number") return [String(raw)];
+  if (typeof raw === "string" && raw.trim()) return [raw.trim()];
+  return [];
+}
+
+/** A follow-up field shows only when its parent's answer is (or includes) one of its trigger values. */
+export function isFieldVisible(field: ReportField, input: Record<string, unknown>): boolean {
+  if (!field.showIfFieldId) return true;
+  const parent = rawValues(input[field.showIfFieldId]);
+  return (field.showIfValues ?? []).some((v) => parent.includes(v));
+}
+
+/**
+ * Checks a submitted report against the fields and returns the answers to store
+ * (labels copied, so later edits to the fields do not change a filed report), or
+ * the first problem in the teacher's words. Hidden follow-ups are skipped.
+ */
 export function buildReportAnswers(
   fields: ReportField[],
   input: Record<string, unknown>
-): { ok: true; answers: { label: string; value: string }[] } | { ok: false; message: string } {
-  const answers: { label: string; value: string }[] = [];
+): { ok: true; answers: ReportAnswer[] } | { ok: false; message: string } {
+  const answers: ReportAnswer[] = [];
   for (const f of fields) {
-    const raw = input[f.id];
-    const value = typeof raw === "number" ? String(raw) : typeof raw === "string" ? raw.trim() : "";
-    if (f.required && !value) return { ok: false, message: `נא למלא: ${f.label}` };
+    if (!isFieldVisible(f, input)) continue;
+    const values = rawValues(input[f.id]);
+    if (f.required && values.length === 0) {
+      return { ok: false, message: f.kind === "choice" || f.kind === "multi" ? `נא לבחור: ${f.label}` : `נא למלא: ${f.label}` };
+    }
+    const options = f.options ?? [];
+    if ((f.kind === "choice" || f.kind === "multi") && values.some((v) => !options.includes(v))) {
+      return { ok: false, message: `${f.label}: אפשרות לא מוכרת. רעננו את הדף ונסו שוב` };
+    }
+    if (f.kind === "choice" && values.length > 1) return { ok: false, message: `${f.label}: אפשר לבחור תשובה אחת` };
+    const value = values.join(", ");
     if (f.kind === "number" && value && !/^\d{1,6}$/.test(value)) return { ok: false, message: `${f.label}: מספר שלם בלבד` };
+    if (f.kind === "date" && value && !/^\d{4}-\d{2}-\d{2}$/.test(value)) return { ok: false, message: `${f.label}: תאריך לא תקין` };
     if (value.length > 4000) return { ok: false, message: `${f.label}: הטקסט ארוך מדי` };
-    answers.push({ label: f.label, value });
+    answers.push({ label: f.label, value, ...(f.internal ? { internal: true } : {}) });
   }
   return { ok: true, answers };
+}
+
+/** What the school receives: everything except answers marked internal. */
+export function answersForRecipient(answers: ReportAnswer[]): ReportAnswer[] {
+  return answers.filter((a) => !a.internal);
 }

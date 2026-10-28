@@ -452,13 +452,22 @@ model FrontalDayReport {
 
 /// The closing-report fields, defined by the admin.
 model FrontalReportField {
-  id        String  @id @default(cuid())
-  label     String
-  /// "short" | "long" | "number"
-  kind      String  @default("long")
-  required  Boolean @default(true)
-  sortOrder Int     @default(0)
-  active    Boolean @default(true)
+  id            String   @id @default(cuid())
+  label         String
+  /// "short" | "long" | "number" | "date" | "choice" (one option) | "multi" (several options)
+  kind          String   @default("long")
+  required      Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  active        Boolean  @default(true)
+  /// Small hint under the label.
+  help          String   @default("")
+  /// Options for "choice" and "multi".
+  options       String[] @default([])
+  /// Shown only when this other field's answer is (or, for "multi", includes) one of showIfValues.
+  showIfFieldId String?
+  showIfValues  String[] @default([])
+  /// Kept for Pazatsta only: never sent to the school with the approved report.
+  internal      Boolean  @default(false)
 }
 
 /// Small admin-editable settings (default templates and checklist), one row per key.
