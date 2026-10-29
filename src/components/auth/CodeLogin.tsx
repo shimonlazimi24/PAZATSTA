@@ -24,11 +24,12 @@ const primaryCls =
   "w-full rounded-[var(--radius-input)] bg-[var(--color-primary)] py-2.5 font-medium text-white hover:opacity-90 disabled:opacity-50";
 const linkCls = "text-sm text-[var(--color-primary)] underline hover:no-underline disabled:opacity-50";
 
-function readMethod(): Method {
+function readMethod(): Method | null {
   try {
-    return window.localStorage.getItem(METHOD_KEY) === "phone" ? "phone" : "email";
+    const saved = window.localStorage.getItem(METHOD_KEY);
+    return saved === "phone" || saved === "email" ? saved : null;
   } catch {
-    return "email";
+    return null;
   }
 }
 
@@ -73,10 +74,12 @@ export function CodeLogin({ role, next, askStudentPhone }: CodeLoginProps) {
     if (reason && GOOGLE_ERRORS[reason]) setError(GOOGLE_ERRORS[reason]);
     apiJson<{ phone?: boolean; google?: boolean }>("/api/auth/methods").then((r) => {
       if (!alive || !r.ok) return;
-      if (r.data?.google) setGoogleAvailable(true);
+      const google = Boolean(r.data?.google);
+      if (google) setGoogleAvailable(true);
       if (!r.data?.phone) return;
       setPhoneAvailable(true);
-      setMethod(readMethod());
+      // With Google and SMS both on, SMS is the default and email is the fallback.
+      setMethod(readMethod() ?? (google ? "phone" : "email"));
     });
     return () => {
       alive = false;
@@ -88,6 +91,8 @@ export function CodeLogin({ role, next, askStudentPhone }: CodeLoginProps) {
   }, [step]);
 
   const usePhone = phoneAvailable && method === "phone";
+  // Google and SMS cover most people, so the email code moves to a small link.
+  const emailAsFallback = googleAvailable && phoneAvailable;
   const cleanEmail = normalizeEmailInput(email);
   const digits = code.replace(/\D/g, "").slice(0, 6);
 
@@ -166,6 +171,28 @@ export function CodeLogin({ role, next, askStudentPhone }: CodeLoginProps) {
     setNotice("");
   }
 
+  const googleButton = (
+    <a
+      href={`/api/auth/google/start?${new URLSearchParams({ role, ...(next ? { next } : {}) })}`}
+      className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white py-2.5 font-medium text-[var(--color-text)] hover:bg-[var(--color-bg-muted)]"
+    >
+      <svg aria-hidden width="18" height="18" viewBox="0 0 48 48">
+        <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z" />
+        <path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z" />
+        <path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z" />
+        <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z" />
+      </svg>
+      כניסה עם Google
+    </a>
+  );
+  const divider = (
+    <div className="flex items-center gap-3 text-xs text-[var(--color-text-muted)]">
+      <span className="h-px flex-1 bg-[var(--color-border)]" />
+      או
+      <span className="h-px flex-1 bg-[var(--color-border)]" />
+    </div>
+  );
+
   if (step === "code") {
     return (
       <form onSubmit={onVerify} className="space-y-4">
@@ -216,7 +243,13 @@ export function CodeLogin({ role, next, askStudentPhone }: CodeLoginProps) {
 
   return (
     <form onSubmit={onSend} className="space-y-4">
-      {phoneAvailable && (
+      {emailAsFallback && (
+        <>
+          {googleButton}
+          {divider}
+        </>
+      )}
+      {phoneAvailable && !emailAsFallback && (
         <div role="radiogroup" aria-label="איך לקבל את הקוד" className="grid grid-cols-2 border-b border-[var(--color-border)]">
           {(
             [
@@ -313,27 +346,19 @@ export function CodeLogin({ role, next, askStudentPhone }: CodeLoginProps) {
 
       {error && <p className="text-sm text-red-700" role="alert">{error}</p>}
       <button type="submit" disabled={busy !== null} className={primaryCls}>
-        {busy === "send" ? "שולח…" : "שלחו לי קוד"}
+        {busy === "send" ? "שולח…" : usePhone ? "שלחו לי קוד ב-SMS" : "שלחו לי קוד"}
       </button>
-      {googleAvailable && (
+      {emailAsFallback && (
+        <p className="text-center">
+          <button type="button" className={linkCls} onClick={() => choose(usePhone ? "email" : "phone")} disabled={busy !== null}>
+            {usePhone ? "אין לכם נייד שמור אצלנו? קבלו קוד במייל" : "חזרה לכניסה ב-SMS"}
+          </button>
+        </p>
+      )}
+      {googleAvailable && !emailAsFallback && (
         <>
-          <div className="flex items-center gap-3 text-xs text-[var(--color-text-muted)]">
-            <span className="h-px flex-1 bg-[var(--color-border)]" />
-            או
-            <span className="h-px flex-1 bg-[var(--color-border)]" />
-          </div>
-          <a
-            href={`/api/auth/google/start?${new URLSearchParams({ role, ...(next ? { next } : {}) })}`}
-            className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white py-2.5 font-medium text-[var(--color-text)] hover:bg-[var(--color-bg-muted)]"
-          >
-            <svg aria-hidden width="18" height="18" viewBox="0 0 48 48">
-              <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z" />
-              <path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z" />
-              <path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z" />
-              <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z" />
-            </svg>
-            כניסה עם Google
-          </a>
+          {divider}
+          {googleButton}
         </>
       )}
     </form>
