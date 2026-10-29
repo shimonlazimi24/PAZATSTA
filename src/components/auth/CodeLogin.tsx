@@ -41,6 +41,33 @@ function saveMethod(m: Method) {
   }
 }
 
+type Methods = { phone: boolean; google: boolean };
+
+// Which ways of logging in are on. Asked once, as soon as a login page loads,
+// so the form opens ready instead of switching after the click.
+let methodsCache: Methods | null = null;
+let methodsPromise: Promise<Methods> | null = null;
+
+function loadMethods(): Promise<Methods> {
+  if (!methodsPromise) {
+    methodsPromise = apiJson<{ phone?: boolean; google?: boolean }>("/api/auth/methods").then((r) => {
+      const m = { phone: Boolean(r.ok && r.data?.phone), google: Boolean(r.ok && r.data?.google) };
+      if (r.ok) methodsCache = m;
+      else methodsPromise = null; // try again next time
+      return m;
+    });
+  }
+  return methodsPromise;
+}
+
+if (typeof window !== "undefined") void loadMethods();
+
+function initialMethod(m: Methods | null): Method {
+  if (!m?.phone) return "email";
+  // With Google and SMS both on, every visit opens on SMS; email is only a fallback.
+  return m.google ? "phone" : (readMethod() ?? "email");
+}
+
 interface CodeLoginProps {
   role: Role;
   /** Where to go after login when the server allows it, e.g. "/admin". */
@@ -54,8 +81,10 @@ interface CodeLoginProps {
  * message. Used by every login screen so they all behave the same.
  */
 export function CodeLogin({ role, next, askStudentPhone }: CodeLoginProps) {
-  const [phoneAvailable, setPhoneAvailable] = useState(false);
-  const [googleAvailable, setGoogleAvailable] = useState(false);
+  // Starts empty even when already known, so the server and browser render the same.
+  const [methods, setMethods] = useState<Methods | null>(null);
+  const phoneAvailable = Boolean(methods?.phone);
+  const googleAvailable = Boolean(methods?.google);
   const [method, setMethod] = useState<Method>("email");
   const [step, setStep] = useState<"ask" | "code">("ask");
   const [email, setEmail] = useState("");
@@ -72,15 +101,15 @@ export function CodeLogin({ role, next, askStudentPhone }: CodeLoginProps) {
     // Coming back from Google with a problem: say what happened.
     const reason = new URLSearchParams(window.location.search).get("google");
     if (reason && GOOGLE_ERRORS[reason]) setError(GOOGLE_ERRORS[reason]);
-    apiJson<{ phone?: boolean; google?: boolean }>("/api/auth/methods").then((r) => {
-      if (!alive || !r.ok) return;
-      const google = Boolean(r.data?.google);
-      if (google) setGoogleAvailable(true);
-      if (!r.data?.phone) return;
-      setPhoneAvailable(true);
-      // With Google and SMS both on, every visit opens on SMS; email is only a fallback.
-      setMethod(google ? "phone" : (readMethod() ?? "email"));
-    });
+    const apply = (m: Methods) => {
+      setMethods(m);
+      setMethod(initialMethod(m));
+    };
+    if (methodsCache) apply(methodsCache);
+    else
+      loadMethods().then((m) => {
+        if (alive) apply(m);
+      });
     return () => {
       alive = false;
     };
@@ -238,6 +267,18 @@ export function CodeLogin({ role, next, askStudentPhone }: CodeLoginProps) {
           </button>
         </div>
       </form>
+    );
+  }
+
+  // Still asking which methods are on (a moment, on a first visit): hold the
+  // space instead of showing the email form and swapping it a second later.
+  if (!methods) {
+    return (
+      <div className="space-y-4" aria-busy="true" aria-label="טוען">
+        <div className="h-11 animate-pulse rounded-[var(--radius-input)] bg-[var(--color-bg-muted)]" />
+        <div className="h-11 animate-pulse rounded-[var(--radius-input)] bg-[var(--color-bg-muted)]" />
+        <div className="h-11 animate-pulse rounded-[var(--radius-input)] bg-[var(--color-bg-muted)]" />
+      </div>
     );
   }
 
