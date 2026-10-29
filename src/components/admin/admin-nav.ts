@@ -40,7 +40,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     ],
   },
   {
-    title: "הגדרות",
+    title: "תבנית דוח השיעור",
     items: [
       { href: "/admin/settings/tips", label: "טיפים לדוח" },
       { href: "/admin/settings/report-fields", label: "שדות דוח השיעור" },

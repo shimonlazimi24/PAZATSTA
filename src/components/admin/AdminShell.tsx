@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart3,
   BellRing,
   CalendarDays,
+  ChevronDown,
   Clock,
   Inbox,
   Lightbulb,
@@ -39,38 +40,85 @@ const ICONS: Record<string, LucideIcon> = {
   "/admin/settings/report-fields": ListChecks,
 };
 
+const COLLAPSED_KEY = "pazatsta-admin-nav-collapsed";
+
+function readCollapsed(): string[] {
+  try {
+    const v = JSON.parse(window.localStorage.getItem(COLLAPSED_KEY) ?? "[]");
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
 function AdminNav({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
   const active = activeAdminHref(pathname);
+  // Titles of the groups the admin closed; remembered on this device.
+  const [collapsed, setCollapsed] = useState<string[]>([]);
+  useEffect(() => setCollapsed(readCollapsed()), []);
+
+  function toggle(title: string) {
+    setCollapsed((prev) => {
+      const next = prev.includes(title) ? prev.filter((t) => t !== title) : [...prev, title];
+      try {
+        window.localStorage.setItem(COLLAPSED_KEY, JSON.stringify(next));
+      } catch {
+        /* private mode: just don't remember */
+      }
+      return next;
+    });
+  }
+
   return (
-    <nav aria-label="תפריט ניהול" className="space-y-5 px-2">
-      {ADMIN_NAV.map((group, gi) => (
-        <div key={group.title ?? gi}>
-          {group.title && <p className="mb-1 px-2.5 text-[11px] font-semibold text-[var(--color-text-muted)]">{group.title}</p>}
-          <ul className="space-y-0.5">
-            {group.items.map((item) => {
-              const Icon = ICONS[item.href];
-              const isActive = item.href === active;
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    onClick={onNavigate}
-                    aria-current={isActive ? "page" : undefined}
-                    className={`relative flex h-8 items-center gap-2 rounded-md px-2.5 text-[13px] transition-colors ${
-                      isActive
-                        ? "bg-white font-semibold text-[var(--color-text)] shadow-sm before:absolute before:inset-y-2 before:start-0 before:w-[3px] before:rounded-full before:bg-[var(--color-primary)]"
-                        : "text-[var(--color-text-muted)] hover:bg-white/70 hover:text-[var(--color-text)]"
-                    }`}
-                  >
-                    {Icon && <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-[var(--color-primary)]" : ""}`} aria-hidden />}
-                    {item.label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ))}
+    <nav aria-label="תפריט ניהול" className="space-y-3 px-2">
+      {ADMIN_NAV.map((group, gi) => {
+        const hasActive = group.items.some((i) => i.href === active);
+        // The group holding the current screen always stays open.
+        const open = !group.title || hasActive || !collapsed.includes(group.title);
+        const listId = `admin-nav-group-${gi}`;
+        return (
+          <div key={group.title ?? gi}>
+            {group.title && (
+              <button
+                type="button"
+                onClick={() => toggle(group.title!)}
+                aria-expanded={open}
+                aria-controls={listId}
+                disabled={hasActive}
+                className="mb-1 flex w-full items-center justify-between rounded-md px-2.5 py-1 text-[11px] font-semibold text-[var(--color-text-muted)] hover:bg-white/70 hover:text-[var(--color-text)] disabled:cursor-default disabled:hover:bg-transparent"
+              >
+                {group.title}
+                <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${open ? "" : "rotate-90"}`} aria-hidden />
+              </button>
+            )}
+            <div className={`grid transition-[grid-template-rows] duration-200 ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+              <ul id={listId} className="space-y-0.5 overflow-hidden" inert={!open}>
+                {group.items.map((item) => {
+                  const Icon = ICONS[item.href];
+                  const isActive = item.href === active;
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        onClick={onNavigate}
+                        aria-current={isActive ? "page" : undefined}
+                        className={`relative flex h-8 items-center gap-2 rounded-md px-2.5 text-[13px] transition-colors ${
+                          isActive
+                            ? "bg-white font-semibold text-[var(--color-text)] shadow-sm before:absolute before:inset-y-2 before:start-0 before:w-[3px] before:rounded-full before:bg-[var(--color-primary)]"
+                            : "text-[var(--color-text-muted)] hover:bg-white/70 hover:text-[var(--color-text)]"
+                        }`}
+                      >
+                        {Icon && <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-[var(--color-primary)]" : ""}`} aria-hidden />}
+                        {item.label}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </div>
+        );
+      })}
     </nav>
   );
 }
