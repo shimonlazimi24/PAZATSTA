@@ -27,7 +27,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (day.report && day.report.teacherId !== me.id) return NextResponse.json({ error: "מדריך אחר כבר הגיש את הדוח של היום" }, { status: 409 });
   if (day.report && day.report.status !== "returned") return NextResponse.json({ error: "הדוח כבר הוגש" }, { status: 409 });
 
-  const fields = await prisma.frontalReportField.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } });
+  const fields = await prisma.frontalReportField.findMany({ where: { active: true, form: "report" }, orderBy: { sortOrder: "asc" } });
   const body = (await req.json().catch(() => null)) as { answers?: Record<string, unknown> } | null;
   const built = buildReportAnswers(fields, body?.answers ?? {});
   if (!built.ok) return NextResponse.json({ error: built.message }, { status: 400 });

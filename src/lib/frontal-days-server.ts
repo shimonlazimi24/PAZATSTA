@@ -88,6 +88,10 @@ export const FrontalDayInput = z
       .optional()
       .default(""),
     teachersNeeded: z.coerce.number().int().min(1, "לפחות מדריך אחד").max(50),
+    classSize: z
+      .union([z.null(), z.literal(""), z.coerce.number().int().min(1, "מספר התלמידים צריך להיות לפחות 1").max(2000, "מספר תלמידים גדול מדי")])
+      .optional()
+      .transform((v) => (typeof v === "number" ? v : null)),
   })
   .refine((v) => v.endTime > v.startTime, { message: "שעת הסיום צריכה להיות אחרי שעת ההתחלה", path: ["endTime"] });
 

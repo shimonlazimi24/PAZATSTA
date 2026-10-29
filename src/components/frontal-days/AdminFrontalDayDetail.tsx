@@ -8,6 +8,7 @@ import { FrontalDayForm, type FrontalDayValues } from "./FrontalDayForm";
 import { TemplateEditor } from "./TemplateEditor";
 import { ChecklistEditor } from "./ChecklistEditor";
 import { QrCode } from "./QrCode";
+import { surveyPath, surveyRatio, type QuestionSummary } from "@/lib/frontal-survey";
 
 type Detail = FrontalDayValues & {
   id: string;
@@ -25,6 +26,57 @@ type Detail = FrontalDayValues & {
   } | null;
 };
 type Teacher = { id: string; name: string | null; email: string };
+type SurveyData = { count: number; classSize: number | null; questions: QuestionSummary[] };
+
+/** How many students answered, out of the class, and what they said. */
+function SurveyResults({ id }: { id: string }) {
+  const [data, setData] = useState<SurveyData | null>(null);
+  useEffect(() => {
+    apiJson<SurveyData>(`/api/admin/frontal-days/${id}/survey`).then((r) => r.ok && setData(r.data));
+  }, [id]);
+  if (!data) return <p className="text-sm text-[var(--color-text-muted)]">טוען…</p>;
+  return (
+    <div className="space-y-4">
+      <p className="text-2xl font-bold text-[var(--color-text)]">{surveyRatio(data.count, data.classSize)}</p>
+      {data.count > 0 &&
+        data.questions.map((q) => (
+          <details key={q.label} className="group rounded-md border border-[var(--color-border)] px-3 py-2" open={q.kind !== "text"}>
+            <summary className="cursor-pointer text-sm font-medium text-[var(--color-text)]">
+              {q.label} <span className="font-normal text-[var(--color-text-muted)]">({q.answered} ענו)</span>
+            </summary>
+            {q.kind === "choice" && (
+              <ul className="mt-2 space-y-1.5">
+                {q.counts.map((c) => {
+                  const pct = q.answered ? Math.round((c.count / q.answered) * 100) : 0;
+                  return (
+                    <li key={c.option} className="grid grid-cols-[8rem_1fr_3.5rem] items-center gap-2 text-sm">
+                      <span className="truncate">{c.option}</span>
+                      <span className="h-2.5 overflow-hidden rounded-full bg-[var(--color-bg-muted)]">
+                        <span className="block h-full rounded-full bg-[var(--color-primary)]" style={{ width: `${pct}%` }} />
+                      </span>
+                      <span className="text-left tabular-nums text-[var(--color-text-muted)]">
+                        {c.count} ({pct}%)
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {q.kind === "number" && <p className="mt-2 text-sm">ממוצע: {q.average ?? "—"}</p>}
+            {q.kind === "text" && (
+              <ul className="mt-2 max-h-72 space-y-1.5 overflow-y-auto text-sm">
+                {q.texts.map((t, i) => (
+                  <li key={i} className="whitespace-pre-line rounded bg-[var(--color-bg-muted)]/60 px-2 py-1">
+                    {t}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </details>
+        ))}
+    </div>
+  );
+}
 
 const card = "rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5";
 const btn = "min-h-[40px] rounded-[var(--radius-input)] px-4 text-sm font-medium disabled:opacity-50";
@@ -46,6 +98,8 @@ export function AdminFrontalDayDetail({ id }: { id: string }) {
   const [tpl, setTpl] = useState<{ messageTemplate: string; reminderTemplate: string; checklist: string[] } | null>(null);
   const [tplSaved, setTplSaved] = useState(false);
   const [returnNote, setReturnNote] = useState("");
+  const [draft, setDraft] = useState<{ value: string; internal: boolean }[] | null>(null);
+  const [includeSurvey, setIncludeSurvey] = useState(true);
 
   const load = useCallback(async () => {
     const r = await apiJson<Detail>(`/api/admin/frontal-days/${id}`);
@@ -157,52 +211,126 @@ export function AdminFrontalDayDetail({ id }: { id: string }) {
             <h3 id="report-h" className="text-lg font-semibold">דוח סיום</h3>
             <p className="text-sm text-[var(--color-text-muted)]">הוגש על ידי {day.report.teacherName}</p>
           </div>
-          <dl className="mt-4 space-y-3">
-            {day.report.answers.map((a) => (
-              <div key={a.label}>
-                <dt className="text-sm text-[var(--color-text-muted)]">
-                  {a.label}
-                  {a.internal && <span className="ms-2 text-xs font-medium text-amber-800">פנימי, לא נשלח לבית הספר</span>}
-                </dt>
-                <dd className="whitespace-pre-wrap">{a.value || "לא מולא"}</dd>
-              </div>
-            ))}
-          </dl>
-          {day.report.status === "approved" ? (
-            <p className="mt-4 text-sm text-[var(--color-primary)]">
-              הדוח אושר ונשלח אל {day.recipientName || day.recipientEmail}.
-            </p>
-          ) : day.report.status === "returned" ? (
-            <p className="mt-4 text-sm text-amber-800">הדוח הוחזר למדריך לתיקון: {day.report.adminNote}</p>
-          ) : (
-            <div className="mt-5 space-y-3 border-t border-[var(--color-border)] pt-4">
-              {day.recipientEmail ? (
+          {draft ? (
+            <div className="mt-4 space-y-4">
+              <p className="text-sm text-[var(--color-text-muted)]">עורכים את הנוסח שיישלח. השאלות נשארות כמו שהן.</p>
+              {day.report.answers.map((a, i) => (
+                <div key={a.label}>
+                  <label htmlFor={`edit-${i}`} className="mb-1 block text-sm text-[var(--color-text-muted)]">
+                    {a.label}
+                  </label>
+                  <textarea
+                    id={`edit-${i}`}
+                    rows={Math.min(8, Math.max(2, Math.ceil((draft[i]?.value.length ?? 0) / 70)))}
+                    maxLength={4000}
+                    className="w-full resize-y rounded-[var(--radius-input)] border border-[var(--color-border)] px-3 py-2"
+                    value={draft[i]?.value ?? ""}
+                    onChange={(e) => setDraft((d) => d && d.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)))}
+                  />
+                  <label className="mt-1 inline-flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
+                    <input
+                      type="checkbox"
+                      checked={draft[i]?.internal ?? false}
+                      onChange={(e) => setDraft((d) => d && d.map((x, j) => (j === i ? { ...x, internal: e.target.checked } : x)))}
+                    />
+                    פנימי, לא לשלוח לבית הספר
+                  </label>
+                </div>
+              ))}
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
                   disabled={busy}
                   className={primary}
-                  onClick={() => {
-                    if (!confirm(`לאשר ולשלוח את הדוח אל ${day.recipientEmail}?`)) return;
-                    act(() => apiJson(`/api/admin/frontal-days/${id}/report`, json("PATCH", { action: "approve" })), "הדוח אושר ונשלח.");
-                  }}
+                  onClick={() =>
+                    act(() => apiJson(`/api/admin/frontal-days/${id}/report`, json("PATCH", { action: "edit", answers: draft })), "הסיכום נשמר.").then(
+                      (ok) => ok && setDraft(null)
+                    )
+                  }
                 >
-                  אישור ושליחה אל {day.recipientName || day.recipientEmail}
+                  שמירת הסיכום
                 </button>
+                <button type="button" disabled={busy} className={secondary} onClick={() => setDraft(null)}>
+                  ביטול
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <dl className="mt-4 space-y-3">
+                {day.report.answers.map((a) => (
+                  <div key={a.label}>
+                    <dt className="text-sm text-[var(--color-text-muted)]">
+                      {a.label}
+                      {a.internal && <span className="ms-2 text-xs font-medium text-amber-800">פנימי, לא נשלח לבית הספר</span>}
+                    </dt>
+                    <dd className="whitespace-pre-wrap">{a.value || "לא מולא"}</dd>
+                  </div>
+                ))}
+              </dl>
+              {day.report.status !== "returned" && (
+                <button
+                  type="button"
+                  className="mt-3 text-sm font-medium text-[var(--color-primary)] underline"
+                  onClick={() => setDraft(day.report!.answers.map((a) => ({ value: a.value, internal: !!a.internal })))}
+                >
+                  עריכת הסיכום
+                </button>
+              )}
+            </>
+          )}
+          {!draft && day.report.status === "returned" && (
+            <p className="mt-4 text-sm text-amber-800">הדוח הוחזר למדריך לתיקון: {day.report.adminNote}</p>
+          )}
+          {!draft && day.report.status !== "returned" && (
+            <div className="mt-5 space-y-3 border-t border-[var(--color-border)] pt-4">
+              {day.report.status === "approved" && (
+                <p className="text-sm text-[var(--color-primary)]">
+                  נשלח אל {day.recipientName || day.recipientEmail}
+                  {day.report.sentToRecipientAt &&
+                    ` ב-${new Date(day.report.sentToRecipientAt).toLocaleString("he-IL", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Jerusalem" })}`}
+                  .
+                </p>
+              )}
+              {day.recipientEmail ? (
+                <>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={includeSurvey} onChange={(e) => setIncludeSurvey(e.target.checked)} />
+                    לצרף את תוצאות סקר התלמידים (כמה ענו ואחוזים בשאלות הבחירה, בלי תשובות פתוחות)
+                  </label>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    className={day.report.status === "approved" ? secondary : primary}
+                    onClick={() => {
+                      const again = day.report!.status === "approved";
+                      if (!confirm(`${again ? "לשלוח שוב" : "לאשר ולשלוח"} את הסיכום אל ${day.recipientEmail}?`)) return;
+                      act(
+                        () => apiJson(`/api/admin/frontal-days/${id}/report`, json("PATCH", { action: again ? "resend" : "approve", includeSurvey })),
+                        again ? "הסיכום נשלח שוב." : "הדוח אושר ונשלח."
+                      );
+                    }}
+                  >
+                    {day.report.status === "approved" ? "שליחה מחדש" : "אישור ושליחה"} אל {day.recipientName || day.recipientEmail}
+                  </button>
+                </>
               ) : (
                 <p className="text-sm text-amber-800">כדי לשלוח את הדוח, הוסיפו בפרטי היום את האימייל של מקבל הדוח.</p>
               )}
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <label htmlFor="return-note" className="sr-only">מה לתקן</label>
-                <input id="return-note" value={returnNote} onChange={(e) => setReturnNote(e.target.value)} placeholder="מה לתקן בדוח" className="min-h-[40px] flex-1 rounded-[var(--radius-input)] border border-[var(--color-border)] px-3" />
-                <button
-                  type="button"
-                  disabled={busy || !returnNote.trim()}
-                  className={secondary}
-                  onClick={() => act(() => apiJson(`/api/admin/frontal-days/${id}/report`, json("PATCH", { action: "return", note: returnNote })), "הדוח הוחזר למדריך.").then((ok) => ok && setReturnNote(""))}
-                >
-                  החזרה למדריך
-                </button>
-              </div>
+              {day.report.status === "submitted" && (
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <label htmlFor="return-note" className="sr-only">מה לתקן</label>
+                  <input id="return-note" value={returnNote} onChange={(e) => setReturnNote(e.target.value)} placeholder="מה לתקן בדוח" className="min-h-[40px] flex-1 rounded-[var(--radius-input)] border border-[var(--color-border)] px-3" />
+                  <button
+                    type="button"
+                    disabled={busy || !returnNote.trim()}
+                    className={secondary}
+                    onClick={() => act(() => apiJson(`/api/admin/frontal-days/${id}/report`, json("PATCH", { action: "return", note: returnNote })), "הדוח הוחזר למדריך.").then((ok) => ok && setReturnNote(""))}
+                  >
+                    החזרה למדריך
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </section>
@@ -354,17 +482,30 @@ export function AdminFrontalDayDetail({ id }: { id: string }) {
         </section>
       )}
 
-      {(day.feedbackUrl || day.courseUrl || day.courseCode) && (
+      {day.status !== "canceled" && (
+        <section className={card} aria-labelledby="survey-h">
+          <h3 id="survey-h" className="text-lg font-semibold">סקר משוב של התלמידים</h3>
+          <p className="mb-4 mt-1 text-sm text-[var(--color-text-muted)]">
+            התלמידים סורקים את ה-QR בסוף היום וממלאים בלי להתחבר. כל טלפון נספר פעם אחת. השאלות נערכות בהגדרות הימים הפרונטליים.
+          </p>
+          <SurveyResults id={id} />
+        </section>
+      )}
+
+      {day.status !== "canceled" && (
         <section className={card} aria-labelledby="qr-h">
           <h3 id="qr-h" className="text-lg font-semibold">קודי QR לסוף היום</h3>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">המדריכים רואים אותם באזור האישי ביום עצמו. אפשר גם להדפיס מכאן.</p>
           <div className="mt-4 flex flex-wrap gap-8">
-            {day.feedbackUrl && (
-              <figure className="space-y-2 text-center">
-                <QrCode value={day.feedbackUrl} size={180} label="QR לטופס המשוב" />
-                <figcaption className="text-sm">משוב לתלמידים</figcaption>
-              </figure>
-            )}
+            <figure className="space-y-2 text-center">
+              <QrCode value={typeof window === "undefined" ? "" : `${window.location.origin}${surveyPath(id)}`} size={180} label="QR לסקר המשוב" />
+              <figcaption className="text-sm">
+                סקר משוב לתלמידים
+                <a href={surveyPath(id)} target="_blank" rel="noreferrer" className="block text-xs text-[var(--color-primary)] underline">
+                  פתיחת הסקר
+                </a>
+              </figcaption>
+            </figure>
             {(day.courseUrl || day.courseCode) && (
               <figure className="space-y-2 text-center">
                 {day.courseUrl && <QrCode value={day.courseUrl} size={180} label="QR לקורס המתנה" />}

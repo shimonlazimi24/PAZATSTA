@@ -39,7 +39,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   };
   if (!mine) return NextResponse.json(base, { headers: { "Cache-Control": "no-store" } });
 
-  const fields = await prisma.frontalReportField.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } });
+  const fields = await prisma.frontalReportField.findMany({ where: { active: true, form: "report" }, orderBy: { sortOrder: "asc" } });
   const report = day.report;
   const otherTeacherReported = !!report && report.teacherId !== me.id;
   return NextResponse.json(
@@ -51,6 +51,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       contactPhone: day.contactPhone,
       whatsappUrl: day.whatsappUrl,
       feedbackUrl: day.feedbackUrl,
+      classSize: day.classSize,
+      surveyCount: await prisma.frontalSurveyResponse.count({ where: { dayId: day.id } }),
       courseCode: day.courseCode,
       courseUrl: day.courseUrl,
       message: renderTemplate(day.messageTemplate, templateValues(day, me.name?.trim() || "מדריך/ה")),

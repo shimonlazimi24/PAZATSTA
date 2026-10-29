@@ -43,15 +43,17 @@ function Status({ message }: { message: { ok: boolean; text: string } | null }) 
 
 const EMPTY_DRAFT = { label: "", kind: "long" as Kind, required: true, help: "", optionsText: "", internal: false, showIfFieldId: "", showIfValues: [] as string[] };
 
-function ReportFields() {
+function ReportFields({ form = "report" }: { form?: "report" | "survey" }) {
+  const survey = form === "survey";
+  const where = survey ? "לסקר" : "לדוח";
   const [fields, setFields] = useState<Field[] | null>(null);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [draft, setDraft] = useState(EMPTY_DRAFT);
 
   const load = useCallback(async () => {
-    const r = await apiJson<Field[]>("/api/admin/frontal-report-fields");
+    const r = await apiJson<Field[]>(`/api/admin/frontal-report-fields?form=${form}`);
     setFields(r.ok ? r.data : []);
-  }, []);
+  }, [form]);
   useEffect(() => {
     load();
   }, [load]);
@@ -73,9 +75,11 @@ function ReportFields() {
   return (
     <div className="space-y-4">
       <Status message={message} />
-      <p className="text-sm text-[var(--color-text-muted)]">
-        שם המדריך, המיקום והתאריך נוספים לדוח אוטומטית, ולא צריך לשאול עליהם.
-      </p>
+      {!survey && (
+        <p className="text-sm text-[var(--color-text-muted)]">
+          שם המדריך, המיקום והתאריך נוספים לדוח אוטומטית, ולא צריך לשאול עליהם.
+        </p>
+      )}
       <ol className="divide-y divide-[var(--color-border)] border-y border-[var(--color-border)]">
         {active.map((f, i) => (
           <li key={f.id} className={`flex flex-col gap-2 py-3 sm:flex-row sm:items-start ${f.showIfFieldId ? "pr-6" : ""}`}>
@@ -105,10 +109,12 @@ function ReportFields() {
               <button type="button" className="text-[var(--color-text-muted)] hover:text-[var(--color-text)]" onClick={() => patch(f, { required: !f.required }, f.required ? "השאלה הפכה לרשות." : "השאלה הפכה לחובה.")}>
                 {f.required ? "להפוך לרשות" : "להפוך לחובה"}
               </button>
-              <button type="button" className="text-[var(--color-text-muted)] hover:text-[var(--color-text)]" onClick={() => patch(f, { internal: !f.internal }, f.internal ? "התשובה תישלח גם לבית הספר." : "התשובה תישאר פנימית.")}>
-                {f.internal ? "לשלוח גם לבית הספר" : "להשאיר פנימי"}
-              </button>
-              <button type="button" className="text-red-700 hover:underline" onClick={() => patch(f, { active: false }, `"${f.label}" הוסרה מהדוח.`)}>
+              {!survey && (
+                <button type="button" className="text-[var(--color-text-muted)] hover:text-[var(--color-text)]" onClick={() => patch(f, { internal: !f.internal }, f.internal ? "התשובה תישלח גם לבית הספר." : "התשובה תישאר פנימית.")}>
+                  {f.internal ? "לשלוח גם לבית הספר" : "להשאיר פנימי"}
+                </button>
+              )}
+              <button type="button" className="text-red-700 hover:underline" onClick={() => patch(f, { active: false }, `"${f.label}" הוסרה ${survey ? "מהסקר" : "מהדוח"}.`)}>
                 הסרה
               </button>
             </div>
@@ -131,9 +137,9 @@ function ReportFields() {
             showIfFieldId: draft.showIfFieldId || null,
             showIfValues: draft.showIfFieldId ? draft.showIfValues : [],
           };
-          const r = await apiJson("/api/admin/frontal-report-fields", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+          const r = await apiJson(`/api/admin/frontal-report-fields?form=${form}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
           if (!r.ok) return setMessage({ ok: false, text: r.error });
-          setMessage({ ok: true, text: `"${draft.label}" נוספה לדוח.` });
+          setMessage({ ok: true, text: `"${draft.label}" נוספה ${where}.` });
           setDraft(EMPTY_DRAFT);
           load();
         }}
@@ -141,12 +147,12 @@ function ReportFields() {
         <p className="text-sm font-semibold">שאלה חדשה</p>
         <div className="grid gap-3 sm:grid-cols-[1fr_14rem]">
           <div>
-            <label htmlFor="nf-label" className="mb-1 block text-sm">השאלה</label>
-            <input id="nf-label" className={`${input} w-full`} value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} />
+            <label htmlFor={`${form}-nf-label`} className="mb-1 block text-sm">השאלה</label>
+            <input id={`${form}-nf-label`} className={`${input} w-full`} value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} />
           </div>
           <div>
-            <label htmlFor="nf-kind" className="mb-1 block text-sm">סוג התשובה</label>
-            <select id="nf-kind" className={`${input} w-full`} value={draft.kind} onChange={(e) => setDraft({ ...draft, kind: e.target.value as Kind })}>
+            <label htmlFor={`${form}-nf-kind`} className="mb-1 block text-sm">סוג התשובה</label>
+            <select id={`${form}-nf-kind`} className={`${input} w-full`} value={draft.kind} onChange={(e) => setDraft({ ...draft, kind: e.target.value as Kind })}>
               {(Object.keys(KIND_LABEL) as Kind[]).map((k) => (
                 <option key={k} value={k}>{KIND_LABEL[k]}</option>
               ))}
@@ -155,19 +161,19 @@ function ReportFields() {
         </div>
         {needsOptions && (
           <div>
-            <label htmlFor="nf-options" className="mb-1 block text-sm">האפשרויות, אחת בכל שורה</label>
-            <textarea id="nf-options" rows={4} className={`${input} w-full py-2`} value={draft.optionsText} onChange={(e) => setDraft({ ...draft, optionsText: e.target.value })} />
+            <label htmlFor={`${form}-nf-options`} className="mb-1 block text-sm">האפשרויות, אחת בכל שורה</label>
+            <textarea id={`${form}-nf-options`} rows={4} className={`${input} w-full py-2`} value={draft.optionsText} onChange={(e) => setDraft({ ...draft, optionsText: e.target.value })} />
           </div>
         )}
         <div>
-          <label htmlFor="nf-help" className="mb-1 block text-sm">הסבר קצר מתחת לשאלה (רשות)</label>
-          <input id="nf-help" className={`${input} w-full`} value={draft.help} onChange={(e) => setDraft({ ...draft, help: e.target.value })} />
+          <label htmlFor={`${form}-nf-help`} className="mb-1 block text-sm">הסבר קצר מתחת לשאלה (רשות)</label>
+          <input id={`${form}-nf-help`} className={`${input} w-full`} value={draft.help} onChange={(e) => setDraft({ ...draft, help: e.target.value })} />
         </div>
         {choiceFields.length > 0 && (
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label htmlFor="nf-parent" className="mb-1 block text-sm">להציג רק אחרי תשובה מסוימת (רשות)</label>
-              <select id="nf-parent" className={`${input} w-full`} value={draft.showIfFieldId} onChange={(e) => setDraft({ ...draft, showIfFieldId: e.target.value, showIfValues: [] })}>
+              <label htmlFor={`${form}-nf-parent`} className="mb-1 block text-sm">להציג רק אחרי תשובה מסוימת (רשות)</label>
+              <select id={`${form}-nf-parent`} className={`${input} w-full`} value={draft.showIfFieldId} onChange={(e) => setDraft({ ...draft, showIfFieldId: e.target.value, showIfValues: [] })}>
                 <option value="">תמיד להציג</option>
                 {choiceFields.map((f) => (
                   <option key={f.id} value={f.id}>{f.label}</option>
@@ -198,10 +204,12 @@ function ReportFields() {
             <input type="checkbox" checked={draft.required} onChange={(e) => setDraft({ ...draft, required: e.target.checked })} />
             חובה
           </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={draft.internal} onChange={(e) => setDraft({ ...draft, internal: e.target.checked })} />
-            פנימי, לא לשלוח לבית הספר
-          </label>
+          {!survey && (
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={draft.internal} onChange={(e) => setDraft({ ...draft, internal: e.target.checked })} />
+              פנימי, לא לשלוח לבית הספר
+            </label>
+          )}
           <button type="submit" disabled={!draft.label.trim() || (draft.showIfFieldId !== "" && draft.showIfValues.length === 0)} className="min-h-[36px] rounded-md bg-[var(--color-primary)] px-4 text-sm font-medium text-white disabled:opacity-50">
             הוספת השאלה
           </button>
@@ -215,7 +223,7 @@ function ReportFields() {
             {hidden.map((f) => (
               <li key={f.id} className="flex justify-between gap-2">
                 <span>{f.label}</span>
-                <button type="button" className="text-[var(--color-primary)] underline" onClick={() => patch(f, { active: true }, `"${f.label}" חזרה לדוח.`)}>
+                <button type="button" className="text-[var(--color-primary)] underline" onClick={() => patch(f, { active: true }, `"${f.label}" חזרה ${where}.`)}>
                   החזרה
                 </button>
               </li>
@@ -223,7 +231,9 @@ function ReportFields() {
           </ul>
         </details>
       )}
-      <p className="text-xs text-[var(--color-text-muted)]">דוחות שכבר הוגשו נשמרים כפי שהוגשו, גם אם משנים כאן את השאלות.</p>
+      <p className="text-xs text-[var(--color-text-muted)]">
+        {survey ? "תשובות שכבר נשלחו נשמרות כפי שנשלחו, גם אם משנים כאן את השאלות." : "דוחות שכבר הוגשו נשמרים כפי שהוגשו, גם אם משנים כאן את השאלות."}
+      </p>
     </div>
   );
 }
@@ -284,6 +294,14 @@ export function FrontalSettings() {
         <h3 id="fields-h" className="text-lg font-semibold">שדות דוח הסיום</h3>
         <p className="mb-4 mt-1 text-sm text-[var(--color-text-muted)]">מה המדריך ממלא בסוף היום. הדוח נשלח אל המקום אחרי שאתם מאשרים אותו.</p>
         <ReportFields />
+      </section>
+
+      <section className={card} aria-labelledby="survey-fields-h">
+        <h3 id="survey-fields-h" className="text-lg font-semibold">שאלות סקר המשוב לתלמידים</h3>
+        <p className="mb-4 mt-1 text-sm text-[var(--color-text-muted)]">
+          מה התלמידים עונים בסוף היום, אחרי שסורקים את ה-QR. בלי התחברות, וכל טלפון נספר פעם אחת. אותן שאלות לכל הימים.
+        </p>
+        <ReportFields form="survey" />
       </section>
     </div>
   );

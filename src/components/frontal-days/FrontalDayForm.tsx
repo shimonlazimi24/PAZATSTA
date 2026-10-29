@@ -19,6 +19,8 @@ export type FrontalDayValues = {
   recipientName: string;
   recipientEmail: string;
   teachersNeeded: number;
+  /** Expected number of students, for "23 of 30 answered the survey". */
+  classSize: number | null;
 };
 
 export const EMPTY_DAY: FrontalDayValues = {
@@ -38,6 +40,7 @@ export const EMPTY_DAY: FrontalDayValues = {
   recipientName: "",
   recipientEmail: "",
   teachersNeeded: 2,
+  classSize: null,
 };
 
 const input = "w-full min-h-[44px] rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-3 py-2 text-right";
@@ -142,8 +145,17 @@ export function FrontalDayForm({
       </Group>
 
       <Group title="סוף היום">
-        <Field id="fd-feedback" label="קישור לטופס המשוב לתלמידים" hint="ממנו נוצר קוד ה-QR שהמדריך מציג בסוף היום.">
-          <input id="fd-feedback" dir="ltr" className={input} value={v.feedbackUrl} onChange={set("feedbackUrl")} placeholder="https://" />
+        <Field id="fd-class" label="כמה תלמידים צפויים (רשות)" hint="כדי לראות כמה מתוך הכיתה ענו על סקר המשוב. הסקר עצמו מגיע מהמערכת, עם QR שהמדריך מציג בסוף היום.">
+          <input
+            id="fd-class"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={2000}
+            className={`${input} sm:w-48`}
+            value={v.classSize ?? ""}
+            onChange={(e) => setV((s) => ({ ...s, classSize: e.target.value === "" ? null : Number(e.target.value) }))}
+          />
         </Field>
         <label className="flex items-start gap-3">
           <input

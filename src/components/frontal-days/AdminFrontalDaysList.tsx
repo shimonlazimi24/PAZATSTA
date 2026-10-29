@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { apiJson } from "@/lib/api";
 import type { DayTone } from "@/lib/frontal-days";
+import { surveyRatio } from "@/lib/frontal-survey";
 
 type Row = {
   id: string;
@@ -18,6 +19,7 @@ type Row = {
   teachers: string[];
   status: { label: string; tone: DayTone };
   past: boolean;
+  survey: { count: number; classSize: number | null };
   report: { status: string; teacherName: string; answers: { label: string; value: string; internal?: boolean }[] } | null;
 };
 
@@ -39,6 +41,10 @@ function DaySummary({ row }: { row: Row }) {
           {row.report ? `${row.report.teacherName} · ${REPORT_STATE[row.report.status] ?? ""}` : "עוד לא הוגש דוח סיום"}
         </span>
       </summary>
+      <p className="mt-2 text-sm text-[var(--color-text)]">
+        <span className="text-[var(--color-text-muted)]">סקר התלמידים: </span>
+        {surveyRatio(row.survey.count, row.survey.classSize)}
+      </p>
       {row.report && (
         <dl className="mt-2 grid gap-x-4 gap-y-1.5 rounded-md bg-[var(--color-bg-muted)]/60 px-3 py-2 text-sm sm:grid-cols-[12rem_1fr]">
           {answers.map((a, i) => (

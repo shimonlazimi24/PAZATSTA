@@ -4,7 +4,7 @@ import { getSigningSecret } from "@/lib/secrets";
 
 const SESSION_COOKIE = "session";
 const PUBLIC_PATHS = ["/", "/login", "/verify", "/welcome"];
-const PUBLIC_PREFIXES = ["/api/auth", "/api/cron", "/login/", "/p/lesson-summary/"];
+const PUBLIC_PREFIXES = ["/api/auth", "/api/cron", "/login/", "/p/lesson-summary/", "/survey/", "/api/survey/"];
 
 /** Paths whose HTML must never be cached by a CDN — they render per-user data. */
 const PRIVATE_PREFIXES = ["/admin", "/teacher", "/student", "/parent", "/book"];

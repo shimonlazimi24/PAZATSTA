@@ -21,10 +21,13 @@ const FieldInput = z
     message: "לשאלת בחירה צריך לפחות שתי אפשרויות",
   });
 
-export async function GET() {
+/** ?form=survey for the students' survey questions; otherwise the closing-report fields. */
+const formOf = (req: Request) => (new URL(req.url).searchParams.get("form") === "survey" ? "survey" : "report");
+
+export async function GET(req: Request) {
   const auth = await requireAdmin();
   if ("error" in auth) return auth.error;
-  const fields = await prisma.frontalReportField.findMany({ orderBy: [{ active: "desc" }, { sortOrder: "asc" }] });
+  const fields = await prisma.frontalReportField.findMany({ where: { form: formOf(req) }, orderBy: [{ active: "desc" }, { sortOrder: "asc" }] });
   return NextResponse.json(fields, { headers: { "Cache-Control": "no-store" } });
 }
 
@@ -33,7 +36,10 @@ export async function POST(req: Request) {
   if ("error" in auth) return auth.error;
   const parsed = FieldInput.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: firstZodMessage(parsed.error) }, { status: 400 });
-  const last = await prisma.frontalReportField.findFirst({ orderBy: { sortOrder: "desc" }, select: { sortOrder: true } });
-  const created = await prisma.frontalReportField.create({ data: { ...parsed.data, sortOrder: (last?.sortOrder ?? 0) + 1 } });
+  const form = formOf(req);
+  const last = await prisma.frontalReportField.findFirst({ where: { form }, orderBy: { sortOrder: "desc" }, select: { sortOrder: true } });
+  const created = await prisma.frontalReportField.create({
+    data: { ...parsed.data, ...(form === "survey" ? { internal: false } : {}), form, sortOrder: (last?.sortOrder ?? 0) + 1 },
+  });
   return NextResponse.json(created, { status: 201 });
 }

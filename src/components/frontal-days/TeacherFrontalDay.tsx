@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { surveyPath, surveyRatio } from "@/lib/frontal-survey";
 import Link from "next/link";
 import { apiJson } from "@/lib/api";
 import { QrCode } from "./QrCode";
@@ -26,6 +27,8 @@ type Day = {
   contactPhone?: string;
   whatsappUrl?: string;
   feedbackUrl?: string;
+  surveyCount?: number;
+  classSize?: number | null;
   courseCode?: string;
   courseUrl?: string;
   checklist?: string[];
@@ -261,22 +264,23 @@ export function TeacherFrontalDay({ id }: { id: string }) {
         </section>
       )}
 
-      {!canceled && dayOfOrAfter && (day.feedbackUrl || day.courseUrl || day.courseCode) && (
+      {!canceled && dayOfOrAfter && (
         <section className={card} aria-labelledby="end-h">
           <h3 id="end-h" className="text-base font-semibold">סוף היום</h3>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">הציגו לתלמידים על המסך המלא, כדי שיסרקו.</p>
           <div className="mt-3 flex flex-wrap gap-2">
-            {day.feedbackUrl && (
-              <button type="button" onClick={() => setQr("feedback")} className={`${bigLink} border border-[var(--color-border)] bg-white hover:bg-[var(--color-bg-muted)]`}>
-                QR למשוב התלמידים
-              </button>
-            )}
+            <button type="button" onClick={() => setQr("feedback")} className={`${bigLink} border border-[var(--color-border)] bg-white hover:bg-[var(--color-bg-muted)]`}>
+              QR לסקר המשוב של התלמידים
+            </button>
             {(day.courseUrl || day.courseCode) && (
               <button type="button" onClick={() => setQr("course")} className={`${bigLink} border border-[var(--color-border)] bg-white hover:bg-[var(--color-bg-muted)]`}>
                 QR וקוד לקורס המתנה
               </button>
             )}
           </div>
+          {typeof day.surveyCount === "number" && (
+            <p className="mt-3 text-sm text-[var(--color-text-muted)]">{surveyRatio(day.surveyCount, day.classSize)}</p>
+          )}
         </section>
       )}
 
@@ -311,7 +315,7 @@ export function TeacherFrontalDay({ id }: { id: string }) {
         </button>
       )}
 
-      {qr === "feedback" && day.feedbackUrl && <FullscreenQr title="משוב על היום" value={day.feedbackUrl} onClose={() => setQr(null)} />}
+      {qr === "feedback" && <FullscreenQr title="משוב על היום" value={`${window.location.origin}${surveyPath(day.id)}`} onClose={() => setQr(null)} />}
       {qr === "course" && <FullscreenQr title="קורס מתנה" value={day.courseUrl ?? ""} code={day.courseCode} onClose={() => setQr(null)} />}
     </div>
   );

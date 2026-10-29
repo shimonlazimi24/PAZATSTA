@@ -30,27 +30,27 @@ model User {
   role      Role
   createdAt DateTime @default(now())
 
-  sessions           Session[]
-  teacherProfile     TeacherProfile?
-  studentProfile     StudentProfile?
-  lessonsAsTeacher   Lesson[] @relation("LessonTeacher")
-  lessonsAsStudent   Lesson[] @relation("LessonStudent")
-  availabilitySlots  Availability[]
-  workshopsLed       Workshop[]
+  sessions          Session[]
+  teacherProfile    TeacherProfile?
+  studentProfile    StudentProfile?
+  lessonsAsTeacher  Lesson[]        @relation("LessonTeacher")
+  lessonsAsStudent  Lesson[]        @relation("LessonStudent")
+  availabilitySlots Availability[]
+  workshopsLed      Workshop[]
 
   @@index([role])
 }
 
 model TeacherProfile {
-  id               String   @id @default(cuid())
-  userId           String   @unique
-  displayName      String?
-  bio              String?
-  profileImageUrl  String?  // deprecated - use avatarType
-  avatarType       String?  // "male" | "female" - generic avatar
-  specialization   String?  // legacy single string
-  specialties      String[] @default([]) // multi-select, must match booking topic labels exactly
-  createdAt        DateTime @default(now())
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  displayName     String?
+  bio             String?
+  profileImageUrl String? // deprecated - use avatarType
+  avatarType      String? // "male" | "female" - generic avatar
+  specialization  String? // legacy single string
+  specialties     String[] @default([]) // multi-select, must match booking topic labels exactly
+  createdAt       DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -62,9 +62,9 @@ model StudentProfile {
   parentFullName         String?
   parentPhone            String?
   parentEmail            String?
-  currentScreeningType   String?   // selected topic
+  currentScreeningType   String? // selected topic
   currentScreeningDate   DateTime?
-  followUpReminderSentAt DateTime?  // reminder tracking
+  followUpReminderSentAt DateTime? // reminder tracking
   createdAt              DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -89,29 +89,29 @@ model Availability {
 // TODO (time consistency): Consider startsAt/endsAt DateTime (UTC) instead of date + startTime/endTime
 // to avoid timezone bugs. Would require migration and API/UI updates.
 model Lesson {
-  id                    String       @id @default(cuid())
-  teacherId             String
-  studentId             String
-  date                  DateTime
-  startTime             String
-  endTime               String
-  topic                 String?      // סוג מיון/מסלול שנבחר בהזמנה
-  status                LessonStatus @default(pending_approval)
-  approvalExpiresAt     DateTime?
-  approvedByTeacherAt   DateTime?
-  approvedByAdminAt     DateTime?
-  reportCompleted       Boolean      @default(false)
-  followUpCompletedAt   DateTime?
-  questionFromStudent   String?
-  createdAt             DateTime     @default(now())
+  id                  String       @id @default(cuid())
+  teacherId           String
+  studentId           String
+  date                DateTime
+  startTime           String
+  endTime             String
+  topic               String? // סוג מיון/מסלול שנבחר בהזמנה
+  status              LessonStatus @default(pending_approval)
+  approvalExpiresAt   DateTime?
+  approvedByTeacherAt DateTime?
+  approvedByAdminAt   DateTime?
+  reportCompleted     Boolean      @default(false)
+  followUpCompletedAt DateTime?
+  questionFromStudent String?
+  createdAt           DateTime     @default(now())
   /// Set when 24h-before reminder email was sent to student + parent (cron).
-  reminder24hSentAt     DateTime?
+  reminder24hSentAt   DateTime?
   /// When the lesson became canceled (cancel, reject, expiry, not held). Null on older rows.
-  canceledAt            DateTime?
+  canceledAt          DateTime?
 
-  teacher User @relation("LessonTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
-  student User @relation("LessonStudent", fields: [studentId], references: [id], onDelete: Cascade)
-  summary LessonSummary?
+  teacher           User               @relation("LessonTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  student           User               @relation("LessonStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  summary           LessonSummary?
   approvalReminders ApprovalReminder[]
 
   workshopId String?
@@ -134,43 +134,43 @@ model Lesson {
 
 /// Group workshop / סדנה — multiple students can share the same calendar slot (see partial unique on Lesson).
 model Workshop {
-  id              String   @id @default(cuid())
-  name            String
-  date            DateTime
-  teacherId       String
-  maxParticipants Int
-  startTime       String   @default("09:00")
-  endTime         String   @default("17:00")
+  id                 String   @id @default(cuid())
+  name               String
+  date               DateTime
+  teacherId          String
+  maxParticipants    Int
+  startTime          String   @default("09:00")
+  endTime            String   @default("17:00")
   /// Shown as סוג מיון; must match TeacherProfile.specialties entry
-  topicLabel      String   @unique
+  topicLabel         String   @unique
   /// Optional admin-facing / public description (הסבר כללי)
   generalDescription String?
-  createdAt       DateTime @default(now())
+  createdAt          DateTime @default(now())
 
-  teacher User    @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  teacher User     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   lessons Lesson[]
 
   @@index([teacherId, date])
 }
 
 model LessonSummary {
-  id               String   @id @default(cuid())
-  lessonId         String   @unique
-  summaryText      String   @default("") // סיכום כללי (generalSummary)
-  homeworkText     String   @default("")
-  pointsToKeep     String   @default("") // נקודות לשימור (preservationPoints)
-  pointsToImprove  String   @default("") // נקודות לשיפור (improvementPoints)
+  id              String   @id @default(cuid())
+  lessonId        String   @unique
+  summaryText     String   @default("") // סיכום כללי (generalSummary)
+  homeworkText    String   @default("")
+  pointsToKeep    String   @default("") // נקודות לשימור (preservationPoints)
+  pointsToImprove String   @default("") // נקודות לשיפור (improvementPoints)
   /// Comma-separated Tip.slug values the teacher selected. A record of the choice.
-  tips             String   @default("")
+  tips            String   @default("")
   /// Free text the teacher added alongside the selected tips.
-  tipsCustom       String   @default("")
+  tipsCustom      String   @default("")
   /// Tip text resolved at completion and frozen. Editing a Tip afterwards must not
   /// change a report a parent already received, so rendering prefers this over
   /// re-resolving `tips`. Empty on rows written before this column existed.
-  tipsSnapshot     String   @default("")
-  recommendations  String   @default("") // המלצות להמשך (nextRecommendations)
-  pdfUrl           String?
-  createdAt        DateTime @default(now())
+  tipsSnapshot    String   @default("")
+  recommendations String   @default("") // המלצות להמשך (nextRecommendations)
+  pdfUrl          String?
+  createdAt       DateTime @default(now())
 
   lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 }
@@ -234,7 +234,7 @@ model Invite {
   email     String
   role      Role
   expiresAt DateTime
-  usedAt   DateTime?
+  usedAt    DateTime?
   createdAt DateTime  @default(now())
 
   @@index([email])
@@ -337,12 +337,12 @@ model GroupLesson {
 
 /// A teacher signed up to lead a group lesson.
 model GroupLessonSignup {
-  id               String    @id @default(cuid())
-  groupLessonId    String
-  teacherId        String
-  createdAt        DateTime  @default(now())
+  id             String    @id @default(cuid())
+  groupLessonId  String
+  teacherId      String
+  createdAt      DateTime  @default(now())
   /// Set when the day-before reminder went out.
-  reminderSentAt   DateTime?
+  reminderSentAt DateTime?
 
   groupLesson GroupLesson @relation(fields: [groupLessonId], references: [id], onDelete: Cascade)
 
@@ -378,41 +378,44 @@ model GroupLessonNotice {
 
 /// A frontal study day ("יום פרונטלי") at a school or venue, managed like a folder by the admin.
 model FrontalDay {
-  id               String   @id @default(cuid())
+  id               String    @id @default(cuid())
   title            String
   /// UTC midnight of the Israeli calendar date.
   date             DateTime
   startTime        String
   endTime          String
   address          String
-  topic            String   @default("")
-  presentationUrl  String   @default("")
-  contactName      String   @default("")
-  contactPhone     String   @default("")
-  whatsappUrl      String   @default("")
-  feedbackUrl      String   @default("")
+  topic            String    @default("")
+  presentationUrl  String    @default("")
+  contactName      String    @default("")
+  contactPhone     String    @default("")
+  whatsappUrl      String    @default("")
+  feedbackUrl      String    @default("")
   /// Access code for the gift course, if the day includes one.
-  courseCode       String   @default("")
-  courseUrl        String   @default("")
+  courseCode       String    @default("")
+  courseUrl        String    @default("")
   /// Who receives the approved closing report (school / venue).
-  recipientName    String   @default("")
-  recipientEmail   String   @default("")
-  teachersNeeded   Int      @default(1)
+  recipientName    String    @default("")
+  recipientEmail   String    @default("")
+  teachersNeeded   Int       @default(1)
+  /// How many students are expected, so the survey can show "23 of 30 answered".
+  classSize        Int?
   /// Message teachers get when they register, with {placeholders}.
-  messageTemplate  String   @default("")
+  messageTemplate  String    @default("")
   /// Reminder teachers get before the day, with {placeholders}.
-  reminderTemplate String   @default("")
+  reminderTemplate String    @default("")
   /// Items each teacher ticks off before the day.
-  checklist        String[] @default([])
+  checklist        String[]  @default([])
   /// "open" | "canceled"
-  status           String   @default("open")
+  status           String    @default("open")
   /// Set when the admin was warned the day has no teachers two weeks ahead.
   noTeacherAlertAt DateTime?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  signups FrontalDaySignup[]
-  report  FrontalDayReport?
+  signups         FrontalDaySignup[]
+  report          FrontalDayReport?
+  surveyResponses FrontalSurveyResponse[]
 
   @@index([date])
   @@index([status, date])
@@ -468,6 +471,26 @@ model FrontalReportField {
   showIfValues  String[] @default([])
   /// Kept for Pazatsta only: never sent to the school with the approved report.
   internal      Boolean  @default(false)
+  /// "report" (the teacher's closing report) | "survey" (the students' feedback survey).
+  form          String   @default("report")
+
+  @@index([form, active])
+}
+
+/// One student's answers to a frontal day's feedback survey. No login: the
+/// browser gets a random key in a cookie so the same phone counts only once.
+model FrontalSurveyResponse {
+  id        String   @id @default(cuid())
+  dayId     String
+  clientKey String
+  /// [{ label, value }] — labels copied at submission so later edits do not change it.
+  answers   Json
+  createdAt DateTime @default(now())
+
+  day FrontalDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+
+  @@unique([dayId, clientKey])
+  @@index([dayId])
 }
 
 /// Small admin-editable settings (default templates and checklist), one row per key.

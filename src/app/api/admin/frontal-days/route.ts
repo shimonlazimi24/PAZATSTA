@@ -16,7 +16,7 @@ export async function GET() {
     const today = todayIsraelYYYYMMDD();
     const days = await prisma.frontalDay.findMany({
       orderBy: { date: "asc" },
-      include: { signups: { select: { teacherId: true } }, report: { select: { status: true, sentToRecipientAt: true, answers: true, teacherId: true } } },
+      include: { signups: { select: { teacherId: true } }, report: { select: { status: true, sentToRecipientAt: true, answers: true, teacherId: true } }, _count: { select: { surveyResponses: true } } },
     });
     const teacherIds = Array.from(new Set(days.flatMap((d) => [...d.signups.map((s) => s.teacherId), ...(d.report ? [d.report.teacherId] : [])])));
     const users = await prisma.user.findMany({ where: { id: { in: teacherIds } }, select: { id: true, name: true, email: true } });
@@ -44,6 +44,7 @@ export async function GET() {
             sentToRecipient: !!d.report?.sentToRecipientAt,
           }),
           past: date < today,
+          survey: { count: d._count.surveyResponses, classSize: d.classSize },
           report: d.report
             ? {
                 status: d.report.status,
