@@ -23,7 +23,7 @@ function readKey(req: Request): string | null {
 }
 
 async function loadDay(dayId: string) {
-  return prisma.frontalDay.findUnique({ where: { id: dayId }, select: { id: true, title: true, date: true, status: true } });
+  return prisma.frontalDay.findUnique({ where: { id: dayId }, select: { id: true, title: true, date: true, status: true, classSize: true } });
 }
 
 /** Public: the questions of one day's survey. No login. */
@@ -69,9 +69,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ dayId: 
   const input = body?.answers && typeof body.answers === "object" && !Array.isArray(body.answers) ? (body.answers as Record<string, unknown>) : {};
   const built = buildReportAnswers(await questionsOf(), input);
   if (!built.ok) return NextResponse.json({ error: built.message }, { status: 400 });
-  if (built.answers.length === 0) return NextResponse.json({ error: "נא לענות לפחות על שאלה אחת" }, { status: 400 });
+  // Optional questions left blank still produce an answer with an empty value.
+  if (built.answers.every((a) => !a.value)) return NextResponse.json({ error: "נא לענות לפחות על שאלה אחת" }, { status: 400 });
 
-  if ((await prisma.frontalSurveyResponse.count({ where: { dayId } })) >= MAX_RESPONSES_PER_DAY) {
+  // A class answers at most about twice its size; a leaked link cannot fill the table.
+  const cap = day.classSize ? Math.min(MAX_RESPONSES_PER_DAY, day.classSize * 2 + 10) : MAX_RESPONSES_PER_DAY;
+  if ((await prisma.frontalSurveyResponse.count({ where: { dayId } })) >= cap) {
     return NextResponse.json({ error: "הסקר מלא" }, { status: 409 });
   }
   const key = readKey(req) ?? randomBytes(18).toString("base64url");
@@ -79,7 +82,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ dayId: 
     await prisma.frontalSurveyResponse.create({ data: { dayId, clientKey: key, answers: built.answers } });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-      return NextResponse.json({ error: "כבר ענית על הסקר הזה. תודה!" }, { status: 409 });
+      return NextResponse.json({ error: "כבר ענית על הסקר הזה. תודה!", code: "already_answered" }, { status: 409 });
     }
     throw e;
   }

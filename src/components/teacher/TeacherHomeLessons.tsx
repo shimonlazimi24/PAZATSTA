@@ -253,7 +253,7 @@ export function TeacherHomeLessons() {
                 {showWorkshopHeader && (
                   <li className="bg-teal-50/90 px-4 py-2.5 text-sm font-semibold text-teal-900 border-b border-teal-100">
                     סדנה: {l.workshopName ?? l.topic ?? "—"}
-                    <span className="font-normal text-teal-800 mr-2"> — דוח נפרד לכל משתתף</span>
+                    <span className="font-normal text-teal-800 ms-2"> — דוח נפרד לכל משתתף</span>
                   </li>
                 )}
                 <li className="py-4">

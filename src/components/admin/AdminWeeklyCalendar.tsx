@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { addDaysYYYYMMDD } from "@/lib/dates";
+import { addDaysYYYYMMDD, isLessonStarted } from "@/lib/dates";
 
 type WeeklyLesson = {
   id: string;
@@ -170,12 +170,13 @@ export function AdminWeeklyCalendar() {
                                 לא לאשר
                               </button>
                             )}
-                            {l.status === "scheduled" && (
+                            {l.status === "scheduled" && !isLessonStarted(l.date, l.startTime) && (
                               <button type="button" disabled={busy} className={actionBtn} onClick={() => act(l, "cancel")}>
                                 ביטול
                               </button>
                             )}
-                            {l.status === "completed" && (
+                            {/* Once the time has passed, "canceled" (email, slot freed) no longer fits; "not held" does. */}
+                            {(l.status === "completed" || (l.status === "scheduled" && isLessonStarted(l.date, l.startTime))) && (
                               <button type="button" disabled={busy} className={actionBtn} onClick={() => act(l, "not-held")}>
                                 לא התקיים
                               </button>

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAdmin, missingTableResponse } from "@/lib/admin-api";
-import { todayIsraelYYYYMMDD } from "@/lib/dates";
+import { addDaysYYYYMMDD, todayIsraelYYYYMMDD } from "@/lib/dates";
 import { dayStatus, type ReportState } from "@/lib/frontal-days";
 import { firstZodMessage, lessonDateFromStr, lessonDateStr } from "@/lib/group-lessons-server";
 import { FrontalDayInput, getFrontalDefaults } from "@/lib/frontal-days-server";
@@ -15,6 +15,8 @@ export async function GET() {
   try {
     const today = todayIsraelYYYYMMDD();
     const days = await prisma.frontalDay.findMany({
+      // Everything upcoming, and the last year of history; the table only ever grows.
+      where: { date: { gte: lessonDateFromStr(addDaysYYYYMMDD(today, -365)) } },
       orderBy: { date: "asc" },
       include: { signups: { select: { teacherId: true } }, report: { select: { status: true, sentToRecipientAt: true, answers: true, teacherId: true } }, _count: { select: { surveyResponses: true } } },
     });

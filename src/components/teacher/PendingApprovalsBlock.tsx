@@ -72,7 +72,7 @@ export function PendingApprovalsBlock() {
     <section aria-labelledby="pending-h" dir="rtl">
       <h2 id="pending-h" className="mb-3 text-lg font-semibold text-[var(--color-text)]">
         מחכים לאישור שלך
-        {lessons.length > 0 && <span className="mr-2 text-sm font-normal text-[var(--color-text-muted)]">{lessons.length}</span>}
+        {lessons.length > 0 && <span className="ms-2 text-sm font-normal text-[var(--color-text-muted)]">{lessons.length}</span>}
       </h2>
       {rejectedMessage && (
         <p role="status" className="mb-3 rounded-md bg-green-50 px-3 py-2 text-sm text-green-800">

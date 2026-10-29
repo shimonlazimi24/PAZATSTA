@@ -42,16 +42,18 @@ async function loadAttention() {
   const frontalHorizon = asLessonDate(addDaysYYYYMMDD(today, NO_TEACHER_ALERT_DAYS));
   const nextMonth = nextMonthKey(monthKeyOf(today));
   const { start: nmStart, end: nmEnd } = monthRange(nextMonth);
+  // Missing reports older than this are no longer worth chasing on the home screen.
+  const reportLookback = asLessonDate(addDaysYYYYMMDD(today, -90));
   const [reportsToApprove, unstaffedDays, nextMonthLessons, teachers, pastGroup, frontalNoReport] = await Promise.all([
     prisma.frontalDayReport.count({ where: { status: "submitted" } }),
     prisma.frontalDay.count({ where: { status: "open", date: { gte: todayDate, lte: frontalHorizon }, signups: { none: {} } } }),
     prisma.groupLesson.findMany({ where: { status: "open", date: { gte: nmStart, lt: nmEnd } }, select: { signups: { select: { teacherId: true } } } }),
     prisma.user.count({ where: { role: "teacher" } }),
     prisma.groupLesson.findMany({
-      where: { status: "open", date: { lt: todayDate }, signups: { some: {} } },
+      where: { status: "open", date: { lt: todayDate, gte: reportLookback }, signups: { some: {} } },
       select: { signups: { select: { teacherId: true } }, reports: { select: { teacherId: true } } },
     }),
-    prisma.frontalDay.count({ where: { status: "open", date: { lt: todayDate }, signups: { some: {} }, report: null } }),
+    prisma.frontalDay.count({ where: { status: "open", date: { lt: todayDate, gte: reportLookback }, signups: { some: {} }, report: null } }),
   ]);
   // A group lesson is missing a report while any teacher who taught it has not sent one.
   const groupNoReport = pastGroup.filter((l) => {
@@ -184,7 +186,7 @@ export async function AdminHome() {
                 <tbody>
                   {data.missingTop.map((t) => (
                     <tr key={t.name}>
-                      <td className="py-0.5 pl-6 text-[var(--color-text)]">{t.name}</td>
+                      <td className="py-0.5 pe-6 text-[var(--color-text)]">{t.name}</td>
                       <td className="py-0.5 tabular-nums text-[var(--color-text-muted)]">
                         {t.count === 1 ? "שיעור אחד" : `${t.count} שיעורים`}
                       </td>

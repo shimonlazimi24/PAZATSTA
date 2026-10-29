@@ -35,15 +35,22 @@ export async function runGroupLessonNotices(prisma: PrismaClient, todayStr = tod
     });
     // Nothing to announce until the admin has scheduled next month's lessons.
     if (lessons.length === 0) continue;
-    if (notice.kind === "signup_open") {
-      if (!(await claimNotice(prisma, notice.monthKey, notice.kind))) continue;
-      await sendGroupSignupOpen(teachers.map((t) => t.email), { monthLabel: monthLabel(notice.monthKey), lessonCount: lessons.length });
-      result.signupOpen = teachers.length;
-    } else {
-      const missing = teachersWithoutSignup(teachers, lessons.flatMap((l) => l.signups.map((s) => s.teacherId)));
-      if (!(await claimNotice(prisma, notice.monthKey, notice.kind))) continue;
-      await sendGroupMissingSignup(missing.map((t) => t.email), { monthLabel: monthLabel(notice.monthKey) });
-      result.missingSignup = missing.length;
+    if (!(await claimNotice(prisma, notice.monthKey, notice.kind))) continue;
+    try {
+      if (notice.kind === "signup_open") {
+        await sendGroupSignupOpen(teachers.map((t) => t.email), { monthLabel: monthLabel(notice.monthKey), lessonCount: lessons.length });
+        result.signupOpen = teachers.length;
+      } else {
+        const missing = teachersWithoutSignup(teachers, lessons.flatMap((l) => l.signups.map((s) => s.teacherId)));
+        await sendGroupMissingSignup(missing.map((t) => t.email), { monthLabel: monthLabel(notice.monthKey) });
+        result.missingSignup = missing.length;
+      }
+    } catch (e) {
+      // Give the claim back so tomorrow's run tries again.
+      console.error("[cron/group-lessons] monthly notice failed", notice.monthKey, notice.kind, e);
+      await prisma.groupLessonNotice
+        .deleteMany({ where: { monthKey: notice.monthKey, kind: notice.kind } })
+        .catch((e2) => console.error("[cron/group-lessons] could not release the notice claim", notice.monthKey, notice.kind, e2));
     }
   }
 
@@ -66,8 +73,10 @@ export async function runGroupLessonNotices(prisma: PrismaClient, todayStr = tod
       await sendGroupLessonDayBefore(to, emailInfo(signup.groupLesson));
       result.dayBefore++;
     } catch (e) {
-      console.error("[group-lessons] day-before reminder failed", signup.id, e);
-      await prisma.groupLessonSignup.update({ where: { id: signup.id }, data: { reminderSentAt: null } }).catch(() => {});
+      console.error("[cron/group-lessons] day-before reminder failed", signup.id, e);
+      await prisma.groupLessonSignup
+        .update({ where: { id: signup.id }, data: { reminderSentAt: null } })
+        .catch((e2) => console.error("[cron/group-lessons] could not release the reminder claim", signup.id, e2));
     }
   }
   return result;

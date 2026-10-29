@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import QRCode from "qrcode";
 
 /** A QR code for a link, drawn in the browser. Renders nothing for an empty value. */
 export function QrCode({ value, size = 240, label }: { value: string; size?: number; label: string }) {
@@ -12,7 +11,9 @@ export function QrCode({ value, size = 240, label }: { value: string; size?: num
       setSrc(null);
       return;
     }
-    QRCode.toDataURL(value, { width: size * 2, margin: 1, errorCorrectionLevel: "M", color: { dark: "#1f2a24", light: "#ffffff" } })
+    // Loaded only when a QR is actually shown; it is not needed on the rest of the page.
+    import("qrcode")
+      .then((QRCode) => QRCode.toDataURL(value, { width: size * 2, margin: 1, errorCorrectionLevel: "M", color: { dark: "#1f2a24", light: "#ffffff" } }))
       .then((url) => alive && setSrc(url))
       .catch(() => alive && setSrc(null));
     return () => {

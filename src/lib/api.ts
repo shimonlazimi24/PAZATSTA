@@ -4,7 +4,8 @@
  */
 
 export type ApiOk<T> = { ok: true; data: T };
-export type ApiErr = { ok: false; status: number; error: string };
+/** `code` is a stable machine-readable reason, when the server gives one. */
+export type ApiErr = { ok: false; status: number; error: string; code?: string };
 
 const DEFAULT_MESSAGES: Record<number, string> = {
   400: "בקשה לא תקינה",
@@ -37,11 +38,11 @@ export async function apiJson<T>(
     return { ok: false, status: 0, error: "Network error" };
   }
 
-  let data: { error?: string } = {};
+  let data: { error?: string; code?: string } = {};
   const text = await res.text();
   if (text) {
     try {
-      data = JSON.parse(text) as { error?: string };
+      data = JSON.parse(text) as { error?: string; code?: string };
     } catch {
       // invalid JSON; keep data = {}
     }
@@ -49,7 +50,7 @@ export async function apiJson<T>(
 
   if (!res.ok) {
     const error = typeof data.error === "string" && data.error.trim() ? data.error.trim() : defaultMessageForStatus(res.status);
-    return { ok: false, status: res.status, error };
+    return { ok: false, status: res.status, error, ...(typeof data.code === "string" ? { code: data.code } : {}) };
   }
 
   let parsed: T;

@@ -46,7 +46,10 @@ export async function POST(req: Request) {
     if (ip) {
       const recent = await prisma.otpRequest
         .count({ where: { ip, createdAt: { gte: new Date(Date.now() - RATE_LIMIT_WINDOW_MS) } } })
-        .catch(() => 0);
+        .catch((e) => {
+          console.error("[request-code] ip rate-limit check failed, allowing", (e as Error)?.message ?? e);
+          return 0;
+        });
       if (recent >= MAX_REQUESTS_PER_IP) {
         console.warn("[request-code] rejected: rate_limited_ip", maskPhone(normalized));
         return NextResponse.json({ error: "יותר מדי בקשות. נסו שוב בעוד 15 דקות." }, { status: 429 });
@@ -62,6 +65,8 @@ export async function POST(req: Request) {
     }
     if (account.kind !== "found") {
       console.warn(`[request-code] rejected: phone_${account.kind}`, maskPhone(normalized), role);
+      // A miss counts against the IP too, so numbers cannot be probed one after another.
+      if (ip) await prisma.otpRequest.create({ data: { email: "phone-lookup", ip } }).catch(() => {});
       return NextResponse.json({ error: account.kind === "none" ? "phone_not_found" : "phone_several" }, { status: account.kind === "none" ? 404 : 409 });
     }
     email = account.email;

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { canAccessAdmin } from "@/lib/admin";
 import { createSession } from "@/lib/auth";
+import { displayIsraeliMobile, normalizeIsraeliMobile } from "@/lib/phone";
 
 export type LoginRole = "student" | "teacher" | "admin";
 
@@ -22,7 +23,9 @@ export async function completeLogin(params: {
   next?: string;
   consume?: () => Promise<void>;
 }): Promise<LoginOutcome> {
-  const { email, role, phone, next } = params;
+  const { email, role, next } = params;
+  // The phone is a login key now, so only a real Israeli mobile number is kept.
+  const phone = params.phone && normalizeIsraeliMobile(params.phone) ? displayIsraeliMobile(normalizeIsraeliMobile(params.phone)!) : "";
   let user = await prisma.user.findUnique({ where: { email } });
 
   if (role === "teacher" || role === "admin") {

@@ -1,8 +1,16 @@
 "use client";
 
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Logo } from "@/components/Logo";
 import { BackLink } from "@/components/design/BackLink";
 import { CodeLogin } from "@/components/auth/CodeLogin";
+
+function TeacherLogin() {
+  // A teacher with admin rights heading for the admin area lands there after login.
+  const nextAdmin = useSearchParams().get("next") === "/admin";
+  return <CodeLogin role="teacher" next={nextAdmin ? "/admin" : undefined} />;
+}
 
 export default function TeacherLoginPage() {
   return (
@@ -16,7 +24,9 @@ export default function TeacherLoginPage() {
           <h1 className="text-xl font-semibold text-[var(--color-text)]">כניסה למורים</h1>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">רק חשבונות מורים יכולים להיכנס מכאן.</p>
         </div>
-        <CodeLogin role="teacher" />
+        <Suspense fallback={<CodeLogin role="teacher" />}>
+          <TeacherLogin />
+        </Suspense>
       </div>
     </div>
   );

@@ -82,7 +82,7 @@ function ReportFields({ form = "report" }: { form?: "report" | "survey" }) {
       )}
       <ol className="divide-y divide-[var(--color-border)] border-y border-[var(--color-border)]">
         {active.map((f, i) => (
-          <li key={f.id} className={`flex flex-col gap-2 py-3 sm:flex-row sm:items-start ${f.showIfFieldId ? "pr-6" : ""}`}>
+          <li key={f.id} className={`flex flex-col gap-2 py-3 sm:flex-row sm:items-start ${f.showIfFieldId ? "ps-6" : ""}`}>
             <span className="w-6 pt-0.5 text-sm tabular-nums text-[var(--color-text-muted)]">{f.showIfFieldId ? "" : i + 1}</span>
             <div className="min-w-0 flex-1">
               <p className="font-medium">{f.label}</p>

@@ -13,7 +13,6 @@ export type FrontalDayValues = {
   contactName: string;
   contactPhone: string;
   whatsappUrl: string;
-  feedbackUrl: string;
   courseCode: string;
   courseUrl: string;
   recipientName: string;
@@ -34,7 +33,6 @@ export const EMPTY_DAY: FrontalDayValues = {
   contactName: "",
   contactPhone: "",
   whatsappUrl: "",
-  feedbackUrl: "",
   courseCode: "",
   courseUrl: "",
   recipientName: "",

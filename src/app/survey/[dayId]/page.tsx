@@ -49,7 +49,7 @@ export default function SurveyPage({ params }: { params: Promise<{ dayId: string
     if (r.ok) {
       setDone(true);
       window.scrollTo({ top: 0 });
-    } else if (r.status === 409 && r.error?.includes("כבר ענית")) {
+    } else if (r.status === 409 && r.code === "already_answered") {
       setDone(true);
     } else {
       setError(r.status === 0 ? "אין חיבור לאינטרנט. בדקו את החיבור ונסו שוב." : r.error || "השליחה לא הצליחה. נסו שוב.");

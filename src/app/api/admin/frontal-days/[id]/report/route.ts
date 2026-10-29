@@ -24,6 +24,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   if (body?.action === "return") {
     if (!note) return NextResponse.json({ error: "כתבו למדריך מה לתקן" }, { status: 400 });
+    if (report.status !== "submitted") return NextResponse.json({ error: "אפשר להחזיר למדריך רק דוח שממתין לאישור" }, { status: 409 });
     await prisma.frontalDayReport.update({ where: { id: report.id }, data: { status: "returned", adminNote: note } });
     const teacher = await prisma.user.findUnique({ where: { id: report.teacherId }, select: { email: true } });
     if (teacher) {

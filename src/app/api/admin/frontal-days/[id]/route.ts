@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/admin-api";
 import { firstZodMessage, hebrewDateLabel, lessonDateFromStr, lessonDateStr } from "@/lib/group-lessons-server";
 import { FrontalDayInput, TemplatesInput } from "@/lib/frontal-days-server";
 import { sendNotice } from "@/lib/email";
+import { todayIsraelYYYYMMDD } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -83,6 +84,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ error: `כבר רשומים ${day.signups.length} מדריכים. הסירו מדריך לפני שמקטינים את המספר` }, { status: 400 });
   }
   const { date, ...rest } = parsed.data;
-  await prisma.frontalDay.update({ where: { id }, data: { ...rest, date: lessonDateFromStr(date) } });
+  const dateChanged = date !== lessonDateStr(day.date);
+  if (dateChanged && date < todayIsraelYYYYMMDD()) return NextResponse.json({ error: "התאריך כבר עבר" }, { status: 400 });
+  await prisma.$transaction([
+    prisma.frontalDay.update({
+      where: { id },
+      // A new date: the "nobody signed up" warning may apply again.
+      data: { ...rest, date: lessonDateFromStr(date), ...(dateChanged ? { noTeacherAlertAt: null } : {}) },
+    }),
+    // ...and the teachers get a reminder for the new date too.
+    ...(dateChanged ? [prisma.frontalDaySignup.updateMany({ where: { dayId: id }, data: { reminderSentAt: null } })] : []),
+  ]);
   return NextResponse.json({ ok: true });
 }

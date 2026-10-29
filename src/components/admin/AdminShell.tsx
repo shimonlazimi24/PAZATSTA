@@ -55,7 +55,13 @@ function AdminNav({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
   const active = activeAdminHref(pathname);
   // Titles of the groups the admin closed; remembered on this device.
   const [collapsed, setCollapsed] = useState<string[]>([]);
-  useEffect(() => setCollapsed(readCollapsed()), []);
+  // Animate only after the remembered state is in, so closed groups don't snap shut on load.
+  const [settled, setSettled] = useState(false);
+  useEffect(() => {
+    setCollapsed(readCollapsed());
+    const t = setTimeout(() => setSettled(true), 50);
+    return () => clearTimeout(t);
+  }, []);
 
   function toggle(title: string) {
     setCollapsed((prev) => {
@@ -84,14 +90,14 @@ function AdminNav({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
                 onClick={() => toggle(group.title!)}
                 aria-expanded={open}
                 aria-controls={listId}
-                disabled={hasActive}
-                className="mb-1 flex w-full items-center justify-between rounded-md px-2.5 py-1 text-[11px] font-semibold text-[var(--color-text-muted)] hover:bg-white/70 hover:text-[var(--color-text)] disabled:cursor-default disabled:hover:bg-transparent"
+                aria-disabled={hasActive}
+                className={`mb-1 flex w-full items-center justify-between rounded-md px-2.5 py-1 text-[11px] font-semibold text-[var(--color-text-muted)] ${hasActive ? "cursor-default" : "hover:bg-white/70 hover:text-[var(--color-text)]"}`}
               >
                 {group.title}
-                <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${open ? "" : "rotate-90"}`} aria-hidden />
+                {!hasActive && <ChevronDown className={`h-3.5 w-3.5 ${settled ? "transition-transform duration-200" : ""} ${open ? "" : "rotate-90"}`} aria-hidden />}
               </button>
             )}
-            <div className={`grid transition-[grid-template-rows] duration-200 ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+            <div className={`grid ${settled ? "transition-[grid-template-rows] duration-200" : ""} ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
               <ul id={listId} className="space-y-0.5 overflow-hidden" inert={!open}>
                 {group.items.map((item) => {
                   const Icon = ICONS[item.href];

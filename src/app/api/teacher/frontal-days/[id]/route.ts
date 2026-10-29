@@ -50,7 +50,6 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       contactName: day.contactName,
       contactPhone: day.contactPhone,
       whatsappUrl: day.whatsappUrl,
-      feedbackUrl: day.feedbackUrl,
       classSize: day.classSize,
       surveyCount: await prisma.frontalSurveyResponse.count({ where: { dayId: day.id } }),
       courseCode: day.courseCode,

@@ -43,7 +43,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (day.report) {
       await prisma.frontalDayReport.update({
         where: { id: day.report.id },
-        data: { answers, status: "submitted", submittedAt: new Date() },
+        // A fresh submission: the earlier approval and sending no longer apply.
+        data: { answers, status: "submitted", submittedAt: new Date(), approvedAt: null, sentToRecipientAt: null, adminNote: "" },
       });
     } else {
       await prisma.frontalDayReport.create({ data: { dayId: id, teacherId: me.id, answers } });

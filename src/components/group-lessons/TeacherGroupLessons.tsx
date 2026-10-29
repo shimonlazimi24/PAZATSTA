@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { apiJson } from "@/lib/api";
 import { monthLabel, monthKeyOf } from "@/lib/group-lessons";
@@ -68,6 +68,10 @@ export function TeacherGroupLessons() {
   const [month, setMonth] = useState(monthKeyOf(today));
   const [data, setData] = useState<Data | null>(null);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const statusRef = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (message) statusRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [message]);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = useCallback(async (m: string) => {
@@ -146,7 +150,7 @@ export function TeacherGroupLessons() {
       />
 
       {message && (
-        <p className={`rounded-[var(--radius-input)] px-3 py-2 text-sm ${message.ok ? "bg-green-50 text-green-800" : "bg-red-50 text-red-700"}`} role={message.ok ? "status" : "alert"}>
+        <p ref={statusRef} className={`rounded-[var(--radius-input)] px-3 py-2 text-sm ${message.ok ? "bg-green-50 text-green-800" : "bg-red-50 text-red-700"}`} role={message.ok ? "status" : "alert"}>
           {message.text}
         </p>
       )}

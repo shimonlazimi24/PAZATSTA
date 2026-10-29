@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { surveyPath, surveyRatio } from "@/lib/frontal-survey";
 import Link from "next/link";
 import { apiJson } from "@/lib/api";
@@ -26,7 +26,6 @@ type Day = {
   contactName?: string;
   contactPhone?: string;
   whatsappUrl?: string;
-  feedbackUrl?: string;
   surveyCount?: number;
   classSize?: number | null;
   courseCode?: string;
@@ -143,6 +142,11 @@ export function TeacherFrontalDay({ id }: { id: string }) {
       חזרה לימים הפרונטליים
     </Link>
   );
+  const statusRef = useRef<HTMLParagraphElement>(null);
+  // The buttons sit at the bottom of a long page; bring the answer to them into view.
+  useEffect(() => {
+    if (message) statusRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [message]);
   if (error) return <div className="space-y-3" dir="rtl">{back}<p>{error}</p></div>;
   if (!day) return <p className="text-sm text-[var(--color-text-muted)]">טוען…</p>;
 
@@ -162,7 +166,7 @@ export function TeacherFrontalDay({ id }: { id: string }) {
   );
 
   const status = message && (
-    <p className={`rounded-[var(--radius-input)] px-3 py-2 text-sm ${message.ok ? "bg-green-50 text-green-800" : "bg-red-50 text-red-700"}`} role={message.ok ? "status" : "alert"}>
+    <p ref={statusRef} className={`rounded-[var(--radius-input)] px-3 py-2 text-sm ${message.ok ? "bg-green-50 text-green-800" : "bg-red-50 text-red-700"}`} role={message.ok ? "status" : "alert"}>
       {message.text}
     </p>
   );

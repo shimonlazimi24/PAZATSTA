@@ -228,7 +228,7 @@ export function CodeLogin({ role, next, askStudentPhone }: CodeLoginProps) {
         <p className="break-words text-sm text-[var(--color-text-muted)]">
           {usePhone ? (
             <>
-              שלחנו SMS עם קוד ל-<bdi dir="ltr">{phone.trim()}</bdi>. לא הגיע תוך דקה? אפשר לשלוח קוד חדש, או להתחבר עם המייל
+              שלחנו SMS עם קוד ל-<bdi dir="ltr">{phone.trim()}</bdi>. לא הגיע תוך דקה? אפשר לשלוח קוד חדש
             </>
           ) : (
             sentHint(cleanEmail)
@@ -334,7 +334,7 @@ export function CodeLogin({ role, next, askStudentPhone }: CodeLoginProps) {
               setError("");
             }}
             required
-            className={`${inputCls} text-right`}
+            className={inputCls}
             disabled={busy === "send"}
           />
           <p className="mt-1 text-xs text-[var(--color-text-muted)]">המספר ששמור אצלנו בחשבון שלכם.</p>
@@ -357,7 +357,7 @@ export function CodeLogin({ role, next, askStudentPhone }: CodeLoginProps) {
                 setError("");
               }}
               required
-              className={`${inputCls} text-right`}
+              className={inputCls}
               disabled={busy === "send"}
             />
           </div>
@@ -374,7 +374,7 @@ export function CodeLogin({ role, next, askStudentPhone }: CodeLoginProps) {
                 dir="ltr"
                 value={studentPhone}
                 onChange={(e) => setStudentPhone(e.target.value)}
-                className={`${inputCls} text-right`}
+                className={inputCls}
                 disabled={busy === "send"}
               />
               {phoneAvailable && (

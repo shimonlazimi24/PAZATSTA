@@ -83,7 +83,9 @@ export async function sendDueApprovalReminders(prisma: PrismaClient, now = new D
     } catch (e) {
       failed++;
       console.error("[approval-reminders] send failed for lesson", lesson.id, (e as Error)?.message ?? e);
-      await prisma.approvalReminder.delete({ where: { id: claimId } }).catch(() => {});
+      await prisma.approvalReminder
+        .delete({ where: { id: claimId } })
+        .catch((e2) => console.error("[approval-reminders] could not release the claim", claimId, (e2 as Error)?.message ?? e2));
     }
   }
   return { checked: lessons.length, sent, failed };

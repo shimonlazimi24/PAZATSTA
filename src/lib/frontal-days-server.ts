@@ -76,7 +76,6 @@ export const FrontalDayInput = z
     contactName: text(120),
     contactPhone: text(40),
     whatsappUrl: optionalUrl("קבוצת וואטסאפ"),
-    feedbackUrl: optionalUrl("טופס משוב"),
     courseCode: text(100),
     courseUrl: optionalUrl("קורס מתנה"),
     recipientName: text(200),

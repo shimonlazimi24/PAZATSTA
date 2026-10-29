@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/admin-api";
 import { typeLabel } from "@/lib/group-lessons";
 import { GroupLessonInput, emailInfo, firstZodMessage, lessonDateFromStr, lessonDateStr } from "@/lib/group-lessons-server";
 import { sendGroupLessonCanceled } from "@/lib/email";
+import { todayIsraelYYYYMMDD } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -77,17 +78,23 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       { status: 400 }
     );
   }
-  await prisma.groupLesson.update({
-    where: { id },
-    data: {
-      typeId: v.typeId,
-      date: lessonDateFromStr(v.date),
-      startTime: v.startTime,
-      endTime: v.endTime,
-      location: v.location || null,
-      details: v.details || null,
-      teachersNeeded: v.teachersNeeded,
-    },
-  });
+  const dateChanged = v.date !== lessonDateStr(lesson.date);
+  if (dateChanged && v.date < todayIsraelYYYYMMDD()) return NextResponse.json({ error: "התאריך כבר עבר" }, { status: 400 });
+  await prisma.$transaction([
+    prisma.groupLesson.update({
+      where: { id },
+      data: {
+        typeId: v.typeId,
+        date: lessonDateFromStr(v.date),
+        startTime: v.startTime,
+        endTime: v.endTime,
+        location: v.location || null,
+        details: v.details || null,
+        teachersNeeded: v.teachersNeeded,
+      },
+    }),
+    // A new date: the teachers get a reminder for it too.
+    ...(dateChanged ? [prisma.groupLessonSignup.updateMany({ where: { groupLessonId: id }, data: { reminderSentAt: null } })] : []),
+  ]);
   return NextResponse.json({ ok: true });
 }

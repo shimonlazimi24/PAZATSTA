@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { summarizeSurvey, surveyOpen, surveyRatio } from "../src/lib/frontal-survey";
+import { buildReportAnswers } from "../src/lib/frontal-days";
 
 test("the survey ratio shows how many of the class answered", () => {
   assert.equal(surveyRatio(23, 30), "23 מתוך 30 ענו (77%)");
@@ -38,4 +39,19 @@ test("answers are summed per question: option counts, averages and free text", (
   assert.deepEqual(s[3], { label: "הערות", kind: "text", answered: 1, texts: ["כיף"] });
   // A question removed later still shows its answers, after the current ones.
   assert.deepEqual(s[4], { label: "שאלה ישנה", kind: "text", answered: 1, texts: ["משהו"] });
+});
+
+test("a survey form left completely blank is not an answer", () => {
+  const questions = [
+    { id: "q1", label: "מה עזר?", kind: "long", required: false, options: [], internal: false, showIfFieldId: null, showIfValues: [] },
+    { id: "q2", label: "מה לשפר?", kind: "long", required: false, options: [], internal: false, showIfFieldId: null, showIfValues: [] },
+  ];
+  const blank = buildReportAnswers(questions, {});
+  assert.ok(blank.ok);
+  // Optional questions still produce (empty) answers, so "nothing answered" must look at the values.
+  assert.equal(blank.answers.length, 2);
+  assert.ok(blank.answers.every((a) => !a.value));
+  const one = buildReportAnswers(questions, { q2: "פחות הרצאה" });
+  assert.ok(one.ok);
+  assert.ok(!one.answers.every((a) => !a.value));
 });
