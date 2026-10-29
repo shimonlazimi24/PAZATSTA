@@ -78,8 +78,8 @@ export function CodeLogin({ role, next, askStudentPhone }: CodeLoginProps) {
       if (google) setGoogleAvailable(true);
       if (!r.data?.phone) return;
       setPhoneAvailable(true);
-      // With Google and SMS both on, SMS is the default and email is the fallback.
-      setMethod(readMethod() ?? (google ? "phone" : "email"));
+      // With Google and SMS both on, every visit opens on SMS; email is only a fallback.
+      setMethod(google ? "phone" : (readMethod() ?? "email"));
     });
     return () => {
       alive = false;
