@@ -15,7 +15,7 @@ import {
 } from "../src/lib/frontal-days";
 
 test("placeholders are filled", () => {
-  assert.equal(renderTemplate("שלום {שם_המדריך}, נתראה ב{כותרת}", { שם_המדריך: "דנה", כותרת: "אורט" }), "שלום דנה, נתראה באורט");
+  assert.equal(renderTemplate("שלום {שם_המורה}, נתראה ב{כותרת}", { שם_המורה: "דנה", כותרת: "אורט" }), "שלום דנה, נתראה באורט");
 });
 
 test("a line whose value is missing disappears instead of showing an empty label", () => {
@@ -24,8 +24,8 @@ test("a line whose value is missing disappears instead of showing an empty label
 });
 
 test("an unknown placeholder stays visible so a typo is noticed", () => {
-  assert.equal(renderTemplate("שלום {שם_מדריך}", { שם_המדריך: "דנה" }), "שלום {שם_מדריך}");
-  assert.deepEqual(unknownPlaceholders("שלום {שם_מדריך} ו{כותרת}"), ["שם_מדריך"]);
+  assert.equal(renderTemplate("שלום {שם_מורה}", { שם_המורה: "דנה" }), "שלום {שם_מורה}");
+  assert.deepEqual(unknownPlaceholders("שלום {שם_מורה} ו{כותרת}"), ["שם_מורה"]);
   assert.deepEqual(unknownPlaceholders(DEFAULT_MESSAGE_TEMPLATE), []);
 });
 
@@ -66,9 +66,9 @@ test("registration and withdrawal rules", () => {
 
 test("day status tells the admin what is needed", () => {
   const s = { status: "open", dateStr: "2026-12-10", teachersNeeded: 2, signedCount: 0, report: "none" as const, sentToRecipient: false };
-  assert.deepEqual(dayStatus({ ...s, todayStr: "2026-12-01" }), { label: "אין מדריכים", tone: "danger" });
-  assert.deepEqual(dayStatus({ ...s, todayStr: "2026-11-01" }), { label: "אין מדריכים", tone: "warning" });
-  assert.equal(dayStatus({ ...s, todayStr: "2026-12-01", signedCount: 1 }).label, "חסר מדריך אחד");
+  assert.deepEqual(dayStatus({ ...s, todayStr: "2026-12-01" }), { label: "אין מורים", tone: "danger" });
+  assert.deepEqual(dayStatus({ ...s, todayStr: "2026-11-01" }), { label: "אין מורים", tone: "warning" });
+  assert.equal(dayStatus({ ...s, todayStr: "2026-12-01", signedCount: 1 }).label, "חסר מורה אחד");
   assert.equal(dayStatus({ ...s, todayStr: "2026-12-01", signedCount: 2 }).tone, "ok");
   assert.equal(dayStatus({ ...s, todayStr: "2026-12-11", signedCount: 2 }).label, "ממתין לדוח סיום");
   assert.equal(dayStatus({ ...s, todayStr: "2026-12-11", report: "submitted" }).label, "דוח ממתין לאישור");

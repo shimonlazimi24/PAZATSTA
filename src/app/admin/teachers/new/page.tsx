@@ -5,8 +5,8 @@ export default function AdminNewTeacherPage() {
   return (
     <div className="max-w-xl">
       <AdminPageHeader
-        title="הוספת מדריך"
-        description="הזינו אימייל כדי ליצור משתמש מדריך, או להפוך משתמש קיים למדריך."
+        title="הוספת מורה"
+        description="הזינו אימייל כדי ליצור משתמש מורה, או להפוך משתמש קיים למורה."
       />
       <DefineTeacherForm />
     </div>

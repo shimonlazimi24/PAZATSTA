@@ -292,7 +292,7 @@ export function TeacherFrontalDay({ id }: { id: string }) {
         <section className={card} aria-labelledby="rep-h">
           <h3 id="rep-h" className="text-base font-semibold">דוח סיום</h3>
           {day.otherTeacherReported && !report?.byMe ? (
-            <p className="mt-2 text-[var(--color-text-muted)]">מדריך אחר כבר הגיש את דוח הסיום של היום.</p>
+            <p className="mt-2 text-[var(--color-text-muted)]">מורה אחר כבר הגיש את דוח הסיום של היום.</p>
           ) : report && report.status !== "returned" ? (
             <p className="mt-2">{report.status === "approved" ? "הדוח אושר ונשלח אל המקום. תודה." : "הדוח הוגש וממתין לאישור של שחר."}</p>
           ) : canFillReport ? (
@@ -305,7 +305,7 @@ export function TeacherFrontalDay({ id }: { id: string }) {
                 .map((f) => (
                   <ReportFieldInput key={f.id} field={f} value={answers[f.id]} onChange={(v) => setAnswers((a) => ({ ...a, [f.id]: v }))} />
                 ))}
-              <button type="submit" disabled={busy} className="min-h-[40px] rounded-md bg-[var(--color-primary)] px-5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50">
+              <button type="submit" disabled={busy} className="min-h-[44px] rounded-md bg-[var(--color-primary)] px-5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50">
                 {busy ? "שולח…" : "שליחה לאישור"}
               </button>
             </form>
@@ -314,7 +314,7 @@ export function TeacherFrontalDay({ id }: { id: string }) {
       )}
 
       {day.canWithdraw && (
-        <button type="button" disabled={busy} onClick={() => signup("DELETE")} className="text-sm text-[var(--color-text-muted)] underline hover:text-red-700">
+        <button type="button" disabled={busy} onClick={() => signup("DELETE")} className="min-h-[44px] rounded-md border border-[var(--color-border)] bg-white px-4 text-sm text-[var(--color-text-muted)] hover:border-red-700 hover:text-red-700">
           ביטול ההרשמה ליום
         </button>
       )}

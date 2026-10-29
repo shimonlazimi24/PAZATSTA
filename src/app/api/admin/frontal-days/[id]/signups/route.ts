@@ -13,7 +13,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const body = (await req.json().catch(() => null)) as { teacherId?: unknown } | null;
   const teacherId = typeof body?.teacherId === "string" ? body.teacherId : "";
   const teacher = teacherId ? await prisma.user.findFirst({ where: { id: teacherId, role: "teacher" } }) : null;
-  if (!teacher) return NextResponse.json({ error: "בחרו מדריך" }, { status: 400 });
+  if (!teacher) return NextResponse.json({ error: "בחרו מורה" }, { status: 400 });
   const result = await registerTeacherForDay(prisma, id, teacher.id, { byAdmin: true });
   if (!result.ok) return NextResponse.json({ error: result.message }, { status: result.status });
   await sendRegistrationMessage(result.day, teacher).catch((e) => console.error("[frontal assign] email failed", e));
@@ -28,7 +28,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   const day = await prisma.frontalDay.findUnique({ where: { id } });
   if (!day) return NextResponse.json({ error: "היום לא נמצא" }, { status: 404 });
   const removed = await prisma.frontalDaySignup.deleteMany({ where: { dayId: id, teacherId } });
-  if (removed.count === 0) return NextResponse.json({ error: "המדריך לא רשום ליום" }, { status: 404 });
+  if (removed.count === 0) return NextResponse.json({ error: "המורה לא רשום ליום" }, { status: 404 });
   const teacher = await prisma.user.findUnique({ where: { id: teacherId }, select: { email: true } });
   if (teacher) {
     await sendNotice("sendFrontalDayRemoved", [teacher.email], `הוסרת מהיום הפרונטלי ב${day.title}`, "הוסרת מיום פרונטלי", [

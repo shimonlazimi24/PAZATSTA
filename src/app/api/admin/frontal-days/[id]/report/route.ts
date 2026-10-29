@@ -23,8 +23,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const report = day.report;
 
   if (body?.action === "return") {
-    if (!note) return NextResponse.json({ error: "כתבו למדריך מה לתקן" }, { status: 400 });
-    if (report.status !== "submitted") return NextResponse.json({ error: "אפשר להחזיר למדריך רק דוח שממתין לאישור" }, { status: 409 });
+    if (!note) return NextResponse.json({ error: "כתבו למורה מה לתקן" }, { status: 400 });
+    if (report.status !== "submitted") return NextResponse.json({ error: "אפשר להחזיר למורה רק דוח שממתין לאישור" }, { status: 409 });
     await prisma.frontalDayReport.update({ where: { id: report.id }, data: { status: "returned", adminNote: note } });
     const teacher = await prisma.user.findUnique({ where: { id: report.teacherId }, select: { email: true } });
     if (teacher) {
@@ -63,7 +63,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   if (body?.action !== "approve") return NextResponse.json({ error: "פעולה לא מוכרת" }, { status: 400 });
   if (report.status !== "submitted" && report.status !== "approved") {
-    return NextResponse.json({ error: "הדוח הוחזר למדריך ועוד לא הוגש מחדש" }, { status: 409 });
+    return NextResponse.json({ error: "הדוח הוחזר למורה ועוד לא הוגש מחדש" }, { status: 409 });
   }
   if (!day.recipientEmail) {
     return NextResponse.json({ error: "חסרה כתובת המייל של מקבל הדוח. הוסיפו אותה בפרטי היום" }, { status: 400 });

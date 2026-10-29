@@ -33,7 +33,7 @@ export async function registerTeacherForDay(
 
 /** The day's message, filled in for this teacher. */
 export function sendRegistrationMessage(day: FrontalDay, teacher: { email: string; name: string | null }) {
-  const body = renderTemplate(day.messageTemplate, templateValues(day, teacher.name?.trim() || "מדריך/ה"));
+  const body = renderTemplate(day.messageTemplate, templateValues(day, teacher.name?.trim() || "מורה"));
   return sendNotice(
     "sendFrontalDayRegistered",
     [teacher.email],

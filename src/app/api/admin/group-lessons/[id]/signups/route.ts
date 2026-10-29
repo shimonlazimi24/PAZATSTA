@@ -15,15 +15,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const teacher = teacherId
     ? await prisma.user.findFirst({ where: { id: teacherId, role: "teacher" }, select: { id: true, email: true } })
     : null;
-  if (!teacher) return NextResponse.json({ error: "בחרו מדריך" }, { status: 400 });
+  if (!teacher) return NextResponse.json({ error: "בחרו מורה" }, { status: 400 });
 
   const result = await prisma.$transaction(async (tx) => {
     const lesson = await lockGroupLessonForSignup(tx, id);
     if (!lesson) return { error: "השיעור לא נמצא", status: 404 } as const;
     if (lesson.status !== "open") return { error: "השיעור בוטל", status: 400 } as const;
-    if (lesson.signups.some((s) => s.teacherId === teacher.id)) return { error: "המדריך כבר רשום", status: 409 } as const;
+    if (lesson.signups.some((s) => s.teacherId === teacher.id)) return { error: "המורה כבר רשום", status: 409 } as const;
     if (lesson.signups.length >= lesson.teachersNeeded) {
-      return { error: "השיעור מלא. הגדילו את מספר המדריכים הדרוש לפני שמוסיפים", status: 409 } as const;
+      return { error: "השיעור מלא. הגדילו את מספר המורים הדרוש לפני שמוסיפים", status: 409 } as const;
     }
     await tx.groupLessonSignup.create({ data: { groupLessonId: id, teacherId: teacher.id } });
     return { lesson } as const;
@@ -43,7 +43,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   const lesson = await prisma.groupLesson.findUnique({ where: { id }, include: { type: true } });
   if (!lesson) return NextResponse.json({ error: "השיעור לא נמצא" }, { status: 404 });
   const removed = await prisma.groupLessonSignup.deleteMany({ where: { groupLessonId: id, teacherId } });
-  if (removed.count === 0) return NextResponse.json({ error: "המדריך לא רשום לשיעור" }, { status: 404 });
+  if (removed.count === 0) return NextResponse.json({ error: "המורה לא רשום לשיעור" }, { status: 404 });
   const teacher = await prisma.user.findUnique({ where: { id: teacherId }, select: { email: true } });
   if (teacher) {
     await sendGroupLessonRemoved(teacher.email, emailInfo(lesson)).catch((e) =>

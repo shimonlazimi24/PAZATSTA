@@ -26,9 +26,9 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     ],
   },
   {
-    title: "מדריכים",
+    title: "מורים",
     items: [
-      { href: "/admin/teachers", label: "מדריכים" },
+      { href: "/admin/teachers", label: "מורים" },
       { href: "/admin/reminders", label: "תזכורות אישור" },
     ],
   },
@@ -52,7 +52,7 @@ const ALL_HREFS = ADMIN_NAV.flatMap((g) => g.items.map((i) => i.href));
 
 /**
  * The menu item to highlight: the longest href that is the path itself or a
- * parent of it. /admin/teachers/abc highlights "מדריכים"; /admin only
+ * parent of it. /admin/teachers/abc highlights "מורים"; /admin only
  * highlights the home item on exactly /admin.
  */
 export function activeAdminHref(pathname: string): string | null {

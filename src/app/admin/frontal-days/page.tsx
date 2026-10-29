@@ -7,7 +7,7 @@ export default function AdminFrontalDaysPage() {
     <div className="max-w-4xl">
       <AdminPageHeader
         title="ימים פרונטליים"
-        description="כל יום הוא תיקייה: הפרטים, המדריכים, ההודעות, רשימת ההכנות ודוח הסיום."
+        description="כל יום הוא תיקייה: הפרטים, המורים, ההודעות, רשימת ההכנות ודוח הסיום."
         actions={
           <>
             <Link href="/admin/frontal-days/settings" className="inline-flex min-h-[40px] items-center rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-4 text-sm font-medium hover:bg-[var(--color-bg-muted)]">

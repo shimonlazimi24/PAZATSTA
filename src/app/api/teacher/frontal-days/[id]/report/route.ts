@@ -21,10 +21,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     where: { id },
     include: { signups: { where: { teacherId: me.id }, select: { id: true } }, report: true },
   });
-  if (!day || day.signups.length === 0) return NextResponse.json({ error: "רק מדריך שרשום ליום יכול להגיש דוח" }, { status: 403 });
+  if (!day || day.signups.length === 0) return NextResponse.json({ error: "רק מורה שרשום ליום יכול להגיש דוח" }, { status: 403 });
   if (day.status !== "open") return NextResponse.json({ error: "היום בוטל" }, { status: 409 });
   if (lessonDateStr(day.date) > todayIsraelYYYYMMDD()) return NextResponse.json({ error: "אפשר להגיש את הדוח מיום הפעילות" }, { status: 409 });
-  if (day.report && day.report.teacherId !== me.id) return NextResponse.json({ error: "מדריך אחר כבר הגיש את הדוח של היום" }, { status: 409 });
+  if (day.report && day.report.teacherId !== me.id) return NextResponse.json({ error: "מורה אחר כבר הגיש את הדוח של היום" }, { status: 409 });
   if (day.report && day.report.status !== "returned") return NextResponse.json({ error: "הדוח כבר הוגש" }, { status: 409 });
 
   const fields = await prisma.frontalReportField.findMany({ where: { active: true, form: "report" }, orderBy: { sortOrder: "asc" } });
@@ -33,7 +33,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!built.ok) return NextResponse.json({ error: built.message }, { status: 400 });
   // Known facts are filled in, not asked: who taught, where, and when.
   const answers = [
-    { label: "שם המדריך", value: me.name || me.email },
+    { label: "שם המורה", value: me.name || me.email },
     { label: "מיקום", value: `${day.title}, ${day.address}` },
     { label: "תאריך", value: hebrewDateLabel(day.date) },
     ...built.answers,
@@ -51,7 +51,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-      return NextResponse.json({ error: "מדריך אחר הגיש את הדוח באותו רגע" }, { status: 409 });
+      return NextResponse.json({ error: "מורה אחר הגיש את הדוח באותו רגע" }, { status: 409 });
     }
     throw e;
   }

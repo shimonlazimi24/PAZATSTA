@@ -25,7 +25,7 @@ type Row = {
 
 const REPORT_STATE: Record<string, string> = {
   submitted: "ממתין לאישור שלך",
-  returned: "הוחזר למדריך לתיקון",
+  returned: "הוחזר למורה לתיקון",
   approved: "אושר ונשלח",
 };
 
@@ -96,7 +96,7 @@ function DayList({ rows }: { rows: Row[] }) {
             <div className="w-44 shrink-0 text-left text-sm">
               <p className={TONE[r.status.tone]}>{r.status.label}</p>
               <p className="text-[var(--color-text-muted)]">
-                {r.teachers.length} מתוך {r.teachersNeeded} מדריכים
+                {r.teachers.length} מתוך {r.teachersNeeded} מורים
               </p>
             </div>
           </Link>

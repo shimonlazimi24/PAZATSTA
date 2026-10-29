@@ -177,7 +177,7 @@ export async function AdminHome() {
           <AttentionRow
             count={data.missingReports}
             title="שיעורים שעברו בלי דוח"
-            detail="המדריך עוד לא מילא דוח ולא סימן שהשיעור לא התקיים."
+            detail="המורה עוד לא מילא דוח ולא סימן שהשיעור לא התקיים."
             href="/admin/calendar"
             action="ללוח השבועי"
           >
@@ -200,7 +200,7 @@ export async function AdminHome() {
             <AttentionRow
               count={data.groupNoReport}
               title="שיעורים קבוצתיים שעברו בלי דוח"
-              detail="לפחות אחד מהמדריכים ששובצו עוד לא שלח דוח. הסיכום של כל שיעור מופיע ברשימת השיעורים."
+              detail="לפחות אחד מהמורים ששובצו עוד לא שלח דוח. הסיכום של כל שיעור מופיע ברשימת השיעורים."
               href="/admin/group-lessons"
               action="לשיעורים הקבוצתיים"
             />
@@ -209,7 +209,7 @@ export async function AdminHome() {
             <AttentionRow
               count={data.frontalNoReport}
               title="ימים פרונטליים שעברו בלי דוח סיום"
-              detail="אף מדריך עוד לא הגיש את דוח הסיום של היום."
+              detail="אף מורה עוד לא הגיש את דוח הסיום של היום."
               href="/admin/frontal-days"
               action="לימים הפרונטליים"
             />
@@ -226,17 +226,17 @@ export async function AdminHome() {
           {data.unstaffedDays > 0 && (
             <AttentionRow
               count={data.unstaffedDays}
-              title="ימים פרונטליים בשבועיים הקרובים בלי מדריכים"
-              detail="אף מדריך לא נרשם. אפשר לשבץ מדריך מתוך עמוד היום."
+              title="ימים פרונטליים בשבועיים הקרובים בלי מורים"
+              detail="אף מורה לא נרשם. אפשר לשבץ מורה מתוך עמוד היום."
               href="/admin/frontal-days"
-              action="לשיבוץ מדריכים"
+              action="לשיבוץ מורים"
             />
           )}
           {data.groupMissing > 0 && (
             <AttentionRow
               count={data.groupMissing}
-              title={`מדריכים שעוד לא נרשמו לשיעור קבוצתי ב${data.nextMonthLabel}`}
-              detail="כל מדריך מעביר לפחות שיעור קבוצתי אחד בחודש. ב-20 לחודש הם מקבלים תזכורת אוטומטית."
+              title={`מורים שעוד לא נרשמו לשיעור קבוצתי ב${data.nextMonthLabel}`}
+              detail="כל מורה מעביר לפחות שיעור קבוצתי אחד בחודש. ב-20 לחודש הם מקבלים תזכורת אוטומטית."
               href="/admin/group-lessons"
               action="לשיעורים הקבוצתיים"
             />

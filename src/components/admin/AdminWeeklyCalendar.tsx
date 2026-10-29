@@ -65,7 +65,7 @@ export function AdminWeeklyCalendar() {
 
   async function act(lesson: WeeklyLesson, action: "cancel" | "reject" | "not-held") {
     const prompts = {
-      cancel: "לבטל את השיעור? התלמיד והמדריך יקבלו מייל, והמשבצת תחזור לזמינות.",
+      cancel: "לבטל את השיעור? התלמיד והמורה יקבלו מייל, והמשבצת תחזור לזמינות.",
       reject: "לא לאשר את הבקשה? השיעור יבוטל והמשבצת תחזור לזמינות.",
       "not-held": "השיעור לא התקיים? הוא יוצא מסיכום השעות. הדוח שנשלח נשמר.",
     };

@@ -114,7 +114,7 @@ export function AdminTeacherEdit({ teacherId }: { teacherId: string }) {
       <div className="max-w-2xl" dir="rtl">
         <p className="text-sm text-red-600">מורה לא נמצא.</p>
         <Link href="/admin/teachers" className="text-[var(--color-primary)] hover:underline mt-2 inline-block">
-          חזרה לרשימת מדריכים
+          חזרה לרשימת מורים
         </Link>
       </div>
     );
@@ -127,7 +127,7 @@ export function AdminTeacherEdit({ teacherId }: { teacherId: string }) {
           href="/admin/teachers"
           className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
         >
-          חזרה לרשימת המדריכים
+          חזרה לרשימת המורים
         </Link>
       </div>
 
@@ -272,9 +272,9 @@ export function AdminTeacherEdit({ teacherId }: { teacherId: string }) {
       </Card>
 
       <section className="rounded-lg border border-red-200 p-5" aria-labelledby="danger-h">
-        <h3 id="danger-h" className="font-semibold text-red-800">מחיקת המדריך</h3>
+        <h3 id="danger-h" className="font-semibold text-red-800">מחיקת המורה</h3>
         <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-          המחיקה מוחקת גם את כל השיעורים והזמינות של המדריך, ואי אפשר לבטל אותה.
+          המחיקה מוחקת גם את כל השיעורים והזמינות של המורה, ואי אפשר לבטל אותה.
         </p>
         <button
           type="button"
@@ -290,7 +290,7 @@ export function AdminTeacherEdit({ teacherId }: { teacherId: string }) {
           }}
           className="mt-3 min-h-[40px] rounded-md border border-red-300 bg-white px-4 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
         >
-          {deleting ? "מוחק…" : "מחיקת המדריך"}
+          {deleting ? "מוחק…" : "מחיקת המורה"}
         </button>
       </section>
     </div>

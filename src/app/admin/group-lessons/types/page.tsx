@@ -8,7 +8,7 @@ export default function GroupLessonTypesPage() {
       <Link href="/admin/group-lessons" className="mb-3 inline-block text-sm text-[var(--color-text-muted)] hover:text-[var(--color-primary)]">
         חזרה לשיעורים הקבוצתיים
       </Link>
-      <AdminPageHeader title="סוגי שיעורים קבוצתיים" description="הקטגוריות והסוגים שמהם בוחרים כשיוצרים שיעור, ושהמדריכים מסמנים בדוח." />
+      <AdminPageHeader title="סוגי שיעורים קבוצתיים" description="הקטגוריות והסוגים שמהם בוחרים כשיוצרים שיעור, ושהמורים מסמנים בדוח." />
       <GroupLessonTypesManager />
     </div>
   );

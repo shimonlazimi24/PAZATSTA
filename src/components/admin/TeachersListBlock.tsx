@@ -34,9 +34,9 @@ export function TeachersListBlock() {
   if (teachers.length === 0) {
     return (
       <p className="rounded-lg border border-dashed border-[var(--color-border)] bg-white px-5 py-8 text-center" dir="rtl">
-        אין עדיין מדריכים במערכת.
+        אין עדיין מורים במערכת.
         <Link href="/admin/teachers/new" className="mt-2 block text-sm font-medium text-[var(--color-primary)] hover:underline">
-          הוספת המדריך הראשון
+          הוספת המורה הראשון
         </Link>
       </p>
     );

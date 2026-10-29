@@ -97,7 +97,7 @@ export default function TeacherProfilePage() {
       <div className="max-w-xl space-y-6" dir="rtl">
         <header>
           <h1 className="text-2xl font-bold text-[var(--color-text)]">הפרטים שלי</h1>
-          <p className="mt-1 text-sm text-[var(--color-text-muted)]">כך התלמידים רואים אותך כשהם בוחרים מדריך.</p>
+          <p className="mt-1 text-sm text-[var(--color-text-muted)]">כך התלמידים רואים אותך כשהם בוחרים מורה.</p>
         </header>
         <div>
           <form onSubmit={handleSubmit} className="space-y-6">

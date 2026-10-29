@@ -64,15 +64,15 @@ export default async function AdminRemindersPage({ searchParams }: { searchParam
   return (
     <div className="max-w-4xl space-y-8">
       <AdminPageHeader
-        title="תזכורות אישור למדריכים"
-        description="תלמיד שמזמין שיעור מחכה לאישור של המדריך. כאן רואים איזה מדריך מאשר בזמן ואיזה צריך תזכורות."
+        title="תזכורות אישור למורים"
+        description="תלמיד שמזמין שיעור מחכה לאישור של המורה. כאן רואים איזה מורה מאשר בזמן ואיזה צריך תזכורות."
       />
 
       <section aria-labelledby="how-h" className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5">
         <h3 id="how-h" className="text-sm font-semibold text-[var(--color-text)]">מה קורה לבקשה שלא אושרה</h3>
         <ol className="mt-4 grid gap-4 sm:grid-cols-4">
           {[
-            ["מיד", "המדריך מקבל מייל עם הבקשה"],
+            ["מיד", "המורה מקבל מייל עם הבקשה"],
             [`אחרי ${24 - REMINDER_MARKS_HOURS_LEFT[0]} שעות`, "תזכורת ראשונה, אם עוד לא אישר"],
             [`אחרי ${24 - REMINDER_MARKS_HOURS_LEFT[1]} שעות`, "תזכורת שנייה"],
             ["אחרי 24 שעות", "הבקשה מתבטלת אוטומטית"],
@@ -96,7 +96,7 @@ export default async function AdminRemindersPage({ searchParams }: { searchParam
 
       <section aria-labelledby="who-h" className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 id="who-h" className="text-lg font-semibold text-[var(--color-text)]">מדריכים שקיבלו תזכורות</h3>
+          <h3 id="who-h" className="text-lg font-semibold text-[var(--color-text)]">מורים שקיבלו תזכורות</h3>
           <div className="inline-flex rounded-md border border-[var(--color-border)] bg-white p-0.5" role="group" aria-label="תקופה">
             {PERIODS.map((p) => (
               <Link
@@ -114,7 +114,7 @@ export default async function AdminRemindersPage({ searchParams }: { searchParam
         {!hasData ? (
           <p className="rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-white px-5 py-8 text-center text-[var(--color-text)]">
             לא נשלחו תזכורות {periodLabel}. כל הבקשות אושרו בזמן, או שלא היו בקשות.
-            <span className="mt-1 block text-sm text-[var(--color-text-muted)]">כשמדריך לא יאשר בקשה תוך {24 - REMINDER_MARKS_HOURS_LEFT[0]} שעות, הוא יופיע כאן.</span>
+            <span className="mt-1 block text-sm text-[var(--color-text-muted)]">כשמורה לא יאשר בקשה תוך {24 - REMINDER_MARKS_HOURS_LEFT[0]} שעות, הוא יופיע כאן.</span>
           </p>
         ) : (
           <>
@@ -122,7 +122,7 @@ export default async function AdminRemindersPage({ searchParams }: { searchParam
               <table className="w-full min-w-[760px] text-right text-sm">
                 <thead className="bg-[var(--color-bg-muted)] text-[var(--color-text-muted)]">
                   <tr>
-                    <th className="px-4 py-2.5 font-medium">מדריך</th>
+                    <th className="px-4 py-2.5 font-medium">מורה</th>
                     <th className="px-4 py-2.5 font-medium">תזכורות</th>
                     <th className="px-4 py-2.5 font-medium">אישר אחרי תזכורת</th>
                     <th className="px-4 py-2.5 font-medium">לא אישר גם אחרי התזכורת הראשונה</th>
@@ -156,7 +156,7 @@ export default async function AdminRemindersPage({ searchParams }: { searchParam
                   <table className="w-full min-w-[600px] text-right text-sm">
                     <thead className="text-[var(--color-text-muted)]">
                       <tr>
-                        <th className="px-4 py-2 font-medium">מדריך</th>
+                        <th className="px-4 py-2 font-medium">מורה</th>
                         <th className="px-4 py-2 font-medium">תלמיד</th>
                         <th className="px-4 py-2 font-medium">מועד השיעור</th>
                         <th className="px-4 py-2 font-medium">נשלחה</th>

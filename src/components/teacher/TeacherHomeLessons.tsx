@@ -171,7 +171,7 @@ export function TeacherHomeLessons() {
       type="button"
       onClick={() => handleNotHeld(lessonId)}
       disabled={!!notHeldId}
-      className="px-3 py-1.5 rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white text-sm font-medium text-[var(--color-text)] hover:bg-[var(--color-bg-muted)] disabled:opacity-50"
+      className="min-h-[44px] px-3 rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white text-sm font-medium text-[var(--color-text)] hover:bg-[var(--color-bg-muted)] disabled:opacity-50"
     >
       {notHeldId === lessonId ? "מעדכן…" : "השיעור לא התקיים"}
     </button>
@@ -275,7 +275,7 @@ export function TeacherHomeLessons() {
                       {l.status === "scheduled" && isLessonStarted(l.date, l.startTime) && !l.summary && (
                         <Link
                           href={`/teacher/lesson/${l.id}/report`}
-                          className="inline-flex min-h-[32px] items-center rounded-md bg-[var(--color-primary)] px-3 text-sm font-medium text-white hover:opacity-90"
+                          className="inline-flex min-h-[44px] items-center rounded-md bg-[var(--color-primary)] px-3 text-sm font-medium text-white hover:opacity-90"
                         >
                           מלא דוח שיעור
                         </Link>
@@ -393,7 +393,7 @@ export function TeacherHomeLessons() {
                                 type="button"
                                 onClick={() => handleFollowUpComplete(l)}
                                 disabled={followUpLoadingId === l.id}
-                                className="px-3 py-1.5 rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white text-sm font-medium text-[var(--color-text)] hover:bg-[var(--color-bg-muted)] disabled:opacity-50"
+                                className="min-h-[44px] px-3 rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white text-sm font-medium text-[var(--color-text)] hover:bg-[var(--color-bg-muted)] disabled:opacity-50"
                               >
                                 {followUpLoadingId === l.id ? "שולח…" : "סימון מעקב הושלם"}
                               </button>
@@ -446,7 +446,7 @@ export function TeacherHomeLessons() {
                             </span>
                             <Link
                               href={`/teacher/lesson/${l.id}/report`}
-                              className="px-3 py-1.5 rounded-[var(--radius-input)] bg-[var(--color-primary)] text-white text-sm font-medium hover:opacity-90"
+                              className="min-h-[44px] px-3 rounded-[var(--radius-input)] bg-[var(--color-primary)] text-white text-sm font-medium hover:opacity-90"
                             >
                               מלא דוח שיעור
                             </Link>

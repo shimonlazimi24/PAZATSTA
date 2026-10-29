@@ -38,7 +38,7 @@ type DayForTemplate = {
 
 export function templateValues(day: DayForTemplate, teacherName: string): TemplateValues {
   return {
-    שם_המדריך: teacherName,
+    שם_המורה: teacherName,
     כותרת: day.title,
     תאריך: hebrewDateLabel(day.date),
     שעות: `${day.startTime}–${day.endTime}`,
@@ -86,7 +86,7 @@ export const FrontalDayInput = z
       .refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), { message: "כתובת המייל של מקבל הדוח לא תקינה" })
       .optional()
       .default(""),
-    teachersNeeded: z.coerce.number().int().min(1, "לפחות מדריך אחד").max(50),
+    teachersNeeded: z.coerce.number().int().min(1, "לפחות מורה אחד").max(50),
     classSize: z
       .union([z.null(), z.literal(""), z.coerce.number().int().min(1, "מספר התלמידים צריך להיות לפחות 1").max(2000, "מספר תלמידים גדול מדי")])
       .optional()

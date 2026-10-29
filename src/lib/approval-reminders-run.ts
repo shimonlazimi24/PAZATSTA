@@ -70,7 +70,7 @@ export async function sendDueApprovalReminders(prisma: PrismaClient, now = new D
     try {
       await sendApprovalReminder({
         to: lesson.teacher.email,
-        teacherName: lesson.teacher.name?.trim() || "מדריך/ה",
+        teacherName: lesson.teacher.name?.trim() || "מורה",
         studentName:
           lesson.student.studentProfile?.studentFullName?.trim() || lesson.student.name?.trim() || lesson.student.email || "תלמיד",
         date: formatDateInIsrael(lesson.date),

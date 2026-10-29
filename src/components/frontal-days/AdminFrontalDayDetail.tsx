@@ -174,7 +174,7 @@ export function AdminFrontalDayDetail({ id }: { id: string }) {
               disabled={busy}
               className={`${btn} border border-red-200 bg-red-50 text-red-800 hover:bg-red-100`}
               onClick={() => {
-                if (!confirm(`לבטל את היום?${day.signups.length ? ` ${day.signups.length} המדריכים הרשומים יקבלו על כך מייל.` : ""}`)) return;
+                if (!confirm(`לבטל את היום?${day.signups.length ? ` ${day.signups.length} המורים הרשומים יקבלו על כך מייל.` : ""}`)) return;
                 act(() => apiJson(`/api/admin/frontal-days/${id}`, json("PATCH", { status: "canceled" })), "היום בוטל.");
               }}
             >
@@ -198,7 +198,7 @@ export function AdminFrontalDayDetail({ id }: { id: string }) {
             const r = await apiJson(`/api/admin/frontal-days/${id}`, json("PATCH", v));
             if (!r.ok) return r.error;
             setEditing(false);
-            setNotice(day.signups.length ? "הפרטים נשמרו. כדי שהמדריכים הרשומים יקבלו אותם, שלחו את ההודעה מחדש למטה." : "הפרטים נשמרו.");
+            setNotice(day.signups.length ? "הפרטים נשמרו. כדי שהמורים הרשומים יקבלו אותם, שלחו את ההודעה מחדש למטה." : "הפרטים נשמרו.");
             await load();
             return null;
           }}
@@ -280,7 +280,7 @@ export function AdminFrontalDayDetail({ id }: { id: string }) {
             </>
           )}
           {!draft && day.report.status === "returned" && (
-            <p className="mt-4 text-sm text-amber-800">הדוח הוחזר למדריך לתיקון: {day.report.adminNote}</p>
+            <p className="mt-4 text-sm text-amber-800">הדוח הוחזר למורה לתיקון: {day.report.adminNote}</p>
           )}
           {!draft && day.report.status !== "returned" && (
             <div className="mt-5 space-y-3 border-t border-[var(--color-border)] pt-4">
@@ -325,9 +325,9 @@ export function AdminFrontalDayDetail({ id }: { id: string }) {
                     type="button"
                     disabled={busy || !returnNote.trim()}
                     className={secondary}
-                    onClick={() => act(() => apiJson(`/api/admin/frontal-days/${id}/report`, json("PATCH", { action: "return", note: returnNote })), "הדוח הוחזר למדריך.").then((ok) => ok && setReturnNote(""))}
+                    onClick={() => act(() => apiJson(`/api/admin/frontal-days/${id}/report`, json("PATCH", { action: "return", note: returnNote })), "הדוח הוחזר למורה.").then((ok) => ok && setReturnNote(""))}
                   >
-                    החזרה למדריך
+                    החזרה למורה
                   </button>
                 </div>
               )}
@@ -336,19 +336,19 @@ export function AdminFrontalDayDetail({ id }: { id: string }) {
         </section>
       )}
       {past && !day.report && !canceled && (
-        <p className={`${card} text-amber-800`}>היום עבר ועוד לא הוגש דוח סיום. אחד המדריכים הרשומים ממלא אותו מהאזור האישי.</p>
+        <p className={`${card} text-amber-800`}>היום עבר ועוד לא הוגש דוח סיום. אחד המורים הרשומים ממלא אותו מהאזור האישי.</p>
       )}
 
       <section className={card} aria-labelledby="teachers-h">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h3 id="teachers-h" className="text-lg font-semibold">מדריכים</h3>
+          <h3 id="teachers-h" className="text-lg font-semibold">מורים</h3>
           <p className={`text-sm ${free > 0 && !canceled ? "font-medium text-amber-800" : "text-[var(--color-text-muted)]"}`}>
             {day.signups.length} מתוך {day.teachersNeeded}
             {free > 0 && !canceled ? `, חסרים ${free}` : ""}
           </p>
         </div>
         {day.signups.length === 0 ? (
-          <p className="mt-3 text-sm text-[var(--color-text-muted)]">עוד אף מדריך לא נרשם.</p>
+          <p className="mt-3 text-sm text-[var(--color-text-muted)]">עוד אף מורה לא נרשם.</p>
         ) : (
           <table className="mt-3 w-full text-right text-sm">
             <thead>
@@ -379,7 +379,7 @@ export function AdminFrontalDayDetail({ id }: { id: string }) {
                           disabled={busy}
                           className="text-red-700 hover:underline disabled:opacity-50"
                           onClick={() => {
-                            if (!confirm(`להסיר את ${s.name} מהיום? המדריך יקבל על כך מייל.`)) return;
+                            if (!confirm(`להסיר את ${s.name} מהיום? המורה יקבל על כך מייל.`)) return;
                             act(() => apiJson(`/api/admin/frontal-days/${id}/signups?teacherId=${encodeURIComponent(s.teacherId)}`, { method: "DELETE" }), `${s.name} הוסר.`);
                           }}
                         >
@@ -398,12 +398,12 @@ export function AdminFrontalDayDetail({ id }: { id: string }) {
             className="mt-4 flex flex-col gap-2 sm:flex-row"
             onSubmit={(e) => {
               e.preventDefault();
-              if (assignId) act(() => apiJson(`/api/admin/frontal-days/${id}/signups`, json("POST", { teacherId: assignId })), "המדריך שובץ וקיבל את הודעת היום.").then(() => setAssignId(""));
+              if (assignId) act(() => apiJson(`/api/admin/frontal-days/${id}/signups`, json("POST", { teacherId: assignId })), "המורה שובץ וקיבל את הודעת היום.").then(() => setAssignId(""));
             }}
           >
-            <label htmlFor="fd-assign" className="sr-only">שיבוץ מדריך</label>
+            <label htmlFor="fd-assign" className="sr-only">שיבוץ מורה</label>
             <select id="fd-assign" value={assignId} onChange={(e) => setAssignId(e.target.value)} className="min-h-[40px] flex-1 rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-3">
-              <option value="">בחרו מדריך לשיבוץ</option>
+              <option value="">בחרו מורה לשיבוץ</option>
               {teachers.filter((t) => !signedIds.has(t.id)).map((t) => (
                 <option key={t.id} value={t.id}>{t.name || t.email}</option>
               ))}
@@ -419,7 +419,7 @@ export function AdminFrontalDayDetail({ id }: { id: string }) {
         <section className={card} aria-labelledby="msg-h">
           <h3 id="msg-h" className="text-lg font-semibold">הודעות ורשימת הכנות</h3>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-            ההודעה נשלחת למדריך כשהוא נרשם, והתזכורת יומיים לפני היום. שינוי כאן חל רק על היום הזה.
+            ההודעה נשלחת למורה כשהוא נרשם, והתזכורת יומיים לפני היום. שינוי כאן חל רק על היום הזה.
           </p>
           <div className="mt-4 flex gap-1 border-b border-[var(--color-border)]" role="tablist">
             {(
@@ -470,11 +470,11 @@ export function AdminFrontalDayDetail({ id }: { id: string }) {
                 disabled={busy || tplDirty}
                 className={secondary}
                 onClick={() => {
-                  if (!confirm(`לשלוח את ה${tab === "reminder" ? "תזכורת" : "הודעה"} מחדש ל-${day.signups.length} המדריכים הרשומים?`)) return;
-                  act(() => apiJson(`/api/admin/frontal-days/${id}/notify`, json("POST", { kind: tab })), "נשלח מחדש לכל המדריכים הרשומים.");
+                  if (!confirm(`לשלוח את ה${tab === "reminder" ? "תזכורת" : "הודעה"} מחדש ל-${day.signups.length} המורים הרשומים?`)) return;
+                  act(() => apiJson(`/api/admin/frontal-days/${id}/notify`, json("POST", { kind: tab })), "נשלח מחדש לכל המורים הרשומים.");
                 }}
               >
-                שליחה מחדש למדריכים הרשומים
+                שליחה מחדש למורים הרשומים
               </button>
             )}
             {tplDirty && <p className="text-sm text-[var(--color-text-muted)]">יש שינויים שלא נשמרו.</p>}
@@ -495,7 +495,7 @@ export function AdminFrontalDayDetail({ id }: { id: string }) {
       {day.status !== "canceled" && (
         <section className={card} aria-labelledby="qr-h">
           <h3 id="qr-h" className="text-lg font-semibold">קודי QR לסוף היום</h3>
-          <p className="mt-1 text-sm text-[var(--color-text-muted)]">המדריכים רואים אותם באזור האישי ביום עצמו. אפשר גם להדפיס מכאן.</p>
+          <p className="mt-1 text-sm text-[var(--color-text-muted)]">המורים רואים אותם באזור האישי ביום עצמו. אפשר גם להדפיס מכאן.</p>
           <div className="mt-4 flex flex-wrap gap-8">
             <figure className="space-y-2 text-center">
               <QrCode value={typeof window === "undefined" ? "" : `${window.location.origin}${surveyPath(id)}`} size={180} label="QR לסקר המשוב" />

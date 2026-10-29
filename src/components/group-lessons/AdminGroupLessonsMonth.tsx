@@ -38,7 +38,7 @@ function LessonSummary({ row }: { row: Row }) {
         {missing > 0 && <span className="ms-2 font-normal text-amber-800">{missing === 1 ? "חסר דוח אחד" : `חסרים ${missing} דוחות`}</span>}
       </summary>
       {row.reports.length === 0 ? (
-        <p className="mt-1 text-sm text-[var(--color-text-muted)]">עוד לא התקבל דוח מהמדריכים.</p>
+        <p className="mt-1 text-sm text-[var(--color-text-muted)]">עוד לא התקבל דוח מהמורים.</p>
       ) : (
         <ul className="mt-2 space-y-2">
           {row.reports.map((r, i) => (
@@ -62,7 +62,7 @@ function Staffing({ row }: { row: Row }) {
   return (
     <div className="text-sm">
       <p className={missing > 0 ? "font-medium text-amber-800" : "text-[var(--color-text)]"}>
-        {row.teachers.length} מתוך {row.teachersNeeded} מדריכים
+        {row.teachers.length} מתוך {row.teachersNeeded} מורים
       </p>
       {row.teachers.length > 0 && (
         <p className="text-[var(--color-text-muted)]">{row.teachers.map((t) => t.name).join(", ")}</p>
@@ -179,12 +179,12 @@ export function AdminGroupLessonsMonth({ initialMonth }: { initialMonth: string 
             <h3 className="text-sm font-semibold text-[var(--color-text)]">עוד לא נרשמו ב{monthLabel(month)}</h3>
             {data.missingTeachers.length === 0 ? (
               <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-                {data.teacherCount === 0 ? "אין מדריכים במערכת." : "כל המדריכים רשומים לשיעור החודש."}
+                {data.teacherCount === 0 ? "אין מורים במערכת." : "כל המורים רשומים לשיעור החודש."}
               </p>
             ) : (
               <>
                 <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                  {data.missingTeachers.length} מתוך {data.teacherCount} מדריכים
+                  {data.missingTeachers.length} מתוך {data.teacherCount} מורים
                 </p>
                 <ul className="mt-3 space-y-1 text-sm text-[var(--color-text)]">
                   {data.missingTeachers.map((t) => (

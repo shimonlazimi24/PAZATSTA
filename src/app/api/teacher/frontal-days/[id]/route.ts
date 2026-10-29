@@ -54,7 +54,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       surveyCount: await prisma.frontalSurveyResponse.count({ where: { dayId: day.id } }),
       courseCode: day.courseCode,
       courseUrl: day.courseUrl,
-      message: renderTemplate(day.messageTemplate, templateValues(day, me.name?.trim() || "מדריך/ה")),
+      message: renderTemplate(day.messageTemplate, templateValues(day, me.name?.trim() || "מורה")),
       checklist: day.checklist,
       checklistDone: mine.checklistDone.filter((x) => day.checklist.includes(x)),
       canWithdraw: !base.past && canWithdraw({ dateStr: date, todayStr: today }).ok,

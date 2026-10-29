@@ -74,7 +74,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const v = parsed.data;
   if (v.teachersNeeded < lesson.signups.length) {
     return NextResponse.json(
-      { error: `כבר רשומים ${lesson.signups.length} מדריכים. הסירו מדריך לפני שמקטינים את המספר` },
+      { error: `כבר רשומים ${lesson.signups.length} מורים. הסירו מורה לפני שמקטינים את המספר` },
       { status: 400 }
     );
   }

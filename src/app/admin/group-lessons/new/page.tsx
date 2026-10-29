@@ -30,7 +30,7 @@ export default function NewGroupLessonPage() {
       <Link href="/admin/group-lessons" className="mb-3 inline-block text-sm text-[var(--color-text-muted)] hover:text-[var(--color-primary)]">
         חזרה לשיעורים הקבוצתיים
       </Link>
-      <AdminPageHeader title="שיעור קבוצתי חדש" description="השיעור יופיע למדריכים להרשמה. ההודעה על פתיחת ההרשמה נשלחת בתחילת החודש שלפני." />
+      <AdminPageHeader title="שיעור קבוצתי חדש" description="השיעור יופיע למורים להרשמה. ההודעה על פתיחת ההרשמה נשלחת בתחילת החודש שלפני." />
       <Suspense>
         <NewGroupLesson />
       </Suspense>

@@ -112,20 +112,20 @@ export function FrontalDayForm({
             <input id="fd-end" type="time" className={input} value={v.endTime} onChange={set("endTime")} />
           </Field>
         </div>
-        <Field id="fd-address" label="כתובת" hint="ממנה נבנה קישור הניווט בוויז שהמדריכים מקבלים.">
+        <Field id="fd-address" label="כתובת" hint="ממנה נבנה קישור הניווט בוויז שהמורים מקבלים.">
           <input id="fd-address" className={input} value={v.address} onChange={set("address")} placeholder="רחוב, מספר, עיר" />
         </Field>
         <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
           <Field id="fd-topic" label="נושא היום">
             <input id="fd-topic" className={input} value={v.topic} onChange={set("topic")} />
           </Field>
-          <Field id="fd-needed" label="מדריכים דרושים">
+          <Field id="fd-needed" label="מורים דרושים">
             <input id="fd-needed" type="number" min={1} max={50} className={input} value={v.teachersNeeded} onChange={set("teachersNeeded")} />
           </Field>
         </div>
       </Group>
 
-      <Group title="מה המדריכים מקבלים">
+      <Group title="מה המורים מקבלים">
         <Field id="fd-pres" label="קישור למצגת" hint="קישור לשיתוף מ-Google Drive או מקום דומה.">
           <input id="fd-pres" dir="ltr" className={input} value={v.presentationUrl} onChange={set("presentationUrl")} placeholder="https://" />
         </Field>
@@ -143,7 +143,7 @@ export function FrontalDayForm({
       </Group>
 
       <Group title="סוף היום">
-        <Field id="fd-class" label="כמה תלמידים צפויים (רשות)" hint="כדי לראות כמה מתוך הכיתה ענו על סקר המשוב. הסקר עצמו מגיע מהמערכת, עם QR שהמדריך מציג בסוף היום.">
+        <Field id="fd-class" label="כמה תלמידים צפויים (רשות)" hint="כדי לראות כמה מתוך הכיתה ענו על סקר המשוב. הסקר עצמו מגיע מהמערכת, עם QR שהמורה מציג בסוף היום.">
           <input
             id="fd-class"
             type="number"
@@ -168,7 +168,7 @@ export function FrontalDayForm({
           <span>
             <span className="block text-sm font-medium text-[var(--color-text)]">היום כולל גישה לקורס מתנה לתלמידים</span>
             <span className="block text-xs text-[var(--color-text-muted)]">
-              בסוף היום המדריך יציג לתלמידים QR לקורס ואת קוד הגישה. בלי הסימון, לא יופיע קורס.
+              בסוף היום המורה יציג לתלמידים QR לקורס ואת קוד הגישה. בלי הסימון, לא יופיע קורס.
             </span>
           </span>
         </label>

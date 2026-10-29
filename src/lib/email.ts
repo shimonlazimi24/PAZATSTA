@@ -194,7 +194,7 @@ export function getApprovalRequestContent(params: {
   const cancellationPolicy = [
     "",
     "מדיניות ביטולים:",
-    "- במידה ואתם רוצים לדחות את השיעור ניתן לעשות זאת עד 12 שעות לפני, ביצירת קשר עם המדריך או המנהל.",
+    "- במידה ואתם רוצים לדחות את השיעור ניתן לעשות זאת עד 12 שעות לפני, ביצירת קשר עם המורה או המנהל.",
     "- במידה ואתם רוצים לדחות או לבטל את השיעור בפחות מ-12 שעות יהיו דמי ביטול של 50 ש״ח.",
   ].join("\n");
 
@@ -271,7 +271,7 @@ function getApprovalRequestHtml(params: {
   <table style="border-collapse:collapse;width:100%;margin-top:16px;font-size:15px">${detailRows.join("")}</table>
   <p style="margin-top:20px;font-size:13px;color:#555;font-weight:600">מדיניות ביטולים</p>
   <ul style="margin:8px 0 0;padding-right:20px;font-size:13px;color:#555">
-    <li>במידה ואתם רוצים לדחות את השיעור ניתן לעשות זאת עד 12 שעות לפני, ביצירת קשר עם המדריך או המנהל.</li>
+    <li>במידה ואתם רוצים לדחות את השיעור ניתן לעשות זאת עד 12 שעות לפני, ביצירת קשר עם המורה או המנהל.</li>
     <li>במידה ואתם רוצים לדחות או לבטל את השיעור בפחות מ-12 שעות יהיו דמי ביטול של 50 ש״ח.</li>
   </ul>
 </div>`;
@@ -354,7 +354,7 @@ export function getBookingConfirmationContent(params: {
   const cancellationPolicy = [
     "",
     "מדיניות ביטולים:",
-    "- במידה ואתם רוצים לדחות את השיעור ניתן לעשות זאת עד 12 שעות לפני, ביצירת קשר עם המדריך או המנהל.",
+    "- במידה ואתם רוצים לדחות את השיעור ניתן לעשות זאת עד 12 שעות לפני, ביצירת קשר עם המורה או המנהל.",
     "- במידה ואתם רוצים לדחות או לבטל את השיעור בפחות מ-12 שעות יהיו דמי ביטול של 50 ש״ח.",
   ].join("\n");
 
@@ -733,7 +733,7 @@ export function getLessonRescheduledContent(params: {
   if (base) lines.push("", `כניסה לאפליקציה: ${base}`);
   lines.push(
     "",
-    "אם המועד החדש לא מתאים, נא ליצור קשר עם המדריך או המנהל.",
+    "אם המועד החדש לא מתאים, נא ליצור קשר עם המורה או המנהל.",
     "",
     "בברכה,",
     "פזצט״א"
@@ -781,7 +781,7 @@ export function getLessonCanceledContent(params: {
   if (params.topic?.trim()) lines.push(`סוג מיון: ${params.topic.trim()}`);
   const base = getAppBaseUrl();
   if (base) lines.push("", `לקביעת מועד חדש: ${base}`);
-  lines.push("", "לשאלות ניתן לפנות למדריך או למנהל.", "", "בברכה,", "פזצט״א");
+  lines.push("", "לשאלות ניתן לפנות למורה או למנהל.", "", "בברכה,", "פזצט״א");
   return {
     subject: `ביטול שיעור – ${params.dateLabel}`,
     text: lines.join("\n"),
@@ -912,7 +912,7 @@ export function sendGroupSignupOpen(to: string[], p: { monthLabel: string; lesso
     `שיעורים קבוצתיים, ${p.monthLabel}`,
     [
       `ההרשמה לשיעורים הקבוצתיים של ${p.monthLabel} פתוחה. יש ${p.lessonCount} שיעורים לבחירה.`,
-      "כל מדריך מעביר לפחות שיעור קבוצתי אחד בחודש. מומלץ להירשם מוקדם, כל עוד יש מקום בשיעורים שנוחים לכם.",
+      "כל מורה מעביר לפחות שיעור קבוצתי אחד בחודש. מומלץ להירשם מוקדם, כל עוד יש מקום בשיעורים שנוחים לכם.",
     ],
     GROUP_CTA
   );
@@ -924,7 +924,7 @@ export function sendGroupMissingSignup(to: string[], p: { monthLabel: string }) 
     to,
     `עוד לא נרשמת לשיעור קבוצתי ב${p.monthLabel}`,
     `תזכורת: שיעור קבוצתי ב${p.monthLabel}`,
-    [`עדיין לא נרשמת לשיעור קבוצתי ב${p.monthLabel}. כל מדריך מעביר לפחות שיעור קבוצתי אחד בחודש.`],
+    [`עדיין לא נרשמת לשיעור קבוצתי ב${p.monthLabel}. כל מורה מעביר לפחות שיעור קבוצתי אחד בחודש.`],
     GROUP_CTA
   );
 }
@@ -994,7 +994,7 @@ export function sendGroupLessonReportToAdmins(
     `דוח שיעור קבוצתי: ${p.teacherName}, ${p.dateLabel}`,
     "דוח שיעור קבוצתי",
     [
-      `מדריך: ${p.teacherName}`,
+      `מורה: ${p.teacherName}`,
       groupLessonLines(p).join("\n"),
       `סוג השיעור לפי הדוח: ${p.reportedType}`,
       `משתתפים שהגיעו: ${p.participants}`,

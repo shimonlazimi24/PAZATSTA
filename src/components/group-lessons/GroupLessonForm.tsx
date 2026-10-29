@@ -93,7 +93,7 @@ export function GroupLessonForm({
           <input id="gl-location" className={field} value={values.location} onChange={(e) => set("location", e.target.value)} placeholder="כתובת, או קישור לזום" />
         </div>
         <div>
-          <label htmlFor="gl-needed" className={labelCls}>מדריכים דרושים</label>
+          <label htmlFor="gl-needed" className={labelCls}>מורים דרושים</label>
           <input
             id="gl-needed"
             type="number"
@@ -108,7 +108,7 @@ export function GroupLessonForm({
       </div>
 
       <div>
-        <label htmlFor="gl-details" className={labelCls}>פרטים למדריכים</label>
+        <label htmlFor="gl-details" className={labelCls}>פרטים למורים</label>
         <textarea
           id="gl-details"
           rows={4}
@@ -118,7 +118,7 @@ export function GroupLessonForm({
           onChange={(e) => set("details", e.target.value)}
           placeholder="מה להכין, איך מגיעים, למי לפנות"
         />
-        <p className="mt-1 text-xs text-[var(--color-text-muted)]">הפרטים מופיעים למדריכים בהרשמה ובמייל התזכורת.</p>
+        <p className="mt-1 text-xs text-[var(--color-text-muted)]">הפרטים מופיעים למורים בהרשמה ובמייל התזכורת.</p>
       </div>
 
       {error && <p className="text-sm text-red-700" role="alert">{error}</p>}

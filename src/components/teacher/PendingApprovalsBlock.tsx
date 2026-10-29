@@ -93,7 +93,7 @@ export function PendingApprovalsBlock() {
                 type="button"
                 disabled={!!approvingId || !!rejectingId}
                 onClick={() => handleApprove(l.id)}
-                className="min-h-[36px] rounded-md bg-[var(--color-primary)] px-4 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                className="min-h-[44px] rounded-md bg-[var(--color-primary)] px-4 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
               >
                 {approvingId === l.id ? "מאשר…" : "אישור"}
               </button>
@@ -103,7 +103,7 @@ export function PendingApprovalsBlock() {
                 onClick={() => {
                   if (confirm("לא לאשר את הבקשה? השיעור יבוטל והתלמיד יוכל לבחור מועד אחר.")) handleReject(l.id);
                 }}
-                className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:underline disabled:opacity-50"
+                className="min-h-[44px] rounded-md border border-[var(--color-border)] bg-white px-4 text-sm text-[var(--color-text)] hover:bg-[var(--color-bg-muted)] disabled:opacity-50"
               >
                 {rejectingId === l.id ? "מבטל…" : "לא לאשר"}
               </button>

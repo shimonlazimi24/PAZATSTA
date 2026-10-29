@@ -43,7 +43,7 @@ export const GroupLessonInput = z
     endTime: z.string().regex(TIME, "שעת סיום לא תקינה"),
     location: z.string().trim().max(300).optional().default(""),
     details: z.string().trim().max(4000).optional().default(""),
-    teachersNeeded: z.coerce.number().int().min(1, "לפחות מדריך אחד").max(50),
+    teachersNeeded: z.coerce.number().int().min(1, "לפחות מורה אחד").max(50),
   })
   .refine((v) => v.endTime > v.startTime, { message: "שעת הסיום צריכה להיות אחרי שעת ההתחלה", path: ["endTime"] });
 

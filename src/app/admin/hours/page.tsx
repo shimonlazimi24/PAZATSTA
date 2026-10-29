@@ -6,7 +6,7 @@ export default function AdminHoursPage() {
     <div className="max-w-xl">
       <AdminPageHeader
         title="סיכום שעות לתשלום"
-        description="שליחת סיכום שעות לכל מדריך לאימייל שלך, לצורך תשלום. נספרים רק שיעורים שהושלמו בחודש הקודם; שיעור שסומן 'לא התקיים' לא נספר."
+        description="שליחת סיכום שעות לכל מורה לאימייל שלך, לצורך תשלום. נספרים רק שיעורים שהושלמו בחודש הקודם; שיעור שסומן 'לא התקיים' לא נספר."
       />
       <SendHoursSummaryButton />
     </div>

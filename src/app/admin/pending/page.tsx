@@ -6,7 +6,7 @@ export default function AdminPendingPage() {
     <div className="max-w-2xl">
       <AdminPageHeader
         title="שיעורים בהמתנה לאישור"
-        description="בקשות שהמדריך עוד לא אישר. בקשה שלא אושרה תוך 24 שעות מתבטלת אוטומטית."
+        description="בקשות שהמורה עוד לא אישר. בקשה שלא אושרה תוך 24 שעות מתבטלת אוטומטית."
       />
       <PendingLessonsBlock />
     </div>

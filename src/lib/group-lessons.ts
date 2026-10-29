@@ -96,7 +96,7 @@ export function canReport(p: {
   signed: boolean;
   alreadyReported: boolean;
 }): Verdict {
-  if (!p.signed) return { ok: false, message: "רק מדריך שרשום לשיעור יכול למלא עליו דוח" };
+  if (!p.signed) return { ok: false, message: "רק מורה שרשום לשיעור יכול למלא עליו דוח" };
   if (p.status !== "open") return { ok: false, message: "השיעור בוטל" };
   if (!p.started) return { ok: false, message: "אפשר למלא דוח אחרי שהשיעור התחיל" };
   if (p.alreadyReported) return { ok: false, message: "כבר שלחת דוח על השיעור הזה" };

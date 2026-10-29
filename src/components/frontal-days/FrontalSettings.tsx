@@ -49,6 +49,8 @@ function ReportFields({ form = "report" }: { form?: "report" | "survey" }) {
   const [fields, setFields] = useState<Field[] | null>(null);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [draft, setDraft] = useState(EMPTY_DRAFT);
+  // The question whose details are in the form; null means a new one.
+  const [editing, setEditing] = useState<Field | null>(null);
 
   const load = useCallback(async () => {
     const r = await apiJson<Field[]>(`/api/admin/frontal-report-fields?form=${form}`);
@@ -77,7 +79,7 @@ function ReportFields({ form = "report" }: { form?: "report" | "survey" }) {
       <Status message={message} />
       {!survey && (
         <p className="text-sm text-[var(--color-text-muted)]">
-          שם המדריך, המיקום והתאריך נוספים לדוח אוטומטית, ולא צריך לשאול עליהם.
+          שם המורה, המיקום והתאריך נוספים לדוח אוטומטית, ולא צריך לשאול עליהם.
         </p>
       )}
       <ol className="divide-y divide-[var(--color-border)] border-y border-[var(--color-border)]">
@@ -114,6 +116,18 @@ function ReportFields({ form = "report" }: { form?: "report" | "survey" }) {
                   {f.internal ? "לשלוח גם לבית הספר" : "להשאיר פנימי"}
                 </button>
               )}
+              <button
+                type="button"
+                className="text-[var(--color-primary)] hover:underline"
+                onClick={() => {
+                  setEditing(f);
+                  setDraft({ label: f.label, kind: f.kind, required: f.required, help: f.help, optionsText: f.options.join("\n"), internal: f.internal, showIfFieldId: f.showIfFieldId ?? "", showIfValues: f.showIfValues });
+                  setMessage(null);
+                  document.getElementById(`${form}-nf-label`)?.focus();
+                }}
+              >
+                עריכה
+              </button>
               <button type="button" className="text-red-700 hover:underline" onClick={() => patch(f, { active: false }, `"${f.label}" הוסרה ${survey ? "מהסקר" : "מהדוח"}.`)}>
                 הסרה
               </button>
@@ -137,14 +151,17 @@ function ReportFields({ form = "report" }: { form?: "report" | "survey" }) {
             showIfFieldId: draft.showIfFieldId || null,
             showIfValues: draft.showIfFieldId ? draft.showIfValues : [],
           };
-          const r = await apiJson(`/api/admin/frontal-report-fields?form=${form}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+          const r = editing
+            ? await apiJson(`/api/admin/frontal-report-fields/${editing.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+            : await apiJson(`/api/admin/frontal-report-fields?form=${form}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
           if (!r.ok) return setMessage({ ok: false, text: r.error });
-          setMessage({ ok: true, text: `"${draft.label}" נוספה ${where}.` });
+          setMessage({ ok: true, text: editing ? `"${draft.label}" עודכנה.` : `"${draft.label}" נוספה ${where}.` });
           setDraft(EMPTY_DRAFT);
+          setEditing(null);
           load();
         }}
       >
-        <p className="text-sm font-semibold">שאלה חדשה</p>
+        <p className="text-sm font-semibold">{editing ? `עריכת השאלה "${editing.label}"` : "שאלה חדשה"}</p>
         <div className="grid gap-3 sm:grid-cols-[1fr_14rem]">
           <div>
             <label htmlFor={`${form}-nf-label`} className="mb-1 block text-sm">השאלה</label>
@@ -175,7 +192,7 @@ function ReportFields({ form = "report" }: { form?: "report" | "survey" }) {
               <label htmlFor={`${form}-nf-parent`} className="mb-1 block text-sm">להציג רק אחרי תשובה מסוימת (רשות)</label>
               <select id={`${form}-nf-parent`} className={`${input} w-full`} value={draft.showIfFieldId} onChange={(e) => setDraft({ ...draft, showIfFieldId: e.target.value, showIfValues: [] })}>
                 <option value="">תמיד להציג</option>
-                {choiceFields.map((f) => (
+                {choiceFields.filter((f) => f.id !== editing?.id).map((f) => (
                   <option key={f.id} value={f.id}>{f.label}</option>
                 ))}
               </select>
@@ -211,8 +228,20 @@ function ReportFields({ form = "report" }: { form?: "report" | "survey" }) {
             </label>
           )}
           <button type="submit" disabled={!draft.label.trim() || (draft.showIfFieldId !== "" && draft.showIfValues.length === 0)} className="min-h-[36px] rounded-md bg-[var(--color-primary)] px-4 text-sm font-medium text-white disabled:opacity-50">
-            הוספת השאלה
+            {editing ? "שמירת השינויים" : "הוספת השאלה"}
           </button>
+          {editing && (
+            <button
+              type="button"
+              className="text-sm text-[var(--color-text-muted)] underline hover:no-underline"
+              onClick={() => {
+                setEditing(null);
+                setDraft(EMPTY_DRAFT);
+              }}
+            >
+              ביטול
+            </button>
+          )}
         </div>
       </form>
 
@@ -263,7 +292,7 @@ export function FrontalSettings() {
           <h3 id="def-h" className="text-lg font-semibold">הודעות ורשימת הכנות לימים חדשים</h3>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">כל יום חדש מתחיל מכאן. ימים שכבר נפתחו לא משתנים.</p>
         </div>
-        <TemplateEditor id="def-msg" label="הודעה למדריך שנרשם" value={defaults.messageTemplate} onChange={(v) => setDefaults({ ...defaults, messageTemplate: v })} />
+        <TemplateEditor id="def-msg" label="הודעה למורה שנרשם" value={defaults.messageTemplate} onChange={(v) => setDefaults({ ...defaults, messageTemplate: v })} />
         <TemplateEditor id="def-rem" label="תזכורת יומיים לפני" value={defaults.reminderTemplate} onChange={(v) => setDefaults({ ...defaults, reminderTemplate: v })} />
         <div>
           <p className="mb-2 text-sm font-medium">רשימת הכנות</p>
@@ -292,7 +321,7 @@ export function FrontalSettings() {
 
       <section className={card} aria-labelledby="fields-h">
         <h3 id="fields-h" className="text-lg font-semibold">שדות דוח הסיום</h3>
-        <p className="mb-4 mt-1 text-sm text-[var(--color-text-muted)]">מה המדריך ממלא בסוף היום. הדוח נשלח אל המקום אחרי שאתם מאשרים אותו.</p>
+        <p className="mb-4 mt-1 text-sm text-[var(--color-text-muted)]">מה המורה ממלא בסוף היום. הדוח נשלח אל המקום אחרי שאתם מאשרים אותו.</p>
         <ReportFields />
       </section>
 

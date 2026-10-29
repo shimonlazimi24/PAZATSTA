@@ -36,7 +36,7 @@ function LessonAction({ l, busy, onSignUp, onWithdraw }: { l: Lesson; busy: bool
       return l.reported ? (
         <p className="text-sm text-[var(--color-text-muted)]">הדוח נשלח</p>
       ) : (
-        <Link href={`/teacher/group-lessons/${l.id}/report`} className="inline-flex min-h-[34px] items-center rounded-md bg-[var(--color-primary)] px-3 text-sm font-medium text-white hover:opacity-90">
+        <Link href={`/teacher/group-lessons/${l.id}/report`} className="inline-flex min-h-[44px] items-center rounded-md bg-[var(--color-primary)] px-3 text-sm font-medium text-white hover:opacity-90">
           מילוי דוח
         </Link>
       );
@@ -57,7 +57,7 @@ function LessonAction({ l, busy, onSignUp, onWithdraw }: { l: Lesson; busy: bool
   if (l.started) return <p className="text-sm text-[var(--color-text-muted)]">השיעור עבר</p>;
   if (l.placesLeft === 0) return <p className="text-sm text-[var(--color-text-muted)]">השיעור מלא</p>;
   return (
-    <button type="button" disabled={busy} onClick={onSignUp} className="min-h-[34px] rounded-md border border-[var(--color-primary)] bg-white px-4 text-sm font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white disabled:opacity-50">
+    <button type="button" disabled={busy} onClick={onSignUp} className="min-h-[44px] rounded-md border border-[var(--color-primary)] bg-white px-4 text-sm font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white disabled:opacity-50">
       הרשמה
     </button>
   );
@@ -102,7 +102,7 @@ export function TeacherGroupLessons() {
     <div className="max-w-3xl space-y-8" dir="rtl">
       <header>
         <h1 className="text-2xl font-bold text-[var(--color-text)]">שיעורים קבוצתיים</h1>
-        <p className="mt-1 text-sm text-[var(--color-text-muted)]">כל מדריך מעביר לפחות שיעור קבוצתי אחד בחודש. בחרו שיעור והירשמו.</p>
+        <p className="mt-1 text-sm text-[var(--color-text-muted)]">כל מורה מעביר לפחות שיעור קבוצתי אחד בחודש. בחרו שיעור והירשמו.</p>
       </header>
       {data && (
         <section aria-label="החובה החודשית">
@@ -132,7 +132,7 @@ export function TeacherGroupLessons() {
                 <span>
                   {r.typeLabel}, {dayLabel(r.date)}
                 </span>
-                <Link href={`/teacher/group-lessons/${r.id}/report`} className="inline-flex min-h-[34px] items-center rounded-md bg-[var(--color-primary)] px-3 text-sm font-medium text-white hover:opacity-90">
+                <Link href={`/teacher/group-lessons/${r.id}/report`} className="inline-flex min-h-[44px] items-center rounded-md bg-[var(--color-primary)] px-3 text-sm font-medium text-white hover:opacity-90">
                   מילוי דוח
                 </Link>
               </li>

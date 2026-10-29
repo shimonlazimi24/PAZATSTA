@@ -129,7 +129,7 @@ export function PendingLessonsBlock() {
       {lessons.length === 0 ? (
         <p className="rounded-lg border border-dashed border-[var(--color-border)] bg-white px-5 py-8 text-center text-[var(--color-text)]">
           אין בקשות שממתינות לאישור.
-          <span className="mt-1 block text-sm text-[var(--color-text-muted)]">בקשה חדשה מתלמיד תופיע כאן, והמדריך מקבל עליה מייל.</span>
+          <span className="mt-1 block text-sm text-[var(--color-text-muted)]">בקשה חדשה מתלמיד תופיע כאן, והמורה מקבל עליה מייל.</span>
         </p>
       ) : (
         <>

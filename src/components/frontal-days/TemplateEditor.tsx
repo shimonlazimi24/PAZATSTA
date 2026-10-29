@@ -4,7 +4,7 @@ import { useRef } from "react";
 import { PLACEHOLDERS, renderTemplate, unknownPlaceholders, type TemplateValues } from "@/lib/frontal-days";
 
 const SAMPLE: TemplateValues = {
-  שם_המדריך: "דנה",
+  שם_המורה: "דנה",
   כותרת: "תיכון אורט רמת גן",
   תאריך: "יום חמישי, 12 בנובמבר",
   שעות: "08:30–13:00",
@@ -86,7 +86,7 @@ export function TemplateEditor({
         )}
       </div>
       <div className="space-y-2">
-        <p className="text-sm font-medium text-[var(--color-text)]">כך המדריך יקבל את זה</p>
+        <p className="text-sm font-medium text-[var(--color-text)]">כך המורה יקבל את זה</p>
         <div className="min-h-[14rem] whitespace-pre-wrap [overflow-wrap:anywhere] rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-bg-muted)]/40 px-4 py-3 text-sm leading-relaxed text-[var(--color-text)]">
           {renderTemplate(value, { ...SAMPLE, ...values })}
         </div>

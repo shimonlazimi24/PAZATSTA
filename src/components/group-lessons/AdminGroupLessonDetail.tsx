@@ -90,14 +90,14 @@ export function AdminGroupLessonDetail({ id }: { id: string }) {
 
       <section className={section} aria-labelledby="teachers-h">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h3 id="teachers-h" className="font-semibold text-[var(--color-text)]">מדריכים</h3>
+          <h3 id="teachers-h" className="font-semibold text-[var(--color-text)]">מורים</h3>
           <p className={`text-sm ${free > 0 && !canceled ? "font-medium text-amber-800" : "text-[var(--color-text-muted)]"}`}>
             {lesson.signups.length} מתוך {lesson.teachersNeeded}
             {free > 0 && !canceled ? `, חסרים ${free}` : ""}
           </p>
         </div>
         {lesson.signups.length === 0 ? (
-          <p className="mt-3 text-sm text-[var(--color-text-muted)]">עוד אף מדריך לא נרשם.</p>
+          <p className="mt-3 text-sm text-[var(--color-text-muted)]">עוד אף מורה לא נרשם.</p>
         ) : (
           <ul className="mt-3 divide-y divide-[var(--color-border)]">
             {lesson.signups.map((s) => (
@@ -109,7 +109,7 @@ export function AdminGroupLessonDetail({ id }: { id: string }) {
                     disabled={busy}
                     className="text-sm text-red-700 hover:underline disabled:opacity-50"
                     onClick={() => {
-                      if (!confirm(`להסיר את ${s.name} מהשיעור? המדריך יקבל על כך מייל.`)) return;
+                      if (!confirm(`להסיר את ${s.name} מהשיעור? המורה יקבל על כך מייל.`)) return;
                       act(
                         () => apiJson(`/api/admin/group-lessons/${id}/signups?teacherId=${encodeURIComponent(s.teacherId)}`, { method: "DELETE" }),
                         `${s.name} הוסר מהשיעור.`
@@ -136,13 +136,13 @@ export function AdminGroupLessonDetail({ id }: { id: string }) {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ teacherId: assignId }),
                   }),
-                "המדריך שובץ וקיבל על כך מייל."
+                "המורה שובץ וקיבל על כך מייל."
               ).then(() => setAssignId(""));
             }}
           >
-            <label htmlFor="assign" className="sr-only">שיבוץ מדריך</label>
+            <label htmlFor="assign" className="sr-only">שיבוץ מורה</label>
             <select id="assign" value={assignId} onChange={(e) => setAssignId(e.target.value)} className="min-h-[44px] flex-1 rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-3">
-              <option value="">בחרו מדריך לשיבוץ</option>
+              <option value="">בחרו מורה לשיבוץ</option>
               {assignable.map((t) => (
                 <option key={t.id} value={t.id}>{t.name || t.email}</option>
               ))}
@@ -157,7 +157,7 @@ export function AdminGroupLessonDetail({ id }: { id: string }) {
       <section className={section} aria-labelledby="reports-h">
         <h3 id="reports-h" className="font-semibold text-[var(--color-text)]">דוחות</h3>
         {lesson.reports.length === 0 ? (
-          <p className="mt-3 text-sm text-[var(--color-text-muted)]">עוד לא התקבלו דוחות. המדריכים ממלאים דוח אחרי השיעור.</p>
+          <p className="mt-3 text-sm text-[var(--color-text-muted)]">עוד לא התקבלו דוחות. המורים ממלאים דוח אחרי השיעור.</p>
         ) : (
           <ul className="mt-3 space-y-4">
             {lesson.reports.map((r) => (
@@ -213,7 +213,7 @@ export function AdminGroupLessonDetail({ id }: { id: string }) {
                 disabled={busy}
                 className="min-h-[44px] rounded-[var(--radius-input)] border border-red-200 bg-red-50 px-5 text-sm font-medium text-red-800 hover:bg-red-100 disabled:opacity-50"
                 onClick={() => {
-                  const who = lesson.signups.length ? ` ${lesson.signups.length} המדריכים הרשומים יקבלו על כך מייל.` : "";
+                  const who = lesson.signups.length ? ` ${lesson.signups.length} המורים הרשומים יקבלו על כך מייל.` : "";
                   if (!confirm(`לבטל את השיעור?${who}`)) return;
                   act(
                     () =>

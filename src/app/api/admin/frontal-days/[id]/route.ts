@@ -81,7 +81,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const parsed = FrontalDayInput.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: firstZodMessage(parsed.error) }, { status: 400 });
   if (parsed.data.teachersNeeded < day.signups.length) {
-    return NextResponse.json({ error: `כבר רשומים ${day.signups.length} מדריכים. הסירו מדריך לפני שמקטינים את המספר` }, { status: 400 });
+    return NextResponse.json({ error: `כבר רשומים ${day.signups.length} מורים. הסירו מורה לפני שמקטינים את המספר` }, { status: 400 });
   }
   const { date, ...rest } = parsed.data;
   const dateChanged = date !== lessonDateStr(day.date);

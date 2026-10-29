@@ -35,7 +35,7 @@ export async function runFrontalDayNotices(prisma: PrismaClient, todayStr = toda
       if (claimed.count === 0) continue;
       const teacher = teachers.get(signup.teacherId);
       if (!teacher || !isValidDeliveryEmail(teacher.email)) continue;
-      const body = renderTemplate(day.reminderTemplate, templateValues(day, teacher.name?.trim() || "מדריך/ה"));
+      const body = renderTemplate(day.reminderTemplate, templateValues(day, teacher.name?.trim() || "מורה"));
       try {
         await sendNotice("sendFrontalDayReminder", [teacher.email], `תזכורת: היום הפרונטלי ב${day.title}, ${hebrewDateLabel(day.date)}`, "תזכורת ליום הפרונטלי", body.split(/\n{2,}/), {
           label: "לפרטי היום ולרשימת ההכנות",
@@ -57,10 +57,10 @@ export async function runFrontalDayNotices(prisma: PrismaClient, todayStr = toda
       await sendNotice(
         "sendFrontalNoTeachersAlert",
         admins,
-        unstaffed.length === 1 ? `אין מדריכים ליום הפרונטלי ב${unstaffed[0].title}` : `${unstaffed.length} ימים פרונטליים בלי מדריכים`,
-        "ימים פרונטליים בלי מדריכים",
+        unstaffed.length === 1 ? `אין מורים ליום הפרונטלי ב${unstaffed[0].title}` : `${unstaffed.length} ימים פרונטליים בלי מורים`,
+        "ימים פרונטליים בלי מורים",
         [
-          `בשבועיים הקרובים יש ${unstaffed.length === 1 ? "יום פרונטלי שאף מדריך לא נרשם אליו" : `${unstaffed.length} ימים פרונטליים שאף מדריך לא נרשם אליהם`}:`,
+          `בשבועיים הקרובים יש ${unstaffed.length === 1 ? "יום פרונטלי שאף מורה לא נרשם אליו" : `${unstaffed.length} ימים פרונטליים שאף מורה לא נרשם אליהם`}:`,
           unstaffed.map((d) => `${d.title}, ${hebrewDateLabel(d.date)}`).join("\n"),
         ],
         { label: "לימים הפרונטליים", path: "/admin/frontal-days" }

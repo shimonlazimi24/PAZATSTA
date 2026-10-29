@@ -12,7 +12,7 @@ export const NO_TEACHER_ALERT_DAYS = 14;
 export const WITHDRAW_DEADLINE_DAYS = 7;
 
 export const PLACEHOLDERS = [
-  { key: "שם_המדריך", help: "השם של המדריך שמקבל את ההודעה" },
+  { key: "שם_המורה", help: "השם של המורה שמקבל את ההודעה" },
   { key: "כותרת", help: "שם בית הספר או המקום" },
   { key: "תאריך", help: "התאריך, למשל יום חמישי, 12 בנובמבר" },
   { key: "שעות", help: "שעת התחלה וסיום" },
@@ -28,7 +28,7 @@ export const PLACEHOLDERS = [
 export type PlaceholderKey = (typeof PLACEHOLDERS)[number]["key"];
 export type TemplateValues = Record<PlaceholderKey, string>;
 
-export const DEFAULT_MESSAGE_TEMPLATE = `שלום {שם_המדריך},
+export const DEFAULT_MESSAGE_TEMPLATE = `שלום {שם_המורה},
 נרשמת ליום הפרונטלי ב{כותרת}. כל הפרטים כאן:
 
 מתי: {תאריך}, {שעות}
@@ -41,7 +41,7 @@ export const DEFAULT_MESSAGE_TEMPLATE = `שלום {שם_המדריך},
 
 לפני היום, עברו על רשימת ההכנות באזור האישי וסמנו כל סעיף שביצעתם.`;
 
-export const DEFAULT_REMINDER_TEMPLATE = `שלום {שם_המדריך},
+export const DEFAULT_REMINDER_TEMPLATE = `שלום {שם_המורה},
 תזכורת: היום הפרונטלי ב{כותרת} מתקיים ב{תאריך}, {שעות}.
 
 איפה: {כתובת}
@@ -159,13 +159,13 @@ export function dayStatus(p: {
   if (d < 0) {
     if (p.report === "approved") return p.sentToRecipient ? { label: "הדוח נשלח", tone: "ok" } : { label: "הדוח אושר, לא נשלח", tone: "warning" };
     if (p.report === "submitted") return { label: "דוח ממתין לאישור", tone: "warning" };
-    if (p.report === "returned") return { label: "הדוח הוחזר למדריך", tone: "warning" };
+    if (p.report === "returned") return { label: "הדוח הוחזר למורה", tone: "warning" };
     return { label: "ממתין לדוח סיום", tone: "warning" };
   }
-  if (p.signedCount === 0) return { label: "אין מדריכים", tone: d <= NO_TEACHER_ALERT_DAYS ? "danger" : "warning" };
+  if (p.signedCount === 0) return { label: "אין מורים", tone: d <= NO_TEACHER_ALERT_DAYS ? "danger" : "warning" };
   const missing = p.teachersNeeded - p.signedCount;
-  if (missing > 0) return { label: missing === 1 ? "חסר מדריך אחד" : `חסרים ${missing} מדריכים`, tone: "warning" };
-  return { label: "כל המדריכים רשומים", tone: "ok" };
+  if (missing > 0) return { label: missing === 1 ? "חסר מורה אחד" : `חסרים ${missing} מורים`, tone: "warning" };
+  return { label: "כל המורים רשומים", tone: "ok" };
 }
 
 export type ReportFieldKind = "short" | "long" | "number" | "date" | "choice" | "multi";
