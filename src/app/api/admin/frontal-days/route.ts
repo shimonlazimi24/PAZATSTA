@@ -16,9 +16,9 @@ export async function GET() {
     const today = todayIsraelYYYYMMDD();
     const days = await prisma.frontalDay.findMany({
       orderBy: { date: "asc" },
-      include: { signups: { select: { teacherId: true } }, report: { select: { status: true, sentToRecipientAt: true } } },
+      include: { signups: { select: { teacherId: true } }, report: { select: { status: true, sentToRecipientAt: true, answers: true, teacherId: true } } },
     });
-    const teacherIds = Array.from(new Set(days.flatMap((d) => d.signups.map((s) => s.teacherId))));
+    const teacherIds = Array.from(new Set(days.flatMap((d) => [...d.signups.map((s) => s.teacherId), ...(d.report ? [d.report.teacherId] : [])])));
     const users = await prisma.user.findMany({ where: { id: { in: teacherIds } }, select: { id: true, name: true, email: true } });
     const nameOf = new Map(users.map((u) => [u.id, u.name || u.email]));
     return NextResponse.json(
@@ -44,6 +44,13 @@ export async function GET() {
             sentToRecipient: !!d.report?.sentToRecipientAt,
           }),
           past: date < today,
+          report: d.report
+            ? {
+                status: d.report.status,
+                teacherName: nameOf.get(d.report.teacherId) ?? "—",
+                answers: Array.isArray(d.report.answers) ? (d.report.answers as { label: string; value: string; internal?: boolean }[]) : [],
+              }
+            : null,
         };
       }),
       { headers: { "Cache-Control": "no-store" } }

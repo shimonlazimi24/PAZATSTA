@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { apiJson } from "@/lib/api";
 import { monthLabel } from "@/lib/group-lessons";
@@ -18,7 +19,41 @@ type Row = {
   teachersNeeded: number;
   teachers: { id: string; name: string }[];
   reportsCount: number;
+  reports: { teacherName: string; typeLabel: string; participants: number; notes: string }[];
 };
+
+/** The closing summary of a lesson that took place: what each teacher reported. */
+function LessonSummary({ row }: { row: Row }) {
+  const missing = row.teachers.length - row.reports.length;
+  return (
+    <details className="group border-t border-dashed border-[var(--color-border)] px-4 py-2 sm:ps-[7.5rem]" open={row.reports.length > 0 && row.reports.length <= 2}>
+      <summary className="cursor-pointer list-none text-sm font-medium text-[var(--color-text)] [&::-webkit-details-marker]:hidden">
+        <ChevronLeft className="me-1 inline h-4 w-4 align-[-3px] transition-transform group-open:-rotate-90" aria-hidden />
+        סיכום השיעור
+        {row.reports.length > 0 && (
+          <span className="ms-2 font-normal text-[var(--color-text-muted)]">
+            {row.reports.reduce((n, r) => n + r.participants, 0)} משתתפים
+          </span>
+        )}
+        {missing > 0 && <span className="ms-2 font-normal text-amber-800">{missing === 1 ? "חסר דוח אחד" : `חסרים ${missing} דוחות`}</span>}
+      </summary>
+      {row.reports.length === 0 ? (
+        <p className="mt-1 text-sm text-[var(--color-text-muted)]">עוד לא התקבל דוח מהמדריכים.</p>
+      ) : (
+        <ul className="mt-2 space-y-2">
+          {row.reports.map((r, i) => (
+            <li key={i} className="rounded-md bg-[var(--color-bg-muted)]/60 px-3 py-2 text-sm">
+              <p className="font-medium text-[var(--color-text)]">
+                {r.teacherName} · {r.typeLabel} · הגיעו {r.participants}
+              </p>
+              <p className="mt-0.5 whitespace-pre-line text-[var(--color-text-muted)]">{r.notes.trim() || "בלי הערות"}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </details>
+  );
+}
 type MonthData = { month: string; lessons: Row[]; missingTeachers: { id: string; name: string }[]; teacherCount: number };
 
 function Staffing({ row }: { row: Row }) {
@@ -127,14 +162,10 @@ export function AdminGroupLessonsMonth({ initialMonth }: { initialMonth: string 
                                 {row.typeLabel}
                               </span>
                               {row.location && <span className="block text-sm text-[var(--color-text-muted)]">{row.location}</span>}
-                              {date < today && row.status === "open" && (
-                                <span className="block text-sm text-[var(--color-text-muted)]">
-                                  {row.reportsCount === 0 ? "עוד לא התקבל דוח" : `התקבלו ${row.reportsCount} דוחות`}
-                                </span>
-                              )}
                             </span>
                             <Staffing row={row} />
                           </Link>
+                          {date < today && row.status === "open" && row.teachers.length + row.reports.length > 0 && <LessonSummary row={row} />}
                         </li>
                       ))}
                     </ul>

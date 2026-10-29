@@ -42,12 +42,22 @@ async function loadAttention() {
   const frontalHorizon = asLessonDate(addDaysYYYYMMDD(today, NO_TEACHER_ALERT_DAYS));
   const nextMonth = nextMonthKey(monthKeyOf(today));
   const { start: nmStart, end: nmEnd } = monthRange(nextMonth);
-  const [reportsToApprove, unstaffedDays, nextMonthLessons, teachers] = await Promise.all([
+  const [reportsToApprove, unstaffedDays, nextMonthLessons, teachers, pastGroup, frontalNoReport] = await Promise.all([
     prisma.frontalDayReport.count({ where: { status: "submitted" } }),
     prisma.frontalDay.count({ where: { status: "open", date: { gte: todayDate, lte: frontalHorizon }, signups: { none: {} } } }),
     prisma.groupLesson.findMany({ where: { status: "open", date: { gte: nmStart, lt: nmEnd } }, select: { signups: { select: { teacherId: true } } } }),
     prisma.user.count({ where: { role: "teacher" } }),
+    prisma.groupLesson.findMany({
+      where: { status: "open", date: { lt: todayDate }, signups: { some: {} } },
+      select: { signups: { select: { teacherId: true } }, reports: { select: { teacherId: true } } },
+    }),
+    prisma.frontalDay.count({ where: { status: "open", date: { lt: todayDate }, signups: { some: {} }, report: null } }),
   ]);
+  // A group lesson is missing a report while any teacher who taught it has not sent one.
+  const groupNoReport = pastGroup.filter((l) => {
+    const reported = new Set(l.reports.map((r) => r.teacherId));
+    return l.signups.some((s) => !reported.has(s.teacherId));
+  }).length;
   const signedNextMonth = new Set(nextMonthLessons.flatMap((l) => l.signups.map((s) => s.teacherId)));
   const groupMissing = nextMonthLessons.length > 0 && Number(today.slice(8, 10)) >= 15 ? Math.max(0, teachers - signedNextMonth.size) : 0;
 
@@ -69,6 +79,8 @@ async function loadAttention() {
     reportsToApprove,
     unstaffedDays,
     groupMissing,
+    groupNoReport,
+    frontalNoReport,
     nextMonthLabel: monthLabel(nextMonth),
   };
 }
@@ -136,7 +148,8 @@ export async function AdminHome() {
   }
 
   const nothingWaiting =
-    data.pending === 0 && data.missingReports === 0 && data.reportsToApprove === 0 && data.unstaffedDays === 0 && data.groupMissing === 0;
+    data.pending === 0 && data.missingReports === 0 && data.reportsToApprove === 0 && data.unstaffedDays === 0 && data.groupMissing === 0 &&
+    data.groupNoReport === 0 && data.frontalNoReport === 0;
 
   return (
     <div className="max-w-3xl">
@@ -181,6 +194,24 @@ export async function AdminHome() {
               </table>
             )}
           </AttentionRow>
+          {data.groupNoReport > 0 && (
+            <AttentionRow
+              count={data.groupNoReport}
+              title="שיעורים קבוצתיים שעברו בלי דוח"
+              detail="לפחות אחד מהמדריכים ששובצו עוד לא שלח דוח. הסיכום של כל שיעור מופיע ברשימת השיעורים."
+              href="/admin/group-lessons"
+              action="לשיעורים הקבוצתיים"
+            />
+          )}
+          {data.frontalNoReport > 0 && (
+            <AttentionRow
+              count={data.frontalNoReport}
+              title="ימים פרונטליים שעברו בלי דוח סיום"
+              detail="אף מדריך עוד לא הגיש את דוח הסיום של היום."
+              href="/admin/frontal-days"
+              action="לימים הפרונטליים"
+            />
+          )}
           {data.reportsToApprove > 0 && (
             <AttentionRow
               count={data.reportsToApprove}

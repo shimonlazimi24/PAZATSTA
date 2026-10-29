@@ -22,7 +22,7 @@ export async function GET(req: Request) {
         include: {
           type: true,
           signups: { select: { teacherId: true } },
-          reports: { select: { teacherId: true } },
+          reports: { select: { teacherId: true, typeLabel: true, participants: true, notes: true }, orderBy: { submittedAt: "asc" } },
         },
       }),
       prisma.user.findMany({ where: { role: "teacher" }, select: { id: true, name: true, email: true }, orderBy: { name: "asc" } }),
@@ -43,6 +43,12 @@ export async function GET(req: Request) {
           teachersNeeded: l.teachersNeeded,
           teachers: l.signups.map((s) => ({ id: s.teacherId, name: nameOf.get(s.teacherId) ?? "—" })),
           reportsCount: l.reports.length,
+          reports: l.reports.map((r) => ({
+            teacherName: nameOf.get(r.teacherId) ?? "—",
+            typeLabel: r.typeLabel,
+            participants: r.participants,
+            notes: r.notes,
+          })),
         })),
         missingTeachers: teachersWithoutSignup(teachers, signedThisMonth).map((t) => ({ id: t.id, name: t.name || t.email })),
         teacherCount: teachers.length,

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 import { apiJson } from "@/lib/api";
 import type { DayTone } from "@/lib/frontal-days";
 
@@ -17,7 +18,43 @@ type Row = {
   teachers: string[];
   status: { label: string; tone: DayTone };
   past: boolean;
+  report: { status: string; teacherName: string; answers: { label: string; value: string; internal?: boolean }[] } | null;
 };
+
+const REPORT_STATE: Record<string, string> = {
+  submitted: "ממתין לאישור שלך",
+  returned: "הוחזר למדריך לתיקון",
+  approved: "אושר ונשלח",
+};
+
+/** The closing report of a day that took place, readable right in the list. */
+function DaySummary({ row }: { row: Row }) {
+  const answers = row.report?.answers.filter((a) => a.value?.trim()) ?? [];
+  return (
+    <details className="group border-t border-dashed border-[var(--color-border)] px-4 py-2 sm:ps-24">
+      <summary className="cursor-pointer list-none text-sm font-medium text-[var(--color-text)] [&::-webkit-details-marker]:hidden">
+        <ChevronLeft className="me-1 inline h-4 w-4 align-[-3px] transition-transform group-open:-rotate-90" aria-hidden />
+        סיכום היום
+        <span className={`ms-2 font-normal ${row.report ? "text-[var(--color-text-muted)]" : "text-amber-800"}`}>
+          {row.report ? `${row.report.teacherName} · ${REPORT_STATE[row.report.status] ?? ""}` : "עוד לא הוגש דוח סיום"}
+        </span>
+      </summary>
+      {row.report && (
+        <dl className="mt-2 grid gap-x-4 gap-y-1.5 rounded-md bg-[var(--color-bg-muted)]/60 px-3 py-2 text-sm sm:grid-cols-[12rem_1fr]">
+          {answers.map((a, i) => (
+            <div key={i} className="contents">
+              <dt className="text-[var(--color-text-muted)]">
+                {a.label}
+                {a.internal && <span className="ms-1 text-xs">(פנימי)</span>}
+              </dt>
+              <dd className="whitespace-pre-line text-[var(--color-text)]">{a.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </details>
+  );
+}
 
 const TONE: Record<DayTone, string> = {
   danger: "text-red-700 font-semibold",
@@ -57,6 +94,7 @@ function DayList({ rows }: { rows: Row[] }) {
               </p>
             </div>
           </Link>
+          {r.past && r.status.tone !== "muted" && (r.report || r.teachers.length > 0) && <DaySummary row={r} />}
         </li>
       ))}
     </ul>
