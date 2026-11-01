@@ -58,6 +58,21 @@ function DaySummary({ row }: { row: Row }) {
           ))}
         </dl>
       )}
+      {row.report && (
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <Link
+            href={`/admin/frontal-days/${row.id}#report`}
+            className={`inline-flex min-h-[44px] items-center rounded-[var(--radius-input)] px-4 text-sm font-medium ${
+              row.report.status === "submitted"
+                ? "bg-[var(--color-primary)] text-white hover:opacity-90"
+                : "border border-[var(--color-border)] bg-white text-[var(--color-text)] hover:bg-[var(--color-bg-muted)]"
+            }`}
+          >
+            {row.report.status === "submitted" ? "עריכה, אישור ושליחה לבית הספר" : row.report.status === "approved" ? "עריכה ושליחה מחדש" : "לדוח"}
+          </Link>
+          {row.report.status === "submitted" && <span className="text-xs text-[var(--color-text-muted)]">הדוח עוד לא נשלח. הוא יישלח רק אחרי שתאשרו אותו.</span>}
+        </div>
+      )}
     </details>
   );
 }

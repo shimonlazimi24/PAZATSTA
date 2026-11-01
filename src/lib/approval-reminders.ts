@@ -129,10 +129,38 @@ export function summarizeReminders(
  * Canceled because the window closed, not because someone rejected or canceled it
  * earlier. Rows from before canceledAt existed fall back to "the window has closed".
  */
-function expiredUnapproved(l: ReminderLesson, now: Date): boolean {
+function expiredUnapproved(l: Pick<ReminderLesson, "status" | "approvalExpiresAt" | "canceledAt">, now: Date): boolean {
   if (l.status !== "canceled" || !l.approvalExpiresAt) return false;
   if (l.canceledAt) return l.canceledAt >= l.approvalExpiresAt;
   return l.approvalExpiresAt <= now;
+}
+
+export type Tone = "ok" | "warning" | "danger" | "muted";
+
+/** What became of a request, in the admin's words. A request whose window closed counts as not approved even before the hourly job cancels it. */
+export function requestOutcome(l: { status: string; approvalExpiresAt: Date | null; canceledAt: Date | null }, now: Date): { label: string; tone: Tone } {
+  if (l.status === "scheduled" || l.status === "completed") return { label: "אושר", tone: "ok" };
+  if (l.status === "pending_approval") {
+    return l.approvalExpiresAt && l.approvalExpiresAt <= now ? { label: "לא אושר בזמן", tone: "danger" } : { label: "עדיין ממתין לאישור", tone: "warning" };
+  }
+  if (expiredUnapproved(l, now)) {
+    return { label: "בוטל כי לא אושר בזמן", tone: "danger" };
+  }
+  return { label: "בוטל", tone: "muted" };
+}
+
+/** One line on what, if anything, the admin should do about a teacher. */
+export function teacherFollowUp(s: Pick<TeacherReminderStats, "expiredUnapproved" | "ignoredFirstReminder">): { label: string; tone: Tone } {
+  if (s.expiredUnapproved > 0) return { label: "כדאי לדבר איתו: תלמידים איבדו שיעור כי לא אישר", tone: "danger" };
+  if (s.ignoredFirstReminder > 0) return { label: "לשים לב: לא תמיד מגיב לתזכורת הראשונה", tone: "warning" };
+  return { label: "תקין: מאשר אחרי תזכורת", tone: "ok" };
+}
+
+/** Which reminder a mark is, counted from the first. */
+export function reminderOrdinal(mark: number): string {
+  const sorted = [...REMINDER_MARKS_HOURS_LEFT].sort((a, b) => b - a);
+  const i = sorted.indexOf(mark as (typeof REMINDER_MARKS_HOURS_LEFT)[number]);
+  return i === 0 ? "ראשונה" : i === 1 ? "שנייה" : "תזכורת";
 }
 
 function median(values: number[]): number | null {

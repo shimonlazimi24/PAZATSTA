@@ -116,6 +116,12 @@ export function AdminFrontalDayDetail({ id }: { id: string }) {
     apiJson<Teacher[]>("/api/admin/teachers").then((r) => r.ok && setTeachers(r.data));
   }, [load]);
 
+  // Opened from "עריכה, אישור ושליחה" in the list: bring the report into view once it has loaded.
+  const hasReport = !!day?.report;
+  useEffect(() => {
+    if (hasReport && window.location.hash === "#report") document.getElementById("report")?.scrollIntoView({ block: "start" });
+  }, [hasReport]);
+
   async function act(run: () => Promise<{ ok: boolean; error?: string }>, done: string) {
     setBusy(true);
     setError(null);
@@ -206,7 +212,7 @@ export function AdminFrontalDayDetail({ id }: { id: string }) {
       )}
 
       {day.report && (
-        <section className={`${card} ${day.report.status === "submitted" ? "border-amber-300" : ""}`} aria-labelledby="report-h">
+        <section id="report" className={`${card} scroll-mt-6 ${day.report.status === "submitted" ? "border-amber-300" : ""}`} aria-labelledby="report-h">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h3 id="report-h" className="text-lg font-semibold">דוח סיום</h3>
             <p className="text-sm text-[var(--color-text-muted)]">הוגש על ידי {day.report.teacherName}</p>
@@ -271,7 +277,7 @@ export function AdminFrontalDayDetail({ id }: { id: string }) {
               {day.report.status !== "returned" && (
                 <button
                   type="button"
-                  className="mt-3 text-sm font-medium text-[var(--color-primary)] underline"
+                  className="mt-3 inline-flex min-h-[44px] items-center rounded-[var(--radius-input)] border border-[var(--color-primary)] bg-white px-4 text-sm font-medium text-[var(--color-primary)] hover:bg-[var(--color-bg-muted)]"
                   onClick={() => setDraft(day.report!.answers.map((a) => ({ value: a.value, internal: !!a.internal })))}
                 >
                   עריכת הסיכום

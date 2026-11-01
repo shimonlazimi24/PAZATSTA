@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { dueReminderMark, hoursLeftLabel, summarizeReminders } from "../src/lib/approval-reminders";
+import { dueReminderMark, hoursLeftLabel, reminderOrdinal, requestOutcome, summarizeReminders, teacherFollowUp } from "../src/lib/approval-reminders";
 
 const H = 60 * 60 * 1000;
 const now = new Date("2026-11-01T12:00:00Z");
@@ -100,4 +100,23 @@ test("a request approved right after the first reminder is not counted as ignori
   );
   assert.equal(stats[0].ignoredFirstReminder, 0);
   assert.equal(stats[0].approvedAfterReminder, 1);
+});
+
+test("each request shows what became of it, including a window that closed before the hourly cancel", () => {
+  const now = new Date("2026-11-01T12:00:00Z");
+  const past = new Date("2026-10-31T12:00:00Z");
+  const future = new Date("2026-11-02T12:00:00Z");
+  assert.equal(requestOutcome({ status: "scheduled", approvalExpiresAt: past, canceledAt: null }, now).label, "אושר");
+  assert.equal(requestOutcome({ status: "pending_approval", approvalExpiresAt: future, canceledAt: null }, now).label, "עדיין ממתין לאישור");
+  assert.equal(requestOutcome({ status: "pending_approval", approvalExpiresAt: past, canceledAt: null }, now).label, "לא אושר בזמן");
+  assert.equal(requestOutcome({ status: "canceled", approvalExpiresAt: past, canceledAt: now }, now).label, "בוטל כי לא אושר בזמן");
+  assert.equal(requestOutcome({ status: "canceled", approvalExpiresAt: future, canceledAt: now }, now).label, "בוטל");
+});
+
+test("the admin gets one clear line per teacher", () => {
+  assert.equal(teacherFollowUp({ expiredUnapproved: 1, ignoredFirstReminder: 3 }).tone, "danger");
+  assert.equal(teacherFollowUp({ expiredUnapproved: 0, ignoredFirstReminder: 1 }).tone, "warning");
+  assert.equal(teacherFollowUp({ expiredUnapproved: 0, ignoredFirstReminder: 0 }).tone, "ok");
+  assert.equal(reminderOrdinal(18), "ראשונה");
+  assert.equal(reminderOrdinal(12), "שנייה");
 });
