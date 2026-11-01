@@ -3,6 +3,9 @@ import { prisma } from "@/lib/db";
 import { validateCronAuth } from "@/lib/cron-auth";
 import { runFrontalDayNotices } from "@/lib/frontal-days-run";
 
+/** Leaves room for a slow email provider; the default can cut a run short. */
+export const maxDuration = 60;
+
 /** Daily: frontal-day reminders to teachers and "no teachers yet" warnings to admins. */
 export async function GET(req: Request) {
   const authError = validateCronAuth(req);

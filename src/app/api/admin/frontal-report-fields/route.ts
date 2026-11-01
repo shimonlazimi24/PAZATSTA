@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin-api";
 import { firstZodMessage } from "@/lib/group-lessons-server";
+import { fieldSetupProblem } from "@/lib/frontal-days";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,9 @@ export async function POST(req: Request) {
   const parsed = FieldInput.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: firstZodMessage(parsed.error) }, { status: 400 });
   const form = formOf(req);
+  const others = await prisma.frontalReportField.findMany({ where: { form, active: true } });
+  const problem = fieldSetupProblem(others, { id: "", ...parsed.data });
+  if (problem) return NextResponse.json({ error: problem }, { status: 400 });
   const last = await prisma.frontalReportField.findFirst({ where: { form }, orderBy: { sortOrder: "desc" }, select: { sortOrder: true } });
   const created = await prisma.frontalReportField.create({
     data: { ...parsed.data, ...(form === "survey" ? { internal: false } : {}), form, sortOrder: (last?.sortOrder ?? 0) + 1 },

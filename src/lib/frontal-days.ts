@@ -168,8 +168,6 @@ export function dayStatus(p: {
   return { label: "כל המורים רשומים", tone: "ok" };
 }
 
-export type ReportFieldKind = "short" | "long" | "number" | "date" | "choice" | "multi";
-
 export type ReportField = {
   id: string;
   label: string;
@@ -181,7 +179,8 @@ export type ReportField = {
   internal?: boolean;
 };
 
-export type ReportAnswer = { label: string; value: string; internal?: boolean };
+/** fieldId links an answer to its question even after the question is reworded; older answers lack it. */
+export type ReportAnswer = { label: string; value: string; internal?: boolean; fieldId?: string };
 
 /** Normalises one raw answer: multi-select answers are arrays, everything else a trimmed string. */
 function rawValues(raw: unknown): string[] {
@@ -223,9 +222,41 @@ export function buildReportAnswers(
     if (f.kind === "number" && value && !/^\d{1,6}$/.test(value)) return { ok: false, message: `${f.label}: מספר שלם בלבד` };
     if (f.kind === "date" && value && !/^\d{4}-\d{2}-\d{2}$/.test(value)) return { ok: false, message: `${f.label}: תאריך לא תקין` };
     if (value.length > 4000) return { ok: false, message: `${f.label}: הטקסט ארוך מדי` };
-    answers.push({ label: f.label, value, ...(f.internal ? { internal: true } : {}) });
+    answers.push({ fieldId: f.id, label: f.label, value, ...(f.internal ? { internal: true } : {}) });
   }
   return { ok: true, answers };
+}
+
+const isChoice = (kind: string) => kind === "choice" || kind === "multi";
+
+/**
+ * Checks a question as it will be saved, against the other questions of the same
+ * form. Returns the problem in the admin's words, or null. Catches a choice
+ * question without options, a follow-up tied to a missing answer or to itself
+ * in a loop, and an edit that would leave an existing follow-up never showing.
+ */
+export function fieldSetupProblem(others: (ReportField & { active?: boolean })[], next: ReportField): string | null {
+  const options = next.options ?? [];
+  if (isChoice(next.kind) && options.length < 2) return "לשאלת בחירה צריך לפחות שתי אפשרויות";
+  const byId = new Map(others.filter((f) => f.id !== next.id).map((f) => [f.id, f]));
+  if (next.showIfFieldId) {
+    const parent = byId.get(next.showIfFieldId);
+    if (!parent || !isChoice(parent.kind)) return "השאלה שבחרתם להציג אחריה לא קיימת או שאינה שאלת בחירה";
+    const values = next.showIfValues ?? [];
+    if (values.length === 0 || values.some((v) => !(parent.options ?? []).includes(v))) return "בחרו אחרי איזו תשובה להציג את השאלה";
+    // Walk up the chain of parents; reaching this question again means a loop.
+    let cur: ReportField | undefined = parent;
+    for (let i = 0; cur && i <= byId.size; i++) {
+      if (cur.showIfFieldId === next.id) return "אי אפשר להציג שאלה אחרי שאלה שמופיעה רק אחריה";
+      cur = cur.showIfFieldId ? byId.get(cur.showIfFieldId) : undefined;
+    }
+  }
+  for (const child of byId.values()) {
+    if (child.showIfFieldId !== next.id || child.active === false) continue;
+    const stillShows = isChoice(next.kind) && (child.showIfValues ?? []).some((v) => options.includes(v));
+    if (!stillShows) return `השאלה "${child.label}" מופיעה רק אחרי תשובה בשאלה הזו. עדכנו או הסירו אותה קודם`;
+  }
+  return null;
 }
 
 /** What the school receives: everything except answers marked internal. */

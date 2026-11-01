@@ -3,6 +3,9 @@ import { prisma } from "@/lib/db";
 import { sendScreeningFollowUpReminder } from "@/lib/email";
 import { validateCronAuth } from "@/lib/cron-auth";
 
+/** Leaves room for a slow email provider; the default can cut a run short. */
+export const maxDuration = 60;
+
 /** Run daily: find lessons with completed report where student's screening date is today;
  *  send reminder to teacher; set followUpReminderSentAt on StudentProfile to avoid duplicates. */
 export async function GET(req: Request) {

@@ -40,6 +40,8 @@ export async function sendDueApprovalReminders(prisma: PrismaClient, now = new D
       student: { select: { name: true, email: true, studentProfile: { select: { studentFullName: true } } } },
       approvalReminders: { where: { channel: CHANNEL }, select: { mark: true } },
     },
+    // The most urgent first, so a long run never leaves them for last.
+    orderBy: { approvalExpiresAt: "asc" },
     take: 500,
   });
 

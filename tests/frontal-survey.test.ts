@@ -55,3 +55,16 @@ test("a survey form left completely blank is not an answer", () => {
   assert.ok(one.ok);
   assert.ok(!one.answers.every((a) => !a.value));
 });
+
+test("rewording a survey question keeps its earlier answers together", () => {
+  const questions = [{ id: "q1", label: "כמה היום היה מועיל?", kind: "choice", options: ["מאוד", "קצת"] }];
+  const responses = [
+    [{ fieldId: "q1", label: "כמה היום היה מועיל לך?", value: "מאוד" }],
+    [{ fieldId: "q1", label: "כמה היום היה מועיל?", value: "קצת" }],
+    // Answers saved before ids were stored still match by label.
+    [{ label: "כמה היום היה מועיל?", value: "מאוד" }],
+  ];
+  const s = summarizeSurvey(questions, responses);
+  assert.equal(s.length, 1);
+  assert.deepEqual(s[0], { label: "כמה היום היה מועיל?", kind: "choice", answered: 3, counts: [{ option: "מאוד", count: 2 }, { option: "קצת", count: 1 }] });
+});

@@ -3,6 +3,9 @@ import { prisma } from "@/lib/db";
 import { validateCronAuth } from "@/lib/cron-auth";
 import { sendDueApprovalReminders } from "@/lib/approval-reminders-run";
 
+/** Leaves room for a slow email provider; the default can cut a run short. */
+export const maxDuration = 60;
+
 /** Every 15 minutes: remind teachers about lesson requests they have not approved. */
 export async function GET(req: Request) {
   const authError = validateCronAuth(req);

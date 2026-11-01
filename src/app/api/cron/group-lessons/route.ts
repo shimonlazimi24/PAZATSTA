@@ -3,6 +3,9 @@ import { prisma } from "@/lib/db";
 import { validateCronAuth } from "@/lib/cron-auth";
 import { runGroupLessonNotices } from "@/lib/group-lessons-run";
 
+/** Leaves room for a slow email provider; the default can cut a run short. */
+export const maxDuration = 60;
+
 /** Daily: group-lesson sign-up notices and day-before reminders. */
 export async function GET(req: Request) {
   const authError = validateCronAuth(req);

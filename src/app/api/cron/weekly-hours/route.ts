@@ -3,6 +3,9 @@ import { prisma } from "@/lib/db";
 import { sendWeeklyHoursSummaryToAdmin } from "@/lib/email";
 import { validateCronAuth } from "@/lib/cron-auth";
 
+/** Leaves room for a slow email provider; the default can cut a run short. */
+export const maxDuration = 60;
+
 /** Parse "HH:MM" or "HHMM" to minutes since midnight. */
 function timeToMinutes(t: string): number {
   const normalized = String(t).replace(/\s/g, "").replace(":", "");

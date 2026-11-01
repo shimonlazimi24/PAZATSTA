@@ -22,6 +22,10 @@ export async function GET(req: Request) {
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
     return NextResponse.json({ error: "Invalid date" }, { status: 400 });
   }
+  // The board shows a week; a wider range is a mistake and would load thousands of rows.
+  if (end.getTime() - start.getTime() > 45 * 24 * 60 * 60 * 1000 || end < start) {
+    return NextResponse.json({ error: "Range must be 0–45 days" }, { status: 400 });
+  }
 
   const lessons = await prisma.lesson.findMany({
     where: {

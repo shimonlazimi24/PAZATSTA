@@ -3,6 +3,9 @@ import { prisma } from "@/lib/db";
 import { validateCronAuth } from "@/lib/cron-auth";
 import { expireOverduePendingLessons } from "@/lib/expire-pending-lessons";
 
+/** Leaves room for a slow email provider; the default can cut a run short. */
+export const maxDuration = 60;
+
 /**
  * Hourly maintenance: cancel pending lessons past approvalExpiresAt and restore
  * their slots, then sweep rows that have outlived their usefulness. Nothing else

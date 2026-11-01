@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   DEFAULT_MESSAGE_TEMPLATE,
   buildReportAnswers,
+  fieldSetupProblem,
   canRegister,
   canWithdraw,
   dayStatus,
@@ -85,9 +86,9 @@ test("report answers follow the admin's fields", () => {
   assert.deepEqual(buildReportAnswers(fields, { n: "30", s: " היה טוב " }), {
     ok: true,
     answers: [
-      { label: "כמה תלמידים", value: "30" },
-      { label: "סיכום", value: "היה טוב" },
-      { label: "הערות", value: "" },
+      { fieldId: "n", label: "כמה תלמידים", value: "30" },
+      { fieldId: "s", label: "סיכום", value: "היה טוב" },
+      { fieldId: "x", label: "הערות", value: "" },
     ],
   });
   assert.equal(buildReportAnswers(fields, { n: "30" }).ok, false);
@@ -108,10 +109,10 @@ test("single and multiple choice answers are stored as text, internal ones marke
   assert.equal(r.ok, true);
   if (r.ok) {
     assert.deepEqual(r.answers, [
-      { label: "מספר משתתפים", value: "בין 10-20" },
-      { label: "המורה המלווה", value: "נוכח לאורך הסדנה, אחר", internal: true },
-      { label: "מה עוד לגבי המורה?", value: "יצא באמצע", internal: true },
-      { label: "האם היו בעיות משמעת?", value: "לא" },
+      { fieldId: "count", label: "מספר משתתפים", value: "בין 10-20" },
+      { fieldId: "teacher", label: "המורה המלווה", value: "נוכח לאורך הסדנה, אחר", internal: true },
+      { fieldId: "teacherOther", label: "מה עוד לגבי המורה?", value: "יצא באמצע", internal: true },
+      { fieldId: "discipline", label: "האם היו בעיות משמעת?", value: "לא" },
     ]);
   }
 });
@@ -131,4 +132,25 @@ test("the school receives everything except internal answers", () => {
   const r = buildReportAnswers(form, { count: "30+", teacher: ["הפריע להתנהלות הסדנה"], discipline: "לא" });
   assert.ok(r.ok);
   if (r.ok) assert.deepEqual(answersForRecipient(r.answers).map((a) => a.label), ["מספר משתתפים", "האם היו בעיות משמעת?"]);
+});
+
+test("a question is checked as it will be saved", () => {
+  const others = form.map((f) => ({ ...f, active: true }));
+  const teacher = others.find((f) => f.id === "teacher")!;
+  // A choice question needs at least two options.
+  assert.match(fieldSetupProblem(others, { ...teacher, options: ["נוכח לאורך הסדנה"] }) ?? "", /שתי אפשרויות/);
+  // Removing "אחר" would leave its follow-up never showing.
+  assert.match(fieldSetupProblem(others, { ...teacher, options: ["נוכח לאורך הסדנה", "הפריע להתנהלות הסדנה"] }) ?? "", /מה עוד לגבי המורה/);
+  assert.match(fieldSetupProblem(others, { ...teacher, kind: "long", options: [] }) ?? "", /מה עוד לגבי המורה/);
+  // A question can't follow one of its own follow-ups.
+  const looped = { ...teacher, showIfFieldId: "teacherOther", showIfValues: ["x"] };
+  assert.ok(fieldSetupProblem(others, looped));
+  const child = { ...others.find((f) => f.id === "disciplineDetail")!, kind: "choice", options: ["א", "ב"] };
+  const withChild = others.map((f) => (f.id === child.id ? child : f));
+  assert.match(fieldSetupProblem(withChild, { ...others.find((f) => f.id === "discipline")!, showIfFieldId: child.id, showIfValues: ["א"] }) ?? "", /שמופיעה רק אחריה/);
+  // The trigger answer must be one of the parent's options.
+  assert.ok(fieldSetupProblem(others, { id: "", label: "חדש", kind: "short", required: false, showIfFieldId: "discipline", showIfValues: ["אולי"] }));
+  // The real form as it stands is fine, and so is rewording a question.
+  for (const f of others) assert.equal(fieldSetupProblem(others, f), null);
+  assert.equal(fieldSetupProblem(others, { ...teacher, label: "המורה של הכיתה" }), null);
 });

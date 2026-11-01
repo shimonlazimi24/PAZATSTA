@@ -6,6 +6,9 @@ import { lessonStartsAtUtc } from "@/lib/lesson-start";
 import { formatDateInIsrael } from "@/lib/date-utils";
 import { isValidDeliveryEmail } from "@/lib/validation";
 
+/** Leaves room for a slow email provider; the default can cut a run short. */
+export const maxDuration = 60;
+
 const MS_HOUR = 60 * 60 * 1000;
 /**
  * Target ~24h before lesson start. On Vercel Hobby, cron may run only once per day

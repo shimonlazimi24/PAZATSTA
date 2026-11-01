@@ -27,7 +27,7 @@ export function surveyRatio(count: number, classSize: number | null | undefined)
   return `${count} מתוך ${classSize} ענו (${pct}%)`;
 }
 
-type Question = { label: string; kind: string; options?: string[] };
+type Question = { id?: string; label: string; kind: string; options?: string[] };
 
 export type QuestionSummary =
   | { label: string; kind: "choice"; answered: number; counts: { option: string; count: number }[] }
@@ -36,17 +36,20 @@ export type QuestionSummary =
 
 /**
  * Sums up the answers per question, in the order of the current questions.
- * Answers are matched by label (labels are copied into each response), so a
- * question removed later still shows, after the current ones.
+ * Answers are matched by question id, so rewording a question keeps its answers
+ * together. Older answers without an id are matched by label. Answers to a
+ * question removed later still show, after the current ones.
  */
 export function summarizeSurvey(questions: Question[], responses: ReportAnswer[][]): QuestionSummary[] {
+  const byId = new Map(questions.filter((q) => q.id).map((q) => [q.id as string, q.label]));
   const byLabel = new Map<string, string[]>();
   for (const r of responses) {
     for (const a of r) {
       if (!a.value?.trim()) continue;
-      const list = byLabel.get(a.label) ?? [];
+      const label = (a.fieldId && byId.get(a.fieldId)) || a.label;
+      const list = byLabel.get(label) ?? [];
       list.push(a.value.trim());
-      byLabel.set(a.label, list);
+      byLabel.set(label, list);
     }
   }
   const known = new Set(questions.map((q) => q.label));

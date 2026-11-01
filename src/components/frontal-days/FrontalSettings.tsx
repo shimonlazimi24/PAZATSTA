@@ -73,6 +73,21 @@ function ReportFields({ form = "report" }: { form?: "report" | "survey" }) {
   const choiceFields = active.filter((f) => f.kind === "choice" || f.kind === "multi");
   const parent = choiceFields.find((f) => f.id === draft.showIfFieldId);
   const needsOptions = draft.kind === "choice" || draft.kind === "multi";
+  const draftOptions = draft.optionsText.split("\n").map((x) => x.trim()).filter(Boolean);
+  // A question can't follow itself or one of its own follow-ups.
+  const descendants = new Set<string>();
+  if (editing) {
+    descendants.add(editing.id);
+    for (let grew = true; grew; ) {
+      grew = false;
+      for (const f of fields) {
+        if (f.showIfFieldId && descendants.has(f.showIfFieldId) && !descendants.has(f.id)) {
+          descendants.add(f.id);
+          grew = true;
+        }
+      }
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -140,7 +155,7 @@ function ReportFields({ form = "report" }: { form?: "report" | "survey" }) {
         className="space-y-3 rounded-md bg-[var(--color-bg-muted)] p-4"
         onSubmit={async (e) => {
           e.preventDefault();
-          const options = draft.optionsText.split("\n").map((x) => x.trim()).filter(Boolean);
+          const options = draftOptions;
           const body = {
             label: draft.label,
             kind: draft.kind,
@@ -151,9 +166,10 @@ function ReportFields({ form = "report" }: { form?: "report" | "survey" }) {
             showIfFieldId: draft.showIfFieldId || null,
             showIfValues: draft.showIfFieldId ? draft.showIfValues : [],
           };
+          const json = { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
           const r = editing
-            ? await apiJson(`/api/admin/frontal-report-fields/${editing.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
-            : await apiJson(`/api/admin/frontal-report-fields?form=${form}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+            ? await apiJson(`/api/admin/frontal-report-fields/${editing.id}`, { method: "PATCH", ...json })
+            : await apiJson(`/api/admin/frontal-report-fields?form=${form}`, { method: "POST", ...json });
           if (!r.ok) return setMessage({ ok: false, text: r.error });
           setMessage({ ok: true, text: editing ? `"${draft.label}" עודכנה.` : `"${draft.label}" נוספה ${where}.` });
           setDraft(EMPTY_DRAFT);
@@ -180,6 +196,7 @@ function ReportFields({ form = "report" }: { form?: "report" | "survey" }) {
           <div>
             <label htmlFor={`${form}-nf-options`} className="mb-1 block text-sm">האפשרויות, אחת בכל שורה</label>
             <textarea id={`${form}-nf-options`} rows={4} className={`${input} w-full py-2`} value={draft.optionsText} onChange={(e) => setDraft({ ...draft, optionsText: e.target.value })} />
+            {draftOptions.length < 2 && <p className="mt-1 text-xs text-[var(--color-text-muted)]">צריך לפחות שתי אפשרויות.</p>}
           </div>
         )}
         <div>
@@ -192,7 +209,7 @@ function ReportFields({ form = "report" }: { form?: "report" | "survey" }) {
               <label htmlFor={`${form}-nf-parent`} className="mb-1 block text-sm">להציג רק אחרי תשובה מסוימת (רשות)</label>
               <select id={`${form}-nf-parent`} className={`${input} w-full`} value={draft.showIfFieldId} onChange={(e) => setDraft({ ...draft, showIfFieldId: e.target.value, showIfValues: [] })}>
                 <option value="">תמיד להציג</option>
-                {choiceFields.filter((f) => f.id !== editing?.id).map((f) => (
+                {choiceFields.filter((f) => !descendants.has(f.id)).map((f) => (
                   <option key={f.id} value={f.id}>{f.label}</option>
                 ))}
               </select>
@@ -227,7 +244,10 @@ function ReportFields({ form = "report" }: { form?: "report" | "survey" }) {
               פנימי, לא לשלוח לבית הספר
             </label>
           )}
-          <button type="submit" disabled={!draft.label.trim() || (draft.showIfFieldId !== "" && draft.showIfValues.length === 0)} className="min-h-[36px] rounded-md bg-[var(--color-primary)] px-4 text-sm font-medium text-white disabled:opacity-50">
+          <button
+            type="submit"
+            disabled={!draft.label.trim() || (needsOptions && draftOptions.length < 2) || (draft.showIfFieldId !== "" && draft.showIfValues.length === 0)}
+            className="min-h-[36px] rounded-md bg-[var(--color-primary)] px-4 text-sm font-medium text-white disabled:opacity-50">
             {editing ? "שמירת השינויים" : "הוספת השאלה"}
           </button>
           {editing && (

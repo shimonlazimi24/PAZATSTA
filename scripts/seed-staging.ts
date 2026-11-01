@@ -49,7 +49,7 @@ async function main() {
     const user = await prisma.user.upsert({ where: { email: t.email }, create: { email: t.email, name: t.name, role: "teacher", phone: t.phone }, update: { phone: t.phone } });
     await prisma.teacherProfile.upsert({
       where: { userId: user.id },
-      create: { userId: user.id, displayName: t.name, avatarType: t.avatarType, specialties: t.specialties, bio: "מדריך/ה לבדיקות" },
+      create: { userId: user.id, displayName: t.name, avatarType: t.avatarType, specialties: t.specialties, bio: "מורה לבדיקות" },
       update: { specialties: t.specialties },
     });
     // Slots on the next 10 days, 16:00–20:00, so booking can be tested.
