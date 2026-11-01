@@ -34,7 +34,7 @@ type Day = {
   checklistDone?: string[];
   canWithdraw?: boolean;
   reportFields?: Field[];
-  report?: { byMe: boolean; status: string; adminNote: string; answers: { label: string; value: string }[] } | null;
+  report?: { byMe: boolean; status: string; adminNote: string; answers: { label: string; value: string; fieldId?: string }[] } | null;
   otherTeacherReported?: boolean;
 };
 
@@ -82,11 +82,11 @@ export function TeacherFrontalDay({ id }: { id: string }) {
     }
     setDay(r.data);
     setDone(r.data.checklistDone ?? []);
-    // A returned report reopens with its previous answers, matched by question.
+    // A returned report reopens with its previous answers, matched by question (by id, or by wording for older reports).
     if (r.data.report?.status === "returned") {
       const prevAnswers: Record<string, AnswerValue> = {};
       for (const f of r.data.reportFields ?? []) {
-        const v = r.data.report.answers.find((a) => a.label === f.label)?.value ?? "";
+        const v = r.data.report.answers.find((a) => (a.fieldId ? a.fieldId === f.id : a.label === f.label))?.value ?? "";
         if (v) prevAnswers[f.id] = f.kind === "multi" ? v.split(", ") : v;
       }
       setAnswers(prevAnswers);

@@ -189,7 +189,7 @@ export function FrontalDayForm({
           <Field id="fd-rname" label="שם">
             <input id="fd-rname" className={input} value={v.recipientName} onChange={set("recipientName")} placeholder="למשל: רכזת השכבה" />
           </Field>
-          <Field id="fd-remail" label="אימייל" hint="הדוח נשלח לכאן אחרי שתאשרו אותו.">
+          <Field id="fd-remail" label="אימייל" hint="שום דבר לא נשלח אוטומטית. אחרי היום המורה ממלא דוח סיום, אתם קוראים אותו ויכולים לערוך, והוא נשלח לכאן רק כשלוחצים על אישור ושליחה.">
             <input id="fd-remail" dir="ltr" type="email" className={input} value={v.recipientEmail} onChange={set("recipientEmail")} />
           </Field>
         </div>

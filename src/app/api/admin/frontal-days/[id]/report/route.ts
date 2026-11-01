@@ -46,7 +46,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       const a = incoming[i] as { value?: unknown; internal?: unknown } | null;
       const value = typeof a?.value === "string" ? a.value.trim() : "";
       if (value.length > 4000) return NextResponse.json({ error: `${stored[i].label}: הטקסט ארוך מדי` }, { status: 400 });
-      edited.push({ label: stored[i].label, value, ...(a?.internal === true ? { internal: true } : {}) });
+      edited.push({ ...(stored[i].fieldId ? { fieldId: stored[i].fieldId } : {}), label: stored[i].label, value, ...(a?.internal === true ? { internal: true } : {}) });
     }
     await prisma.frontalDayReport.update({ where: { id: report.id }, data: { answers: edited } });
     return NextResponse.json({ ok: true });
