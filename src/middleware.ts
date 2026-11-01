@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { getSigningSecret } from "@/lib/secrets";
 
 const SESSION_COOKIE = "session";
-const PUBLIC_PATHS = ["/", "/login", "/verify", "/welcome"];
+const PUBLIC_PATHS = ["/", "/login", "/verify", "/welcome", "/switch-account"];
 const PUBLIC_PREFIXES = ["/api/auth", "/api/cron", "/login/", "/p/lesson-summary/", "/survey/", "/api/survey/"];
 
 /** Paths whose HTML must never be cached by a CDN — they render per-user data. */
@@ -80,9 +80,18 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  const res = valid
-    ? NextResponse.next()
-    : NextResponse.redirect(new URL("/login", req.url));
+  let res: NextResponse;
+  if (valid) {
+    // Layouts read the path to send someone on the wrong account to /switch-account with it.
+    const headers = new Headers(req.headers);
+    headers.set("x-pathname", path + req.nextUrl.search);
+    res = NextResponse.next({ request: { headers } });
+  } else {
+    // Keep where they were heading (often a link in an email), so login lands there.
+    const login = new URL("/login", req.url);
+    if (isPrivate(path)) login.searchParams.set("next", path + req.nextUrl.search);
+    res = NextResponse.redirect(login);
+  }
 
   // Avoid CDN/edge caching HTML with stale /_next/static/* hashes after redeploy.
   // Only authenticated pages need this; public pages stay cacheable.

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { nextFor } from "@/lib/login-next";
 import { canAccessAdmin } from "@/lib/admin";
 import { createSession } from "@/lib/auth";
 import { displayIsraeliMobile, normalizeIsraeliMobile } from "@/lib/phone";
@@ -68,9 +69,10 @@ export async function completeLogin(params: {
   }
 
   const sessionId = await createSession(user.id);
-  const wantAdmin = next === "/admin" && canAccessAdmin(user);
-  const redirect = wantAdmin
-    ? "/admin"
+  // The page the user was heading for (an email link, say), when they may open it.
+  const target = nextFor({ role: user.role, canAccessAdmin: canAccessAdmin(user) }, next);
+  const redirect = target
+    ? target
     : user.role === "student"
       ? "/book"
       : user.role === "teacher"

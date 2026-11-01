@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { areaOf, safeNext } from "@/lib/login-next";
 
 const MODES = [
   { href: "/login/student", label: "התחבר כתלמיד", desc: "קביעת שיעורים והשיעורים שלי" },
@@ -13,10 +14,15 @@ const MODES = [
 
 /** Pick who you are; each choice has its own login screen, so all three look and behave the same. */
 function LoginChoices() {
-  const searchParams = useSearchParams();
-  const nextAdmin = searchParams.get("next") === "/admin";
-  // Heading for the admin area: a student login cannot get there.
-  const modes = nextAdmin ? MODES.filter((m) => m.href !== "/login/student") : MODES;
+  const next = safeNext(useSearchParams().get("next"));
+  const area = next ? areaOf(next) : null;
+  // Heading for a page (an email link): offer only the logins that can open it.
+  const modes =
+    area === "admin"
+      ? MODES.filter((m) => m.href !== "/login/student")
+      : area
+        ? MODES.filter((m) => m.href === `/login/${area}`)
+        : MODES;
 
   return (
     <div className="w-full max-w-md space-y-8">
@@ -28,7 +34,7 @@ function LoginChoices() {
         {modes.map((m) => (
           <Link
             key={m.href}
-            href={nextAdmin ? `${m.href}?next=/admin` : m.href}
+            href={next ? `${m.href}?${new URLSearchParams({ next })}` : m.href}
             className="block rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-6 text-right shadow-sm transition hover:border-[var(--color-primary)] hover:shadow-md"
           >
             <p className="text-lg font-semibold text-[var(--color-text)]">{m.label}</p>

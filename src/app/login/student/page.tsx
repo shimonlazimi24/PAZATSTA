@@ -1,12 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BackLink } from "@/components/design/BackLink";
 import { CodeLogin } from "@/components/auth/CodeLogin";
+import { safeNext } from "@/lib/login-next";
+
+function StudentLogin() {
+  const next = safeNext(useSearchParams().get("next"));
+  return <CodeLogin role="student" askStudentPhone next={next || undefined} />;
+}
 
 export default function StudentLoginPage() {
   const router = useRouter();
@@ -47,7 +53,9 @@ export default function StudentLoginPage() {
               </Link>
             </p>
           </div>
-          <CodeLogin role="student" askStudentPhone />
+          <Suspense fallback={<CodeLogin role="student" askStudentPhone />}>
+            <StudentLogin />
+          </Suspense>
         </div>
 
         {/* The test-login API refuses in production; don't offer real students a dead button. */}

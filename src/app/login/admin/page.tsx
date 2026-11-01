@@ -2,7 +2,15 @@
 
 import { Logo } from "@/components/Logo";
 import { BackLink } from "@/components/design/BackLink";
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { CodeLogin } from "@/components/auth/CodeLogin";
+import { areaOf, safeNext } from "@/lib/login-next";
+
+function AdminLogin() {
+  const next = safeNext(useSearchParams().get("next"));
+  return <CodeLogin role="admin" next={next && areaOf(next) === "admin" ? next : "/admin"} />;
+}
 
 export default function AdminLoginPage() {
   return (
@@ -13,7 +21,9 @@ export default function AdminLoginPage() {
       </div>
       <div className="space-y-5 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-6">
         <h1 className="text-center text-xl font-semibold text-[var(--color-text)]">כניסת מנהל</h1>
-        <CodeLogin role="admin" next="/admin" />
+        <Suspense fallback={<CodeLogin role="admin" next="/admin" />}>
+          <AdminLogin />
+        </Suspense>
       </div>
     </div>
   );

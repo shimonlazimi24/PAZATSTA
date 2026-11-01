@@ -5,11 +5,12 @@ import { useSearchParams } from "next/navigation";
 import { Logo } from "@/components/Logo";
 import { BackLink } from "@/components/design/BackLink";
 import { CodeLogin } from "@/components/auth/CodeLogin";
+import { safeNext } from "@/lib/login-next";
 
 function TeacherLogin() {
-  // A teacher with admin rights heading for the admin area lands there after login.
-  const nextAdmin = useSearchParams().get("next") === "/admin";
-  return <CodeLogin role="teacher" next={nextAdmin ? "/admin" : undefined} />;
+  // Lands on the page the teacher was heading for (an email link, or the admin area for a teacher with admin rights).
+  const next = safeNext(useSearchParams().get("next"));
+  return <CodeLogin role="teacher" next={next || undefined} />;
 }
 
 export default function TeacherLoginPage() {
