@@ -324,17 +324,22 @@ export function AdminFrontalDayDetail({ id }: { id: string }) {
                 <p className="text-sm text-amber-800">כדי לשלוח את הדוח, הוסיפו בפרטי היום את האימייל של מקבל הדוח.</p>
               )}
               {day.report.status === "submitted" && (
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <label htmlFor="return-note" className="sr-only">מה לתקן</label>
-                  <input id="return-note" value={returnNote} onChange={(e) => setReturnNote(e.target.value)} placeholder="מה לתקן בדוח" className="min-h-[40px] flex-1 rounded-[var(--radius-input)] border border-[var(--color-border)] px-3" />
-                  <button
-                    type="button"
-                    disabled={busy || !returnNote.trim()}
-                    className={secondary}
-                    onClick={() => act(() => apiJson(`/api/admin/frontal-days/${id}/report`, json("PATCH", { action: "return", note: returnNote })), "הדוח הוחזר למורה.").then((ok) => ok && setReturnNote(""))}
-                  >
-                    החזרה למורה
-                  </button>
+                <div className="space-y-2 border-t border-[var(--color-border)] pt-4">
+                  <label htmlFor="return-note" className="block text-sm font-semibold text-[var(--color-text)]">משהו חסר בדוח? החזירו אותו למורה לתיקון</label>
+                  <p className="text-xs text-[var(--color-text-muted)]">
+                    כתבו מה לתקן. המורה יקבל מייל עם ההערה, והדוח ייפתח אצלו שוב עם התשובות שכבר מילא. שום דבר לא נשלח לבית הספר עד שהמורה יגיש מחדש ותאשרו.
+                  </p>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <input id="return-note" value={returnNote} onChange={(e) => setReturnNote(e.target.value)} placeholder="למשל: חסר פירוט על בעיות המשמעת" className="min-h-[44px] flex-1 rounded-[var(--radius-input)] border border-[var(--color-border)] px-3" />
+                    <button
+                      type="button"
+                      disabled={busy || !returnNote.trim()}
+                      className={secondary}
+                      onClick={() => act(() => apiJson(`/api/admin/frontal-days/${id}/report`, json("PATCH", { action: "return", note: returnNote })), "הדוח הוחזר למורה.").then((ok) => ok && setReturnNote(""))}
+                    >
+                      החזרה למורה
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
