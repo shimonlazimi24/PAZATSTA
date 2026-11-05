@@ -21,8 +21,6 @@ const inputCls =
   "w-full rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-3 py-2 focus-visible:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] disabled:opacity-60";
 const primaryCls =
   "w-full rounded-[var(--radius-input)] bg-[var(--color-primary)] py-2.5 font-medium text-white hover:opacity-90 disabled:opacity-50";
-const secondaryCls =
-  "w-full rounded-[var(--radius-input)] border border-[var(--color-primary)] bg-white py-2.5 font-medium text-[var(--color-primary)] hover:bg-[var(--color-bg-muted)] disabled:opacity-50";
 const linkCls = "text-sm text-[var(--color-primary)] underline hover:no-underline disabled:opacity-50";
 
 type Methods = { phone: boolean; google: boolean };
@@ -80,6 +78,7 @@ export function CodeLogin({ role, next }: CodeLoginProps) {
     if (reason && GOOGLE_ERRORS[reason]) setGoogleError(GOOGLE_ERRORS[reason]);
     const apply = (m: Methods) => {
       setMethods(m);
+      if (m.phone) setMethod("phone");
     };
     if (methodsCache) apply(methodsCache);
     else
@@ -248,75 +247,86 @@ export function CodeLogin({ role, next }: CodeLoginProps) {
     );
   }
 
-  const sectionTitle = "mb-2 text-sm font-semibold text-[var(--color-text)]";
-  const errorFor = (m: Method) =>
-    error && method === m ? (
-      <p className="text-sm text-red-700" role="alert">
-        {error}
-      </p>
-    ) : null;
+  const tabs: ReadonlyArray<readonly [Method, string]> = [
+    ["phone", "קוד לטלפון"],
+    ["email", "קוד למייל"],
+  ];
 
   return (
-    <div className="space-y-5">
-      {/* Google first, then SMS (when on), then the email code: each its own section. */}
+    <form onSubmit={(e) => onSend(e, usePhone ? "phone" : "email")} className="space-y-4">
       {googleError && (
         <p className="text-sm text-red-700" role="alert">
           {googleError}
         </p>
       )}
-      {googleAvailable && googleButton}
-
-      {phoneAvailable && (
+      {googleAvailable && (
         <>
-          {googleAvailable && divider}
-          <form onSubmit={(e) => onSend(e, "phone")} className="space-y-3" aria-labelledby="login-sms-title">
-            <h2 id="login-sms-title" className={sectionTitle}>
-              קוד ב-SMS
-            </h2>
-            <div>
-              <label htmlFor="login-phone" className="mb-1 block text-sm text-[var(--color-text)]">
-                מספר נייד
-              </label>
-              <input
-                id="login-phone"
-                type="tel"
-                inputMode="tel"
-                autoComplete="tel"
-                placeholder="050-1234567"
-                dir="ltr"
-                value={phone}
-                onChange={(e) => {
-                  setPhone(e.target.value);
-                  setError("");
-                }}
-                required
-                className={inputCls}
-                disabled={busy === "send"}
-              />
-              <p className="mt-1 text-xs text-[var(--color-text-muted)]">המספר ששמור אצלנו בחשבון שלכם.</p>
-            </div>
-            {errorFor("phone")}
-            <button type="submit" disabled={busy !== null} className={primaryCls}>
-              {busy === "send" && method === "phone" ? "שולח…" : "שלחו לי קוד ב-SMS"}
-            </button>
-          </form>
+          {googleButton}
+          {divider}
         </>
       )}
 
-      {(googleAvailable || phoneAvailable) && divider}
-      <form onSubmit={(e) => onSend(e, "email")} className="space-y-3" aria-labelledby="login-email-title">
-        <h2 id="login-email-title" className={sectionTitle}>
-          קוד במייל
-        </h2>
+      {/* One switch, one field, one button: phone or email, never both at once. */}
+      {phoneAvailable && (
+        <div
+          role="radiogroup"
+          aria-label="איך לקבל את הקוד"
+          className="grid grid-cols-2 gap-1 rounded-full bg-[var(--color-bg-muted)] p-1"
+        >
+          {tabs.map(([m, label]) => (
+            <button
+              key={m}
+              type="button"
+              role="radio"
+              aria-checked={method === m}
+              onClick={() => {
+                setMethod(m);
+                setError("");
+              }}
+              className={`rounded-full py-2 text-sm font-medium transition-colors ${
+                method === m
+                  ? "bg-white text-[var(--color-text)] shadow-sm"
+                  : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {usePhone ? (
         <div>
-          <label htmlFor="login-email" className="mb-1 block text-sm text-[var(--color-text)]">
-            אימייל
+          <label htmlFor="login-phone" className="mb-1 block text-sm font-medium text-[var(--color-text)]">
+            מספר נייד
+          </label>
+          <input
+            id="login-phone"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="050-0000000"
+            dir="ltr"
+            value={phone}
+            onChange={(e) => {
+              setPhone(e.target.value);
+              setError("");
+            }}
+            required
+            className={inputCls}
+            disabled={busy === "send"}
+          />
+        </div>
+      ) : (
+        <div>
+          <label htmlFor="login-email" className="mb-1 block text-sm font-medium text-[var(--color-text)]">
+            כתובת מייל
           </label>
           <input
             id="login-email"
             type="email"
             autoComplete="email"
-            placeholder="you@example.com"
+            placeholder="name@example.com"
             dir="ltr"
             value={email}
             onChange={(e) => {
@@ -328,11 +338,23 @@ export function CodeLogin({ role, next }: CodeLoginProps) {
             disabled={busy === "send"}
           />
         </div>
-        {errorFor("email")}
-        <button type="submit" disabled={busy !== null} className={phoneAvailable ? secondaryCls : primaryCls}>
-          {busy === "send" && method === "email" ? "שולח…" : "שלחו לי קוד למייל"}
-        </button>
-      </form>
-    </div>
+      )}
+
+      {error && (
+        <p className="text-sm text-red-700" role="alert">
+          {error}
+        </p>
+      )}
+      <button type="submit" disabled={busy !== null} className={`${primaryCls} flex items-center justify-center gap-2`}>
+        {busy === "send" ? (
+          "שולח…"
+        ) : (
+          <>
+            {usePhone ? "שלחו לי קוד לטלפון" : "שלחו לי קוד במייל"}
+            <span aria-hidden>←</span>
+          </>
+        )}
+      </button>
+    </form>
   );
 }
