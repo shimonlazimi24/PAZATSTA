@@ -1,16 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Heebo } from "next/font/google";
 import "./globals.css";
 import { ConditionalFooter } from "@/components/ConditionalFooter";
 
-// Self-hosted by Next at build time: no render-blocking request to a third-party
-// font CDN, and no CSP exception needed for fonts.googleapis.com.
-const heebo = Heebo({
-  subsets: ["hebrew", "latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  display: "swap",
-  variable: "--font-heebo",
-});
+// Heebo is served from /public/fonts (see globals.css), not fetched from Google
+// during the build: that download kept failing and broke deploys.
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -29,7 +22,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="he" dir="rtl" className={`${heebo.variable} font-heebo`}>
+    <html lang="he" dir="rtl" className="font-heebo">
       <body className="min-h-screen antialiased flex flex-col" dir="rtl">
         <div className="flex-1 flex flex-col min-h-0">{children}</div>
         <ConditionalFooter />
