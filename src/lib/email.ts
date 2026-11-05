@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import { isValidDeliveryEmail } from "@/lib/validation";
 import { emailDeliveryMode, redirectMessage } from "@/lib/email-guard";
+import { isPhoneOnlyEmail } from "@/lib/phone-only";
 
 const isDev = process.env.NODE_ENV !== "production";
 const noRealKey = () =>
@@ -11,6 +12,42 @@ const noRealKey = () =>
  * email guard, so staging and previews can never email real customers.
  */
 function getResend(): Pick<Resend, "emails" | "batch"> {
+  return withoutPhoneOnly(guardedResend());
+}
+
+type OneMessage = Parameters<Resend["emails"]["send"]>[0];
+
+/** The message without stand-in addresses of phone-only students, or null if nobody is left. */
+function dropPhoneOnly<M extends OneMessage>(message: M): M | null {
+  const keep = (list: string | string[] | undefined) =>
+    list === undefined ? undefined : (Array.isArray(list) ? list : [list]).filter((a) => !isPhoneOnlyEmail(a));
+  const to = keep(message.to) ?? [];
+  if (to.length === 0) return null;
+  const cc = keep(message.cc);
+  const bcc = keep(message.bcc);
+  return { ...message, to, ...(cc ? { cc } : {}), ...(bcc ? { bcc } : {}) };
+}
+
+/** Students who signed up with a phone alone have no mailbox: never send to them. */
+function withoutPhoneOnly(inner: Pick<Resend, "emails" | "batch">): Pick<Resend, "emails" | "batch"> {
+  const skipped = () => Promise.resolve({ data: null, error: null });
+  return {
+    emails: {
+      send: ((message: OneMessage) => {
+        const m = dropPhoneOnly(message);
+        return m ? inner.emails.send(m) : skipped();
+      }) as Resend["emails"]["send"],
+    },
+    batch: {
+      send: ((messages: OneMessage[]) => {
+        const kept = messages.map(dropPhoneOnly).filter((m): m is OneMessage => m !== null);
+        return kept.length ? inner.batch.send(kept) : skipped();
+      }) as Resend["batch"]["send"],
+    },
+  } as Pick<Resend, "emails" | "batch">;
+}
+
+function guardedResend(): Pick<Resend, "emails" | "batch"> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) throw new Error("RESEND_API_KEY not set");
   const client = new Resend(apiKey);

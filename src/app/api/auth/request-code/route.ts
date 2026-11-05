@@ -6,7 +6,7 @@ import { EMAIL_REGEX } from "@/lib/validation";
 import { maskEmail, normalizeEmailInput } from "@/lib/login-messages";
 import { maskPhone, normalizeIsraeliMobile } from "@/lib/phone";
 import { findAccountByPhone, type LoginRole } from "@/lib/phone-login";
-import { phoneCodeKey } from "@/lib/phone-proof";
+import { phoneCodeKey } from "@/lib/phone-only";
 import { phoneLoginEnabled, sendLoginCodeSms } from "@/lib/sms";
 
 const OTP_TTL_MINUTES = 10;
@@ -67,7 +67,7 @@ export async function POST(req: Request) {
     if (account.kind === "found") {
       email = account.email;
     } else if (account.kind === "none" && role === "student") {
-      // A new student: text a code to confirm the number; the email comes after it.
+      // A new student: text a code to confirm the number; the account opens on verify.
       email = phoneCodeKey(normalized);
     } else {
       console.warn(`[request-code] rejected: phone_${account.kind}`, maskPhone(normalized), role);

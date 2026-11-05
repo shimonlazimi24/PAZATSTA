@@ -14,7 +14,8 @@ export function isValidDeliveryEmail(value: string): boolean {
   if (!lower || !lower.includes("@")) return false;
   if (!EMAIL_REGEX.test(value.trim())) return false;
   if (lower.endsWith(".local") || lower.includes("@localhost")) return false;
-  if (/@.*\.(local|test|example)$/i.test(lower)) return false;
+  // .invalid also covers students who signed up with a phone and no email.
+  if (/@.*\.(local|test|example|invalid)$/i.test(lower)) return false;
   return true;
 }
 
