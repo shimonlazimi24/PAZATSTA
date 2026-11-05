@@ -284,7 +284,8 @@ export function CodeLogin({ role, next, askStudentPhone }: CodeLoginProps) {
 
   return (
     <form onSubmit={onSend} className="space-y-4">
-      {emailAsFallback && (
+      {/* Google first; below it SMS when on, and the email code as the fallback. */}
+      {googleAvailable && (
         <>
           {googleButton}
           {divider}
@@ -364,7 +365,7 @@ export function CodeLogin({ role, next, askStudentPhone }: CodeLoginProps) {
           {askStudentPhone && (
             <div>
               <label htmlFor="login-student-phone" className="mb-1 block text-sm font-medium text-[var(--color-text)]">
-                טלפון (רשות)
+                טלפון נייד
               </label>
               <input
                 id="login-student-phone"
@@ -387,7 +388,7 @@ export function CodeLogin({ role, next, askStudentPhone }: CodeLoginProps) {
 
       {error && <p className="text-sm text-red-700" role="alert">{error}</p>}
       <button type="submit" disabled={busy !== null} className={primaryCls}>
-        {busy === "send" ? "שולח…" : usePhone ? "שלחו לי קוד ב-SMS" : "שלחו לי קוד"}
+        {busy === "send" ? "שולח…" : usePhone ? "שלחו לי קוד ב-SMS" : "שלחו לי קוד למייל"}
       </button>
       {emailAsFallback && (
         <p className="text-center">
@@ -395,12 +396,6 @@ export function CodeLogin({ role, next, askStudentPhone }: CodeLoginProps) {
             {usePhone ? "אין לכם נייד שמור אצלנו? קבלו קוד במייל" : "חזרה לכניסה ב-SMS"}
           </button>
         </p>
-      )}
-      {googleAvailable && !emailAsFallback && (
-        <>
-          {divider}
-          {googleButton}
-        </>
       )}
     </form>
   );
