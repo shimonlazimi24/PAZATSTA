@@ -11,7 +11,7 @@ import { safeNext } from "@/lib/login-next";
 
 function StudentLogin() {
   const next = safeNext(useSearchParams().get("next"));
-  return <CodeLogin role="student" askStudentPhone next={next || undefined} />;
+  return <CodeLogin role="student" next={next || undefined} />;
 }
 
 export default function StudentLoginPage() {
@@ -53,7 +53,7 @@ export default function StudentLoginPage() {
               </Link>
             </p>
           </div>
-          <Suspense fallback={<CodeLogin role="student" askStudentPhone />}>
+          <Suspense fallback={<CodeLogin role="student" />}>
             <StudentLogin />
           </Suspense>
         </div>

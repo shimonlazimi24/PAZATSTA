@@ -21,10 +21,11 @@ export function BackLink({ href, label = "חזרה", className, refreshOnNavigat
         type="button"
         onClick={() => router.push(`${href}?r=${Date.now()}`)}
         className={cn(
-          "inline-flex items-center gap-1 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors bg-transparent border-none cursor-pointer font-inherit",
+          "inline-flex items-center gap-1.5 rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-3 py-1.5 text-sm font-medium text-[var(--color-text)] hover:bg-[var(--color-bg-muted)] transition-colors cursor-pointer",
           className
         )}
       >
+        <span aria-hidden>→</span>
         {label}
       </button>
     );
@@ -34,10 +35,11 @@ export function BackLink({ href, label = "חזרה", className, refreshOnNavigat
     <Link
       href={href}
       className={cn(
-        "inline-flex items-center gap-1 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors",
+        "inline-flex items-center gap-1.5 rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-3 py-1.5 text-sm font-medium text-[var(--color-text)] hover:bg-[var(--color-bg-muted)] transition-colors",
         className
       )}
     >
+      <span aria-hidden>→</span>
       {label}
     </Link>
   );
