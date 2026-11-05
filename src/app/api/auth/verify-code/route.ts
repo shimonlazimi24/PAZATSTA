@@ -10,6 +10,7 @@ import {
 } from "@/lib/auth";
 import { normalizeIsraeliMobile } from "@/lib/phone";
 import { findAccountByPhone } from "@/lib/phone-login";
+import { makePhoneProof, phoneCodeKey, readPhoneProof } from "@/lib/phone-proof";
 
 const MAX_ATTEMPTS = 5;
 
@@ -25,15 +26,30 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-    const { code, role, phone, loginPhone } = parsed.data;
+    const { code, role, loginPhone } = parsed.data;
+    let { phone } = parsed.data;
     let email = parsed.data.email;
+    // Set when the SMS code was for a number no student account has yet.
+    let newPhone: string | null = null;
     if (loginPhone) {
       const normalized = normalizeIsraeliMobile(loginPhone);
       const account = normalized ? await findAccountByPhone(normalized, role) : null;
-      if (!account || account.kind !== "found") {
+      if (account?.kind === "found") {
+        email = account.email;
+      } else if (normalized && account?.kind === "none" && role === "student") {
+        newPhone = normalized;
+        email = phoneCodeKey(normalized);
+      } else {
         return NextResponse.json({ error: "לא נשלח קוד או שפג תוקף. נא לבקש קוד חדש." }, { status: 400 });
       }
-      email = account.email;
+    }
+    // The email step after a confirmed new number: save that number on the account.
+    if (!loginPhone && parsed.data.phoneProof && role === "student") {
+      const proved = readPhoneProof(parsed.data.phoneProof);
+      if (!proved) {
+        return NextResponse.json({ error: "עבר יותר מדי זמן מאז אימות הנייד. התחילו שוב עם קוד לטלפון." }, { status: 400 });
+      }
+      phone = proved;
     }
     if (!email || code.length !== 6) {
       return NextResponse.json(
@@ -77,6 +93,12 @@ export async function POST(req: Request) {
         await prisma.loginCode.delete({ where: { id: loginCode.id } });
       }
       return NextResponse.json({ error: "קוד שגוי" }, { status: 400 });
+    }
+
+    if (newPhone) {
+      // The number is confirmed, but there is no account yet: ask for an email next.
+      await prisma.loginCode.deleteMany({ where: { id: loginCode.id } });
+      return NextResponse.json({ ok: true, needEmail: true, phoneProof: makePhoneProof(newPhone) });
     }
 
     const outcome = await completeLogin({

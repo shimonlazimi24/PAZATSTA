@@ -61,7 +61,9 @@ export function CodeLogin({ role, next }: CodeLoginProps) {
   const phoneAvailable = Boolean(methods?.phone);
   const googleAvailable = Boolean(methods?.google);
   const [method, setMethod] = useState<Method>("email");
-  const [step, setStep] = useState<"ask" | "code">("ask");
+  // "addEmail": a new student confirmed their number by SMS and now adds an email, once.
+  const [step, setStep] = useState<"ask" | "code" | "addEmail">("ask");
+  const [phoneProof, setPhoneProof] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
@@ -134,7 +136,7 @@ export function CodeLogin({ role, next }: CodeLoginProps) {
     setBusy("verify");
     setError("");
     try {
-      const result = await apiJson<{ redirect?: string }>("/api/auth/verify-code", {
+      const result = await apiJson<{ redirect?: string; needEmail?: boolean; phoneProof?: string }>("/api/auth/verify-code", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -143,10 +145,21 @@ export function CodeLogin({ role, next }: CodeLoginProps) {
           code: digits,
           role,
           ...(next ? { next } : {}),
+          ...(!usePhone && phoneProof ? { phoneProof } : {}),
         }),
       });
       if (!result.ok) {
         setError(verifyCodeErrorMessage(result.status, result.error || "אימות נכשל"));
+        setBusy(null);
+        return;
+      }
+      if (result.data?.needEmail && result.data.phoneProof) {
+        // The number is new to us: one email step, then the next login is SMS only.
+        setPhoneProof(result.data.phoneProof);
+        setMethod("email");
+        setCode("");
+        setNotice("");
+        setStep("addEmail");
         setBusy(null);
         return;
       }
@@ -159,7 +172,7 @@ export function CodeLogin({ role, next }: CodeLoginProps) {
   }
 
   function backToAsk() {
-    setStep("ask");
+    setStep(phoneProof ? "addEmail" : "ask");
     setCode("");
     setError("");
     setNotice("");
@@ -186,6 +199,56 @@ export function CodeLogin({ role, next }: CodeLoginProps) {
       <span className="h-px flex-1 bg-[var(--color-border)]" />
     </div>
   );
+
+  if (step === "addEmail") {
+    return (
+      <form onSubmit={(e) => onSend(e, "email")} className="space-y-4">
+        <div className="rounded-[var(--radius-input)] bg-[var(--color-bg-muted)] p-3 text-sm text-[var(--color-text)]">
+          <p className="font-medium">הנייד אומת ✓</p>
+          <p className="mt-1 text-[var(--color-text-muted)]">
+            זו הפעם הראשונה שלכם כאן. הוסיפו מייל כדי לקבל אליו סיכומי שיעור ואישורים. נשלח אליו קוד פעם אחת, ומהפעם הבאה
+            נכנסים רק עם הנייד.
+          </p>
+        </div>
+        <div>
+          <label htmlFor="login-new-email" className="mb-1 block text-sm font-medium text-[var(--color-text)]">
+            כתובת מייל
+          </label>
+          <input
+            id="login-new-email"
+            type="email"
+            autoComplete="email"
+            placeholder="name@example.com"
+            dir="ltr"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setError("");
+            }}
+            required
+            autoFocus
+            className={inputCls}
+            disabled={busy === "send"}
+          />
+        </div>
+        {error && (
+          <p className="text-sm text-red-700" role="alert">
+            {error}
+          </p>
+        )}
+        <button type="submit" disabled={busy !== null} className={`${primaryCls} flex items-center justify-center gap-2`}>
+          {busy === "send" ? (
+            "שולח…"
+          ) : (
+            <>
+              שלחו לי קוד במייל
+              <span aria-hidden>←</span>
+            </>
+          )}
+        </button>
+      </form>
+    );
+  }
 
   if (step === "code") {
     return (

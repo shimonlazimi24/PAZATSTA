@@ -6,6 +6,7 @@ import { EMAIL_REGEX } from "@/lib/validation";
 import { maskEmail, normalizeEmailInput } from "@/lib/login-messages";
 import { maskPhone, normalizeIsraeliMobile } from "@/lib/phone";
 import { findAccountByPhone, type LoginRole } from "@/lib/phone-login";
+import { phoneCodeKey } from "@/lib/phone-proof";
 import { phoneLoginEnabled, sendLoginCodeSms } from "@/lib/sms";
 
 const OTP_TTL_MINUTES = 10;
@@ -63,13 +64,17 @@ export async function POST(req: Request) {
       console.error("[request-code] rejected: db_error", maskPhone(normalized), (e as Error)?.message ?? e);
       return NextResponse.json({ error: "Failed to send code" }, { status: 503 });
     }
-    if (account.kind !== "found") {
+    if (account.kind === "found") {
+      email = account.email;
+    } else if (account.kind === "none" && role === "student") {
+      // A new student: text a code to confirm the number; the email comes after it.
+      email = phoneCodeKey(normalized);
+    } else {
       console.warn(`[request-code] rejected: phone_${account.kind}`, maskPhone(normalized), role);
       // A miss counts against the IP too, so numbers cannot be probed one after another.
       if (ip) await prisma.otpRequest.create({ data: { email: "phone-lookup", ip } }).catch(() => {});
       return NextResponse.json({ error: account.kind === "none" ? "phone_not_found" : "phone_several" }, { status: account.kind === "none" ? 404 : 409 });
     }
-    email = account.email;
     phoneTo = normalized;
   } else {
     email = typeof body.email === "string" ? normalizeEmailInput(body.email) : "";

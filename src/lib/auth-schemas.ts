@@ -14,5 +14,7 @@ export const VerifyCodeSchema = z.object({
   phone: z.unknown().optional().transform((s) => (typeof s === "string" ? s.trim() : "")),
   // Set when logging in by phone: the account is found by this number instead of email.
   loginPhone: z.unknown().optional().transform((s) => (typeof s === "string" ? s.trim() : "")),
+  // A new student's number, confirmed by SMS just before this email step.
+  phoneProof: z.unknown().optional().transform((s) => (typeof s === "string" ? s.trim() : "")),
   next: z.unknown().optional().transform((s) => (typeof s === "string" ? s.trim() : "")),
 });

@@ -95,6 +95,14 @@ export async function sendLoginCodeSms(toNormalized: string, code: string, accou
     return;
   }
   if (smsMode(process.env) === "email-fallback") {
+    // A new number has no account email to fall back to.
+    if (!accountEmail.includes("@")) {
+      if (!process.env.VERCEL_ENV && process.env.NODE_ENV !== "production") {
+        console.log("[sms] dev only, code for new number", maskPhone(toNormalized), ":", code);
+        return;
+      }
+      throw new Error("No SMS provider for a number without an account");
+    }
     console.log("[sms] no provider yet, sending the code for", maskPhone(toNormalized), "by email");
     await sendLoginCode(accountEmail, code);
     return;
