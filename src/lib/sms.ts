@@ -35,7 +35,15 @@ function provider019(env: Env): SmsProvider | null {
     async send(toNormalized, text) {
       const res = await fetch(url, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        // 019 sits behind a bot firewall (Imperva) that refuses anonymous server
+        // requests; name the client the way a regular integration would.
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "User-Agent": "Mozilla/5.0 (compatible; Pazatsta/1.0; +https://www.pazatsta-schedule.com)",
+          "Accept-Language": "he-IL,he;q=0.9,en;q=0.8",
+        },
         body: JSON.stringify({
           sms: {
             user: { username },
