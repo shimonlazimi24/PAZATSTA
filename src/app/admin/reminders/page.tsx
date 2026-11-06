@@ -13,19 +13,22 @@ const TONE: Record<Tone, string> = {
 
 const PERIODS = [7, 30, 90] as const;
 
-export default async function AdminRemindersPage({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
-  const { days: daysParam } = await searchParams;
+export default async function AdminRemindersPage({ searchParams }: { searchParams: Promise<{ days?: string; teacher?: string }> }) {
+  const { days: daysParam, teacher: teacherParam } = await searchParams;
   const days = PERIODS.find((p) => String(p) === daysParam) ?? 30;
+  // Optional: one teacher only. Unknown ids just show nothing.
+  const teacherId = typeof teacherParam === "string" && teacherParam ? teacherParam : null;
+  const byTeacher = teacherId ? { teacherId } : {};
   const now = new Date();
   const since = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
 
-  const [reminders, lessons, recent] = await Promise.all([
+  const [reminders, lessons, recent, allTeachers] = await Promise.all([
     prisma.approvalReminder.findMany({
-      where: { sentAt: { gte: since } },
+      where: { sentAt: { gte: since }, ...byTeacher },
       select: { lessonId: true, teacherId: true, mark: true, sentAt: true },
     }),
     prisma.lesson.findMany({
-      where: { createdAt: { gte: since }, workshopId: null, approvalExpiresAt: { not: null } },
+      where: { createdAt: { gte: since }, workshopId: null, approvalExpiresAt: { not: null }, ...byTeacher },
       select: {
         id: true,
         teacherId: true,
@@ -38,7 +41,7 @@ export default async function AdminRemindersPage({ searchParams }: { searchParam
       },
     }),
     prisma.approvalReminder.findMany({
-      where: { sentAt: { gte: since } },
+      where: { sentAt: { gte: since }, ...byTeacher },
       orderBy: { sentAt: "desc" },
       take: 20,
       select: {
@@ -50,12 +53,11 @@ export default async function AdminRemindersPage({ searchParams }: { searchParam
         lesson: { select: { date: true, startTime: true, status: true, approvalExpiresAt: true, canceledAt: true, student: { select: { name: true, email: true } } } },
       },
     }),
+    prisma.user.findMany({ where: { role: "teacher" }, select: { id: true, name: true, email: true }, orderBy: { name: "asc" } }),
   ]);
 
   const stats = summarizeReminders(reminders, lessons, now);
-  const teacherIds = Array.from(new Set([...stats.map((s) => s.teacherId), ...recent.map((r) => r.teacherId)]));
-  const teachers = await prisma.user.findMany({ where: { id: { in: teacherIds } }, select: { id: true, name: true, email: true } });
-  const nameOf = new Map(teachers.map((t) => [t.id, t.name || t.email]));
+  const nameOf = new Map(allTeachers.map((t) => [t.id, t.name || t.email]));
   const fmt = (d: Date) =>
     d.toLocaleString("he-IL", { timeZone: "Asia/Jerusalem", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" });
   const shown = stats.filter((x) => x.remindersSent > 0 || x.expiredUnapproved > 0);
@@ -67,6 +69,7 @@ export default async function AdminRemindersPage({ searchParams }: { searchParam
 
   const hasData = stats.some((x) => x.remindersSent > 0 || x.expiredUnapproved > 0) || recent.length > 0;
   const periodLabel = days === 7 ? "בשבוע האחרון" : `ב-${days} הימים האחרונים`;
+  const periodHref = (p: number) => `/admin/reminders?days=${p}${teacherId ? `&teacher=${encodeURIComponent(teacherId)}` : ""}`;
 
   return (
     <div className="max-w-4xl space-y-8">
@@ -104,17 +107,39 @@ export default async function AdminRemindersPage({ searchParams }: { searchParam
       <section aria-labelledby="who-h" className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 id="who-h" className="text-lg font-semibold text-[var(--color-text)]">מה קרה {periodLabel}</h3>
+          <div className="flex flex-wrap items-center gap-2">
+          <form method="get" action="/admin/reminders" className="flex items-center gap-2">
+            <input type="hidden" name="days" value={days} />
+            <label htmlFor="teacher-filter" className="sr-only">מורה</label>
+            <select
+              id="teacher-filter"
+              name="teacher"
+              defaultValue={teacherId ?? ""}
+              className="min-h-[36px] rounded-md border border-[var(--color-border)] bg-white px-2 text-sm"
+            >
+              <option value="">כל המורים</option>
+              {allTeachers.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name || t.email}
+                </option>
+              ))}
+            </select>
+            <button type="submit" className="min-h-[36px] rounded-md border border-[var(--color-border)] bg-white px-3 text-sm hover:bg-[var(--color-bg-muted)]">
+              הצגה
+            </button>
+          </form>
           <div className="inline-flex rounded-md border border-[var(--color-border)] bg-white p-0.5" role="group" aria-label="תקופה">
             {PERIODS.map((p) => (
               <Link
                 key={p}
-                href={`/admin/reminders?days=${p}`}
+                href={periodHref(p)}
                 aria-current={p === days ? "page" : undefined}
                 className={`rounded px-3 py-1.5 text-sm ${p === days ? "bg-[var(--color-bg-muted)] font-semibold text-[var(--color-text)]" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"}`}
               >
                 {p === 7 ? "שבוע" : `${p} ימים`}
               </Link>
             ))}
+          </div>
           </div>
         </div>
 

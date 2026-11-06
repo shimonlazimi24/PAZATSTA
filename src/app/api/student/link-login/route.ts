@@ -6,7 +6,7 @@ import { sendLoginCode } from "@/lib/email";
 import { sendLoginCodeSms, phoneLoginEnabled } from "@/lib/sms";
 import { displayIsraeliMobile, normalizeIsraeliMobile } from "@/lib/phone";
 import { findAccountByPhone } from "@/lib/phone-login";
-import { isPhoneOnlyEmail } from "@/lib/phone-only";
+import { isPhoneOnlyEmail, phoneOnlyEmail } from "@/lib/phone-only";
 import { normalizeEmailInput } from "@/lib/login-messages";
 import { EMAIL_REGEX } from "@/lib/validation";
 import { mergeStudentAccounts } from "@/lib/student-merge";
@@ -16,6 +16,7 @@ export const dynamic = "force-dynamic";
 const CODE_TTL_MS = 10 * 60 * 1000;
 const WINDOW_MS = 15 * 60 * 1000;
 const MAX_SENDS = 5;
+const MAX_SENDS_PER_DAY = 10;
 const MAX_ATTEMPTS = 5;
 
 type Target = { kind: "email"; value: string } | { kind: "phone"; value: string };
@@ -80,9 +81,18 @@ export async function POST(req: Request) {
   const key = codeKey(user.id, target);
 
   if (body.step === "send") {
+    // Counted per student (any address) and per day, so codes cannot be sprayed
+    // at many numbers: every SMS costs money.
     const since = new Date(Date.now() - WINDOW_MS);
-    const recent = await prisma.otpRequest.count({ where: { email: key, createdAt: { gte: since } } });
-    if (recent >= MAX_SENDS) return fail("ביקשתם יותר מדי קודים. אפשר לנסות שוב בעוד 15 דקות", 429);
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const mine = { email: { startsWith: `link:${user.id}:` } };
+    const [recent, today] = await Promise.all([
+      prisma.otpRequest.count({ where: { ...mine, createdAt: { gte: since } } }),
+      prisma.otpRequest.count({ where: { ...mine, createdAt: { gte: dayAgo } } }),
+    ]);
+    if (recent >= MAX_SENDS || today >= MAX_SENDS_PER_DAY) {
+      return fail("ביקשתם יותר מדי קודים. אפשר לנסות שוב מאוחר יותר", 429);
+    }
     const code = createOTP();
     await prisma.$transaction([
       prisma.loginCode.deleteMany({ where: { email: key } }),
@@ -123,7 +133,15 @@ export async function POST(req: Request) {
     }
   } else {
     if (owner && owner.id !== user.id) await mergeStudentAccounts(owner.id, user.id);
-    await prisma.user.update({ where: { id: user.id }, data: { phone: displayIsraeliMobile(target.value) } });
+    // A phone-only account is found by its stand-in address too: move it to the
+    // new number, so the old number no longer opens this account.
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        phone: displayIsraeliMobile(target.value),
+        ...(isPhoneOnlyEmail(user.email) ? { email: phoneOnlyEmail(target.value) } : {}),
+      },
+    });
   }
 
   const res = NextResponse.json({ ok: true, merged: Boolean(owner && owner.id !== user.id) });

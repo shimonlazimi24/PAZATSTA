@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { isPhoneOnlyEmail } from "@/lib/phone-only";
 
 type Tx = Prisma.TransactionClient;
 
@@ -27,7 +28,8 @@ export async function mergeStudentAccounts(fromId: string, intoId: string): Prom
     await tx.user.update({
       where: { id: intoId },
       data: {
-        ...(into.phone ? {} : from.phone ? { phone: from.phone } : {}),
+        // A phone-only account's number was confirmed by SMS: it wins over one typed in a form.
+        ...(from.phone && (!into.phone || isPhoneOnlyEmail(from.email)) ? { phone: from.phone } : {}),
         ...(into.name ? {} : from.name ? { name: from.name } : {}),
       },
     });

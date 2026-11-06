@@ -3,6 +3,9 @@ import { isValidDeliveryEmail } from "@/lib/validation";
 import { emailDeliveryMode, redirectMessage } from "@/lib/email-guard";
 import { isPhoneOnlyEmail } from "@/lib/phone-only";
 
+/** A student's email worth showing: not empty and not the stand-in of a phone-only account. */
+const realEmail = (e: string | null | undefined): e is string => Boolean(e) && !isPhoneOnlyEmail(e);
+
 const isDev = process.env.NODE_ENV !== "production";
 const noRealKey = () =>
   !process.env.RESEND_API_KEY || process.env.RESEND_API_KEY === "re_xxxx";
@@ -247,7 +250,7 @@ export function getApprovalRequestContent(params: {
     "",
     ...platformLines,
     `שם מלא של התלמיד: ${params.studentName}`,
-    ...(params.studentEmail ? [`אימייל תלמיד: ${params.studentEmail}`] : []),
+    ...(realEmail(params.studentEmail) ? [`אימייל תלמיד: ${params.studentEmail}`] : []),
     ...(params.studentPhone ? [`טלפון תלמיד: ${params.studentPhone}`] : []),
     ...(params.parentName ? [`שם מלא של אחד ההורים: ${params.parentName}`] : []),
     ...(params.parentPhone ? [`טלפון הורה: ${params.parentPhone}`] : []),
@@ -289,7 +292,7 @@ function getApprovalRequestHtml(params: {
   const detailRows: string[] = [
     `<tr><td style="padding:4px 0;font-weight:600">שם מלא של התלמיד</td><td style="padding:4px 0">${esc(params.studentName)}</td></tr>`,
   ];
-  if (params.studentEmail) detailRows.push(`<tr><td style="padding:4px 0;font-weight:600">אימייל תלמיד</td><td style="padding:4px 0">${esc(params.studentEmail)}</td></tr>`);
+  if (realEmail(params.studentEmail)) detailRows.push(`<tr><td style="padding:4px 0;font-weight:600">אימייל תלמיד</td><td style="padding:4px 0">${esc(params.studentEmail)}</td></tr>`);
   if (params.studentPhone) detailRows.push(`<tr><td style="padding:4px 0;font-weight:600">טלפון תלמיד</td><td style="padding:4px 0">${esc(params.studentPhone)}</td></tr>`);
   if (params.parentName) detailRows.push(`<tr><td style="padding:4px 0;font-weight:600">שם מלא של אחד ההורים</td><td style="padding:4px 0">${esc(params.parentName)}</td></tr>`);
   if (params.parentPhone) detailRows.push(`<tr><td style="padding:4px 0;font-weight:600">טלפון הורה</td><td style="padding:4px 0">${esc(params.parentPhone)}</td></tr>`);
@@ -398,7 +401,7 @@ export function getBookingConfirmationContent(params: {
   let text = `שיעור נקבע: ${params.studentName} עם ${params.teacherName} בתאריך ${params.date} בשעה ${params.timeRange}.`;
   text += `\nסוג המיון: ${params.topic || "לא צוין"}`;
   if (params.screeningDate) text += `\nתאריך המיון: ${params.screeningDate}`;
-  if (params.studentEmail) text += `\nאימייל תלמיד: ${params.studentEmail}`;
+  if (realEmail(params.studentEmail)) text += `\nאימייל תלמיד: ${params.studentEmail}`;
   if (params.studentPhone) text += `\nטלפון תלמיד: ${params.studentPhone}`;
   if (params.parentName) text += `\nשם מלא של אחד ההורים: ${params.parentName}`;
   if (params.parentPhone) text += `\nטלפון הורה: ${params.parentPhone}`;

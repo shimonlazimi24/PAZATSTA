@@ -9,6 +9,7 @@ import { isLessonStarted } from "@/lib/dates";
 import { formatLessonDate } from "@/lib/lesson-utils";
 import { RescheduleLessonModal } from "./RescheduleLessonModal";
 import type { DisplayLesson } from "@/types";
+import { isPhoneOnlyEmail } from "@/lib/phone-only";
 
 type Lesson = DisplayLesson & {
   student: NonNullable<DisplayLesson["student"]> & { id: string };
@@ -231,13 +232,13 @@ export function TeacherHomeLessons() {
             {sortedUpcoming.map((l, idx) => {
               const prev = sortedUpcoming[idx - 1];
               const showWorkshopHeader = Boolean(l.workshopId && l.workshopId !== prev?.workshopId);
-              const studentLabel = l.student.name || l.student.email;
+              const studentLabel = l.student.name || (isPhoneOnlyEmail(l.student.email) ? "תלמיד" : l.student.email);
               const teacherLabel = l.teacher?.name || l.teacher?.email || "מורה";
               const topicLabel = l.topic?.trim() || "שיעור פזצט״א";
               const calendarTitle = `${topicLabel} – ${studentLabel}`;
               const calendarDescription = [
                 `שם מלא של התלמיד: ${studentLabel}`,
-                l.student.email ? `אימייל תלמיד: ${l.student.email}` : null,
+                l.student.email && !isPhoneOnlyEmail(l.student.email) ? `אימייל תלמיד: ${l.student.email}` : null,
                 l.student.phone ? `טלפון תלמיד: ${l.student.phone}` : null,
                 l.student.parentName ? `שם מלא של אחד ההורים: ${l.student.parentName}` : null,
                 l.student.parentPhone ? `טלפון הורה: ${l.student.parentPhone}` : null,
@@ -310,7 +311,7 @@ export function TeacherHomeLessons() {
                               endTime: l.endTime,
                               title: calendarTitle,
                               description: calendarDescription,
-                              attendees: [l.student.email, "admin@pazatsta.co.il"],
+                              attendees: [...(isPhoneOnlyEmail(l.student.email) ? [] : [l.student.email]), "admin@pazatsta.co.il"],
                             })
                           }
                           className="inline-flex items-center gap-1 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:underline disabled:opacity-50"

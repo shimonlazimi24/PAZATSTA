@@ -9,6 +9,7 @@ import {
   sign,
 } from "@/lib/auth";
 import { normalizeIsraeliMobile } from "@/lib/phone";
+import { EMAIL_REGEX } from "@/lib/validation";
 import { findAccountByPhone } from "@/lib/phone-login";
 import { phoneCodeKey, phoneOnlyEmail } from "@/lib/phone-only";
 
@@ -26,7 +27,7 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-    const { code, role, phone, loginPhone } = parsed.data;
+    const { code, role, loginPhone } = parsed.data;
     let email = parsed.data.email;
     // Set when the SMS code was for a number no student account has yet.
     let newPhone: string | null = null;
@@ -41,6 +42,10 @@ export async function POST(req: Request) {
       } else {
         return NextResponse.json({ error: "לא נשלח קוד או שפג תוקף. נא לבקש קוד חדש." }, { status: 400 });
       }
+    }
+    // Login keys like "phone:…" are internal; only a real address may log in by email.
+    if (!loginPhone && !EMAIL_REGEX.test(email)) {
+      return NextResponse.json({ error: "נא להזין אימייל וקוד בן 6 ספרות" }, { status: 400 });
     }
     if (!email || code.length !== 6) {
       return NextResponse.json(
@@ -90,7 +95,8 @@ export async function POST(req: Request) {
     const outcome = await completeLogin({
       email: newPhone ? phoneOnlyEmail(newPhone) : email,
       role,
-      phone: newPhone ?? phone,
+      // Only a number just confirmed by SMS is saved as a login number.
+      ...(newPhone ? { phone: newPhone } : {}),
       next: parsed.data.next,
       consume: async () => {
         await prisma.loginCode.deleteMany({ where: { id: loginCode.id } });
