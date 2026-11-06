@@ -3,6 +3,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getUserFromSession } from "@/lib/auth";
 import { isValidEmail } from "@/lib/validation";
+import { isPhoneOnlyEmail } from "@/lib/phone-only";
+import { phoneLoginEnabled } from "@/lib/sms";
 
 export const dynamic = "force-dynamic";
 
@@ -34,11 +36,19 @@ export async function GET() {
   if (!user || user.role !== "student") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-  const profile = await prisma.studentProfile.findUnique({
-    where: { userId: user.id },
-  });
+  const [profile, account] = await Promise.all([
+    prisma.studentProfile.findUnique({ where: { userId: user.id } }),
+    prisma.user.findUnique({ where: { id: user.id }, select: { email: true, phone: true } }),
+  ]);
+  // The ways this student logs in; a phone-only account has no real email.
+  const login = {
+    loginEmail: account && !isPhoneOnlyEmail(account.email) ? account.email : null,
+    loginPhone: account?.phone ?? null,
+    smsAvailable: phoneLoginEnabled(),
+  };
   if (!profile) {
     return NextResponse.json({
+      ...login,
       studentFullName: null,
       parentFullName: null,
       parentPhone: null,
@@ -48,6 +58,7 @@ export async function GET() {
     });
   }
   return NextResponse.json({
+    ...login,
     studentFullName: profile.studentFullName,
     parentFullName: profile.parentFullName,
     parentPhone: profile.parentPhone,

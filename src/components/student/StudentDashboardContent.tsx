@@ -16,6 +16,7 @@ export function StudentDashboardContent() {
   const [upcoming, setUpcoming] = useState<Lesson[]>([]);
   const [past, setPast] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
+  const [noEmail, setNoEmail] = useState(false);
 
   function fetchLessons() {
     setLoading(true);
@@ -38,6 +39,11 @@ export function StudentDashboardContent() {
 
   useEffect(() => {
     fetchLessons();
+    // Phone-only students: offer to add an email (and merge an older email account).
+    fetch("/api/student/profile", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((p) => setNoEmail(Boolean(p && p.loginEmail === null)))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -83,6 +89,21 @@ export function StudentDashboardContent() {
             השיעורים הקרובים והשיעורים שעברו. לשיעורים שעברו — לחצו &quot;צפייה ב-PDF&quot; כדי לצפות בסיכום השיעור.
           </p>
         </header>
+
+        {noEmail && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-4">
+            <p className="min-w-0 text-sm text-[var(--color-text)]">
+              נכנסתם עם הנייד. הוסיפו מייל כדי לקבל סיכומי שיעור ואישורים, ואם כבר נרשמתם בעבר עם מייל, השיעורים יתאחדו לחשבון
+              אחד.
+            </p>
+            <Link
+              href="/student/profile"
+              className="min-h-[40px] shrink-0 rounded-[var(--radius-input)] bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+            >
+              הוספת מייל
+            </Link>
+          </div>
+        )}
 
         <section id="student-lessons" className="space-y-8">
           {hasUpcoming && (

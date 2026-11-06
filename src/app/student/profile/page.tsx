@@ -5,9 +5,13 @@ import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { BackLink } from "@/components/design/BackLink";
 import { apiJson } from "@/lib/api";
+import { LoginMethods } from "@/components/student/LoginMethods";
 import { isValidPhone, isValidEmail } from "@/lib/validation";
 
 type ProfileResponse = {
+  loginEmail?: string | null;
+  loginPhone?: string | null;
+  smsAvailable?: boolean;
   studentFullName?: string | null;
   parentFullName?: string | null;
   parentPhone?: string | null;
@@ -20,6 +24,7 @@ export default function StudentProfilePage() {
   const [parentFullName, setParentFullName] = useState("");
   const [parentPhone, setParentPhone] = useState("");
   const [parentEmail, setParentEmail] = useState("");
+  const [login, setLogin] = useState<{ email: string | null; phone: string | null; smsAvailable: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -32,6 +37,7 @@ export default function StudentProfilePage() {
         setParentFullName(p.parentFullName ?? "");
         setParentPhone(p.parentPhone ?? "");
         setParentEmail(p.parentEmail ?? "");
+        setLogin({ email: p.loginEmail ?? null, phone: p.loginPhone ?? null, smsAvailable: Boolean(p.smsAvailable) });
       }
       setLoading(false);
     });
@@ -79,6 +85,7 @@ export default function StudentProfilePage() {
     <AppShell title="פרטי תלמיד">
       <div className="max-w-xl mx-auto space-y-6" dir="rtl">
         <BackLink href="/student" label="חזרה" />
+        {login && <LoginMethods email={login.email} phone={login.phone} smsAvailable={login.smsAvailable} />}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="studentFullName" className="block text-sm font-medium text-[var(--color-text)] mb-1">
