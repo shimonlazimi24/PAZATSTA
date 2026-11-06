@@ -69,6 +69,11 @@ function provider019(env: Env): SmsProvider | null {
         const detail =
           data?.message ??
           `${incident ? `Imperva incident ${incident}; ` : ""}${raw.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 300)}`;
+        // The full reply (headers and body) goes to the log once, for 019 support.
+        if (!data) {
+          const headers = Array.from(res.headers.entries()).map(([k, v]) => `${k}: ${v}`).join(" | ");
+          console.error("[sms] 019 full reply:", res.status, headers, "BODY:", raw.slice(0, 4000));
+        }
         throw new Error(`019 refused: http ${res.status}, status ${data?.status ?? "?"}, ${detail}`);
       }
     },
