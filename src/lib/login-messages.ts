@@ -83,7 +83,7 @@ export function requestPhoneCodeErrorMessage(status: number): string {
 /** Asks the server to text a login code to the account with this mobile number. */
 export async function requestPhoneLoginCode(
   rawPhone: string,
-  role: "student" | "teacher" | "admin"
+  role: "student" | "teacher" | "admin" | "auto"
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   if (!rawPhone.trim()) return { ok: false, message: LOGIN_MESSAGES.invalidPhone };
   const result = await apiJson<{ ok?: boolean }>("/api/auth/request-code", {

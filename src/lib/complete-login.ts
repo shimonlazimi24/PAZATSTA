@@ -19,15 +19,18 @@ export type LoginOutcome =
  */
 export async function completeLogin(params: {
   email: string;
-  role: LoginRole;
+  /** "auto": the shared login screen; the account's own role decides (a new email is a new student). */
+  role: LoginRole | "auto";
   phone?: string;
   next?: string;
   consume?: () => Promise<void>;
 }): Promise<LoginOutcome> {
-  const { email, role, next } = params;
+  const { email, next } = params;
   // The phone is a login key now, so only a real Israeli mobile number is kept.
   const phone = params.phone && normalizeIsraeliMobile(params.phone) ? displayIsraeliMobile(normalizeIsraeliMobile(params.phone)!) : "";
   let user = await prisma.user.findUnique({ where: { email } });
+  const role: LoginRole =
+    params.role !== "auto" ? params.role : user?.role === "teacher" || user?.role === "admin" ? user.role : "student";
 
   if (role === "teacher" || role === "admin") {
     if (!user || user.role !== role) {

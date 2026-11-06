@@ -10,7 +10,7 @@ export const VerifyCodeSchema = z.object({
   // Must clean exactly as request-code does, or the stored code would never match.
   email: z.unknown().optional().transform((s) => (typeof s === "string" ? normalizeEmailInput(s) : "")),
   code: z.unknown().optional().transform((s) => (typeof s === "string" ? s.replace(/\D/g, "") : "")),
-  role: z.unknown().optional().transform((s) => (s === "teacher" || s === "admin" ? s : "student")),
+  role: z.unknown().optional().transform((s) => (s === "teacher" || s === "admin" || s === "auto" ? s : "student")),
   phone: z.unknown().optional().transform((s) => (typeof s === "string" ? s.trim() : "")),
   // Set when logging in by phone: the account is found by this number instead of email.
   loginPhone: z.unknown().optional().transform((s) => (typeof s === "string" ? s.trim() : "")),

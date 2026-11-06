@@ -12,10 +12,11 @@ import {
   verifyCodeErrorMessage,
 } from "@/lib/login-messages";
 
-type Role = "student" | "teacher" | "admin";
+/** "auto": the shared login screen; the server sends each account to its own area. */
+type Role = "student" | "teacher" | "admin" | "auto";
 type Method = "email" | "phone";
 
-const HOME: Record<Role, string> = { student: "/student", teacher: "/teacher/dashboard", admin: "/admin" };
+const HOME: Record<Role, string> = { student: "/student", teacher: "/teacher/dashboard", admin: "/admin", auto: "/" };
 
 const inputCls =
   "w-full rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-3 py-2 focus-visible:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] disabled:opacity-60";

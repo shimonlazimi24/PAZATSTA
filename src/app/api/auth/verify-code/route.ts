@@ -36,7 +36,7 @@ export async function POST(req: Request) {
       const account = normalized ? await findAccountByPhone(normalized, role) : null;
       if (account?.kind === "found") {
         email = account.email;
-      } else if (normalized && account?.kind === "none" && role === "student") {
+      } else if (normalized && account?.kind === "none" && (role === "student" || role === "auto")) {
         newPhone = normalized;
         email = phoneCodeKey(normalized);
       } else {

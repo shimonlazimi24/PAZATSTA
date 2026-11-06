@@ -12,7 +12,7 @@ export async function GET(req: Request) {
   if (!cfg) return NextResponse.redirect(new URL("/login?google=off", url.origin));
 
   const roleParam = url.searchParams.get("role");
-  const role = roleParam === "teacher" || roleParam === "admin" ? roleParam : "student";
+  const role = roleParam === "teacher" || roleParam === "admin" || roleParam === "auto" ? roleParam : "student";
   const nextParam = url.searchParams.get("next") ?? "";
   const next = nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "";
   const nonce = crypto.randomBytes(24).toString("base64url");

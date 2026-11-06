@@ -7,7 +7,7 @@ import { maskEmail } from "@/lib/login-messages";
 
 export const dynamic = "force-dynamic";
 
-const LOGIN_PAGE = { student: "/login/student", teacher: "/login/teacher", admin: "/login/admin" } as const;
+const LOGIN_PAGE = { student: "/login/student", teacher: "/login/teacher", admin: "/login/admin", auto: "/login" } as const;
 
 function sameString(a: string, b: string): boolean {
   const x = Buffer.from(a);

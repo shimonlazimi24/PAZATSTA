@@ -6,7 +6,7 @@
  * as for a one-time code (see complete-login.ts).
  */
 
-export type GoogleRole = "student" | "teacher" | "admin";
+export type GoogleRole = "student" | "teacher" | "admin" | "auto";
 
 type Env = Record<string, string | undefined>;
 
@@ -45,7 +45,7 @@ export function decodeState(raw: string | null | undefined): LoginState | null {
   try {
     const v = JSON.parse(Buffer.from(raw, "base64url").toString("utf8"));
     if (typeof v?.nonce !== "string" || v.nonce.length < 16) return null;
-    const role: GoogleRole = v.role === "teacher" || v.role === "admin" ? v.role : "student";
+    const role: GoogleRole = v.role === "teacher" || v.role === "admin" || v.role === "auto" ? v.role : "student";
     const next = typeof v.next === "string" && v.next.startsWith("/") && !v.next.startsWith("//") ? v.next : "";
     return { nonce: v.nonce, role, next };
   } catch {

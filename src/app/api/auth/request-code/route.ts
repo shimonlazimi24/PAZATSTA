@@ -5,7 +5,7 @@ import { sendLoginCode } from "@/lib/email";
 import { EMAIL_REGEX } from "@/lib/validation";
 import { maskEmail, normalizeEmailInput } from "@/lib/login-messages";
 import { maskPhone, normalizeIsraeliMobile } from "@/lib/phone";
-import { findAccountByPhone, type LoginRole } from "@/lib/phone-login";
+import { findAccountByPhone, type LoginRoleOrAuto } from "@/lib/phone-login";
 import { phoneCodeKey } from "@/lib/phone-only";
 import { phoneLoginEnabled, sendLoginCodeSms } from "@/lib/sms";
 
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "יותר מדי בקשות. נסו שוב בעוד 15 דקות." }, { status: 429 });
       }
     }
-    const role: LoginRole = body.role === "teacher" || body.role === "admin" ? body.role : "student";
+    const role: LoginRoleOrAuto = body.role === "teacher" || body.role === "admin" || body.role === "auto" ? body.role : "student";
     let account;
     try {
       account = await findAccountByPhone(normalized, role);
@@ -66,7 +66,7 @@ export async function POST(req: Request) {
     }
     if (account.kind === "found") {
       email = account.email;
-    } else if (account.kind === "none" && role === "student") {
+    } else if (account.kind === "none" && (role === "student" || role === "auto")) {
       // A new student: text a code to confirm the number; the account opens on verify.
       email = phoneCodeKey(normalized);
     } else {
