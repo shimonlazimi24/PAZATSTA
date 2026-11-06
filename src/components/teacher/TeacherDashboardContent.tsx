@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { TeacherHomeLessons } from "@/components/teacher/TeacherHomeLessons";
 import { PendingApprovalsBlock } from "@/components/teacher/PendingApprovalsBlock";
+import { TeacherAssignmentsBlock } from "@/components/teacher/TeacherAssignmentsBlock";
 
 export function TeacherDashboardContent() {
   const searchParams = useSearchParams();
@@ -18,11 +19,13 @@ export function TeacherDashboardContent() {
       <header>
         <h1 className="text-2xl font-bold text-[var(--color-text)]">השיעורים שלי</h1>
         <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-          בקשות לאישור, השיעורים הקרובים, ושיעורים שעברו ומחכים לדוח.
+          בקשות לאישור, השיעורים הקרובים, שיעורים קבוצתיים וימים פרונטליים, ומה מחכה לדוח.
         </p>
       </header>
 
       <PendingApprovalsBlock />
+
+      <TeacherAssignmentsBlock />
 
       <section id="teacher-lessons">
         <TeacherHomeLessons />
