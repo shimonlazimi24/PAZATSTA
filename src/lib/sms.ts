@@ -13,6 +13,7 @@
 import { emailDeliveryMode } from "@/lib/email-guard";
 import { sendLoginCode } from "@/lib/email";
 import { maskPhone } from "@/lib/phone";
+import { needsRelay, relayTarget, signRelay } from "@/lib/sms-relay";
 
 export type SmsMode = "provider" | "email-fallback" | "off";
 
@@ -97,6 +98,34 @@ export function phoneLoginEnabled(env: Env = process.env): boolean {
   return smsMode(env) !== "off";
 }
 
+/**
+ * Sends one SMS through the provider. 019 refuses calls from Asia, and the site
+ * runs in Seoul, so there the message is handed to the Frankfurt route
+ * (/api/internal/sms), which calls `sendSmsDirect`.
+ */
+export async function sendSms(toNormalized: string, text: string): Promise<void> {
+  if (!needsRelay()) return sendSmsDirect(toNormalized, text);
+  const target = relayTarget();
+  if (!target) throw new Error("SMS relay: no deployment URL");
+  const res = await fetch(target.url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...target.headers },
+    body: JSON.stringify(signRelay(toNormalized, text)),
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!res.ok) {
+    const reply = (await res.text().catch(() => "")).slice(0, 300);
+    throw new Error(`SMS relay failed: http ${res.status} ${reply}`);
+  }
+}
+
+/** Calls the provider from this server. Only for servers 019 accepts (see sms-relay). */
+export async function sendSmsDirect(toNormalized: string, text: string): Promise<void> {
+  const provider = providerFrom(process.env);
+  if (!provider) throw new Error("No SMS provider configured");
+  await provider.send(toNormalized, text);
+}
+
 export function loginCodeSmsText(code: string): string {
   return `קוד ההתחברות שלך לפזצט״א: ${code}\nתוקף: 10 דקות.`;
 }
@@ -108,7 +137,7 @@ export function loginCodeSmsText(code: string): string {
 export async function sendLoginCodeSms(toNormalized: string, code: string, accountEmail: string): Promise<void> {
   const provider = providerFrom(process.env);
   if (provider) {
-    await provider.send(toNormalized, loginCodeSmsText(code));
+    await sendSms(toNormalized, loginCodeSmsText(code));
     return;
   }
   if (smsMode(process.env) === "email-fallback") {
