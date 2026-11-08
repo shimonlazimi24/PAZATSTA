@@ -31,5 +31,12 @@
       "path": "/api/cron/frontal-days",
       "schedule": "10 7 * * *"
     }
-  ]
+  ],
+  "functions": {
+    "src/app/api/internal/sms/route.ts": {
+      "regions": [
+        "fra1"
+      ]
+    }
+  }
 }
