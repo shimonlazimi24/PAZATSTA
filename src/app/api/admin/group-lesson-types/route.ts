@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { PENDING_TOPIC_TYPE_ID } from "@/lib/group-lessons-weekly";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
@@ -17,6 +18,8 @@ export async function GET() {
   if ("error" in auth) return auth.error;
   try {
     const types = await prisma.groupLessonType.findMany({
+      // The "topic coming soon" placeholder of weekly lessons is not a real topic.
+      where: { id: { not: PENDING_TOPIC_TYPE_ID } },
       orderBy: [{ category: "asc" }, { sortOrder: "asc" }, { name: "asc" }],
       include: { _count: { select: { lessons: true } } },
     });

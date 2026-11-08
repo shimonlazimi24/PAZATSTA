@@ -9,7 +9,7 @@ export default function AdminGroupLessonsPage() {
     <div className="max-w-5xl">
       <AdminPageHeader
         title="שיעורים קבוצתיים"
-        description="כל מורה מעביר לפחות שיעור קבוצתי אחד בחודש. ההרשמה לחודש נפתחת בתחילת החודש שלפניו."
+        description="השיעורים הקבועים נוצרים לבד כל שבוע. בוחרים נושא לכל תאריך, והמורים נרשמים בעצמם. כל מורה מעביר לפחות שיעור אחד בחודש."
       />
       <Suspense fallback={<p className="text-sm text-[var(--color-text-muted)]">טוען…</p>}>
         <AdminGroupLessonsMonth initialMonth={monthKeyOf(todayIsraelYYYYMMDD())} />

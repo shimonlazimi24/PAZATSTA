@@ -324,15 +324,36 @@ model GroupLesson {
   teachersNeeded Int      @default(1)
   /// "open" | "canceled"
   status         String   @default("open")
+  /// Set when the lesson was created from a weekly slot (GroupLessonSchedule).
+  scheduleId     String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  type    GroupLessonType     @relation(fields: [typeId], references: [id])
-  signups GroupLessonSignup[]
-  reports GroupLessonReport[]
+  type     GroupLessonType      @relation(fields: [typeId], references: [id])
+  schedule GroupLessonSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  signups  GroupLessonSignup[]
+  reports  GroupLessonReport[]
 
+  /// One lesson per weekly slot and date, so the daily run never creates it twice.
+  @@unique([scheduleId, date])
   @@index([date])
   @@index([status, date])
+}
+
+/// A fixed weekly group lesson, e.g. every Sunday 17:00–18:30. Lessons are
+/// created from it automatically ahead of time; the admin only sets each topic.
+model GroupLessonSchedule {
+  id             String   @id @default(cuid())
+  /// 0 = Sunday … 6 = Saturday.
+  weekday        Int
+  startTime      String
+  endTime        String
+  location       String?
+  teachersNeeded Int      @default(1)
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  lessons GroupLesson[]
 }
 
 /// A teacher signed up to lead a group lesson.

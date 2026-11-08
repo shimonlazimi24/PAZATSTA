@@ -69,6 +69,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ ok: true });
   }
 
+  // Topic only (the weekly list picks it inline): { topicTypeId }.
+  if (body && typeof body.topicTypeId === "string" && Object.keys(body).length === 1) {
+    const type = await prisma.groupLessonType.findUnique({ where: { id: body.topicTypeId }, select: { active: true } });
+    if (!type?.active) return NextResponse.json({ error: "הנושא לא זמין" }, { status: 400 });
+    await prisma.groupLesson.update({ where: { id }, data: { typeId: body.topicTypeId } });
+    return NextResponse.json({ ok: true });
+  }
+
   const parsed = GroupLessonInput.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: firstZodMessage(parsed.error) }, { status: 400 });
   const v = parsed.data;

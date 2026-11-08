@@ -7,6 +7,47 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { apiJson } from "@/lib/api";
 import { monthLabel } from "@/lib/group-lessons";
 import { MonthSwitcher, dayLabel, groupByDate } from "./MonthSwitcher";
+import { WeeklySlotsEditor } from "./WeeklySlotsEditor";
+
+/** Matches PENDING_TOPIC_TYPE_ID in src/lib/group-lessons-weekly.ts. */
+const PENDING_TOPIC = "glt_topic_pending";
+
+/** Pick a lesson's topic straight from the list. */
+function TopicPicker({ row, types, onChanged }: { row: Row; types: { id: string; label: string }[]; onChanged: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const pending = row.typeId === PENDING_TOPIC;
+  return (
+    <div className="flex flex-wrap items-center gap-2 border-t border-dashed border-[var(--color-border)] px-4 py-2 sm:ps-[7.5rem]">
+      <label htmlFor={`topic-${row.id}`} className={`text-sm ${pending ? "font-medium text-amber-800" : "text-[var(--color-text-muted)]"}`}>
+        {pending ? "בחרו נושא:" : "נושא:"}
+      </label>
+      <select
+        id={`topic-${row.id}`}
+        disabled={busy}
+        value={pending ? "" : row.typeId}
+        onChange={async (e) => {
+          if (!e.target.value) return;
+          setBusy(true);
+          await apiJson(`/api/admin/group-lessons/${row.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ topicTypeId: e.target.value }),
+          });
+          setBusy(false);
+          onChanged();
+        }}
+        className="min-h-[36px] max-w-full rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-2 text-sm"
+      >
+        <option value="">— בחרו נושא —</option>
+        {types.map((t) => (
+          <option key={t.id} value={t.id}>
+            {t.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
 
 type Row = {
   id: string;
@@ -15,7 +56,9 @@ type Row = {
   endTime: string;
   location: string | null;
   status: string;
+  typeId: string;
   typeLabel: string;
+  weekly: boolean;
   teachersNeeded: number;
   teachers: { id: string; name: string }[];
   reportsCount: number;
@@ -77,6 +120,13 @@ export function AdminGroupLessonsMonth({ initialMonth }: { initialMonth: string 
   const [month, setMonth] = useState(searchParams.get("month") || initialMonth);
   const [data, setData] = useState<MonthData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [types, setTypes] = useState<{ id: string; label: string }[]>([]);
+
+  useEffect(() => {
+    apiJson<{ id: string; category: string; name: string; active: boolean }[]>("/api/admin/group-lesson-types").then((r) => {
+      if (r.ok) setTypes(r.data.filter((t) => t.active).map((t) => ({ id: t.id, label: `${t.category} – ${t.name}` })));
+    });
+  }, []);
 
   const load = useCallback(async (m: string) => {
     setError(null);
@@ -99,6 +149,7 @@ export function AdminGroupLessonsMonth({ initialMonth }: { initialMonth: string 
 
   return (
     <div className="space-y-6">
+      <WeeklySlotsEditor onSaved={() => load(month)} />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <MonthSwitcher month={month} onChange={changeMonth} />
         <div className="flex gap-2">
@@ -165,6 +216,9 @@ export function AdminGroupLessonsMonth({ initialMonth }: { initialMonth: string 
                             </span>
                             <Staffing row={row} />
                           </Link>
+                          {date >= today && row.status === "open" && types.length > 0 && (
+                            <TopicPicker row={row} types={types} onChanged={() => load(month)} />
+                          )}
                           {date < today && row.status === "open" && row.teachers.length + row.reports.length > 0 && <LessonSummary row={row} />}
                         </li>
                       ))}
