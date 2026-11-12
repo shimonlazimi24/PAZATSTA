@@ -19,6 +19,7 @@ import { formatIsraelYYYYMMDD, addDaysYYYYMMDD } from "@/lib/dates";
 import { isValidEmail, isValidPhone } from "@/lib/validation";
 import { apiJson } from "@/lib/api";
 import type { SlotView } from "@/types/slot";
+import { isPhoneOnlyEmail } from "@/lib/phone-only";
 
 /** Week dates in Israel (YYYY-MM-DD) so student and teacher see the same calendar days. */
 function getBookPageWeekDates(): string[] {
@@ -218,7 +219,8 @@ export default function BookPage() {
         }
         // The booking is always made for the signed-in account, so the address is
         // shown rather than asked for.
-        if (typeof data?.email === "string") setEmail(data.email);
+        // A student who signed up by phone has no mailbox yet: no address to show.
+        if (typeof data?.email === "string" && !isPhoneOnlyEmail(data.email)) setEmail(data.email);
         setRoleChecked(true);
       })
       .catch(() => setRoleChecked(true));
@@ -235,8 +237,10 @@ export default function BookPage() {
         parentFullName?: string | null;
         parentPhone?: string | null;
         parentEmail?: string | null;
+        loginPhone?: string | null;
       } | null) => {
         if (!p) return;
+        if (p.loginPhone) setPhone((v) => v || p.loginPhone!);
         if (p.studentFullName) setName((v) => v || p.studentFullName!);
         if (p.parentFullName) setParentName((v) => v || p.parentFullName!);
         if (p.parentPhone) setParentPhone((v) => v || p.parentPhone!);
@@ -826,15 +830,21 @@ export default function BookPage() {
                 required
                 error={errors.phone}
               />
-              <FormField
-                label="אימייל תלמיד"
-                name="email"
-                type="email"
-                value={email}
-                onChange={() => {}}
-                readOnly
-                hint="האישור והסיכום יישלחו לכתובת שאיתה התחברת."
-              />
+              {email ? (
+                <FormField
+                  label="אימייל תלמיד"
+                  name="email"
+                  type="email"
+                  value={email}
+                  onChange={() => {}}
+                  readOnly
+                  hint="האישור והסיכום יישלחו לכתובת שאיתה התחברת."
+                />
+              ) : (
+                <p className="text-sm text-[var(--color-text-muted)]">
+                  נכנסתם עם הנייד, אז האישור והסיכום יישלחו למייל של ההורה. אפשר להוסיף מייל משלכם בעמוד הפרטים שלי.
+                </p>
+              )}
               <FormField
                 label="שם מלא של אחד ההורים"
                 name="parentName"
@@ -941,15 +951,21 @@ export default function BookPage() {
                 required
                 error={errors.phone}
               />
-              <FormField
-                label="אימייל תלמיד"
-                name="email"
-                type="email"
-                value={email}
-                onChange={() => {}}
-                readOnly
-                hint="האישור והסיכום יישלחו לכתובת שאיתה התחברת."
-              />
+              {email ? (
+                <FormField
+                  label="אימייל תלמיד"
+                  name="email"
+                  type="email"
+                  value={email}
+                  onChange={() => {}}
+                  readOnly
+                  hint="האישור והסיכום יישלחו לכתובת שאיתה התחברת."
+                />
+              ) : (
+                <p className="text-sm text-[var(--color-text-muted)]">
+                  נכנסתם עם הנייד, אז האישור והסיכום יישלחו למייל של ההורה. אפשר להוסיף מייל משלכם בעמוד הפרטים שלי.
+                </p>
+              )}
               <FormField
                 label="שם מלא של אחד ההורים"
                 name="parentName"

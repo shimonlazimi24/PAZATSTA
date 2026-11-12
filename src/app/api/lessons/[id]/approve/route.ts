@@ -5,6 +5,8 @@ import { canAccessAdmin } from "@/lib/admin";
 import { canActOnLesson } from "@/lib/lesson-authz";
 import { sendBookingConfirmation } from "@/lib/email";
 import { formatDateInIsrael } from "@/lib/date-utils";
+import { isPhoneOnlyEmail } from "@/lib/phone-only";
+import { isValidDeliveryEmail } from "@/lib/validation";
 
 /** Teacher or admin approves a pending lesson; sets status to scheduled and sends booking email. */
 export async function POST(
@@ -83,9 +85,13 @@ export async function POST(
     select: { email: true },
   });
   const adminEmails = admins.map((a) => a.email).filter(Boolean);
-  const toEmails = Array.from(
-    new Set([lesson.teacher.email, lesson.student.email, ...adminEmails])
-  );
+  // A student who signed up by phone has no mailbox: the parent gets the confirmation instead.
+  const studentTo = isPhoneOnlyEmail(lesson.student.email)
+    ? studentProfile?.parentEmail && isValidDeliveryEmail(studentProfile.parentEmail)
+      ? [studentProfile.parentEmail]
+      : []
+    : [lesson.student.email];
+  const toEmails = Array.from(new Set([lesson.teacher.email, ...studentTo, ...adminEmails]));
 
   try {
     await sendBookingConfirmation({
