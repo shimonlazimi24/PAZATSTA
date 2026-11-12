@@ -6,7 +6,7 @@ import { sendApprovalRequest } from "@/lib/email";
 import { teacherMatchesTopic } from "@/lib/topics";
 import { formatDateInIsrael } from "@/lib/date-utils";
 import { resolveAdminRecipients } from "@/lib/admin";
-import { isValidDeliveryEmail } from "@/lib/validation";
+import { isValidDeliveryEmail, isValidEmail } from "@/lib/validation";
 import { upsertStudentProfileFromBookingForm } from "@/lib/booking-student-profile";
 import {
   availabilityDateFromYYYYMMDD,
@@ -14,6 +14,8 @@ import {
   utcDayBounds,
 } from "@/lib/dates";
 import { expirePendingForSlotInTx } from "@/lib/expire-pending-lessons";
+import { isPhoneOnlyEmail } from "@/lib/phone-only";
+import { normalizeEmailInput } from "@/lib/login-messages";
 
 const APPROVAL_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -30,6 +32,8 @@ const BookSubmitSchema = z.object({
   parentPhone: z.unknown().optional().transform(trimString),
   parentEmail: z.unknown().optional().transform(trimString),
   notes: z.unknown().optional().transform(trimString),
+  // Only from a student who signed up with a phone: their email, saved on the account.
+  studentEmail: z.unknown().optional().transform(trimString),
   date: z.unknown().optional().transform(trimString),
   startTime: z.unknown().optional().transform(trimString),
   endTime: z.unknown().optional().transform(trimString),
@@ -44,6 +48,7 @@ const BookSubmitSchema = z.object({
   parentPhoneFromForm: o.parentPhone || "",
   parentEmailFromForm: o.parentEmail || "",
   notesFromForm: o.notes || "",
+  studentEmailFromForm: o.studentEmail || "",
   dateStr: o.date || "",
   startTime: o.startTime || "",
   endTime: o.endTime || "",
@@ -78,10 +83,35 @@ export async function POST(req: Request) {
       parentPhoneFromForm,
       parentEmailFromForm,
       notesFromForm,
+      studentEmailFromForm,
       dateStr,
       startTime,
       endTime,
     } = parsed.data;
+
+    // A phone-only account gets its email here, before the lesson, so every email
+    // about this booking (approval, reminders, summary) goes to it.
+    if (isPhoneOnlyEmail(user.email)) {
+      const newEmail = normalizeEmailInput(studentEmailFromForm);
+      if (!newEmail || !isValidEmail(newEmail) || isPhoneOnlyEmail(newEmail)) {
+        return NextResponse.json({ error: "נא להזין אימייל תלמיד תקין. לשם יישלחו האישור והסיכום" }, { status: 400 });
+      }
+      const taken = await prisma.user.findUnique({ where: { email: newEmail }, select: { id: true } });
+      if (taken && taken.id !== user.id) {
+        return NextResponse.json(
+          {
+            error:
+              "המייל הזה כבר רשום אצלנו בחשבון אחר. כדי לחבר את החשבונות, היכנסו ל'הפרטים שלי' ולחצו 'הוספת מייל': נשלח קוד לאימות והשיעורים יתאחדו.",
+          },
+          { status: 409 }
+        );
+      }
+      try {
+        await prisma.user.update({ where: { id: user.id }, data: { email: newEmail } });
+      } catch {
+        return NextResponse.json({ error: "המייל הזה כבר רשום אצלנו. נסו מייל אחר" }, { status: 409 });
+      }
+    }
     const workshopId = workshopIdRaw?.trim() || "";
 
     if (!workshopId && !notesFromForm?.trim()) {

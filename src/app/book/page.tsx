@@ -188,6 +188,8 @@ export default function BookPage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  // Signed up with a phone only: the email is asked for here, and saved on the account.
+  const [phoneOnly, setPhoneOnly] = useState(false);
   const [parentName, setParentName] = useState("");
   const [parentPhone, setParentPhone] = useState("");
   const [parentEmail, setParentEmail] = useState("");
@@ -221,6 +223,7 @@ export default function BookPage() {
         // shown rather than asked for.
         // A student who signed up by phone has no mailbox yet: no address to show.
         if (typeof data?.email === "string" && !isPhoneOnlyEmail(data.email)) setEmail(data.email);
+        else if (typeof data?.email === "string") setPhoneOnly(true);
         setRoleChecked(true);
       })
       .catch(() => setRoleChecked(true));
@@ -396,6 +399,10 @@ export default function BookPage() {
     if (!name.trim()) e.name = "נא להזין שם מלא";
     if (!phone.trim()) e.phone = "נא להזין טלפון";
     else if (!isValidPhone(phone)) e.phone = "נא להזין מספר טלפון תקין (9–11 ספרות)";
+    if (phoneOnly) {
+      if (!email.trim()) e.email = "נא להזין אימייל. לשם יישלחו האישור והסיכום";
+      else if (!isValidEmail(email)) e.email = "נא להזין כתובת אימייל תקינה";
+    }
     if (!parentName.trim()) e.parentName = "נא להזין שם מלא של אחד ההורים";
     if (!parentPhone.trim()) e.parentPhone = "נא להזין טלפון של אחד ההורים";
     else if (!isValidPhone(parentPhone)) e.parentPhone = "נא להזין מספר טלפון תקין (9–11 ספרות)";
@@ -445,6 +452,7 @@ export default function BookPage() {
             parentPhone?: string;
             parentEmail?: string;
             notes?: string;
+            studentEmail?: string;
           } = {
             workshopId: selectedWorkshop.id,
             selectedTopic: selectedWorkshop.topicLabel,
@@ -455,6 +463,7 @@ export default function BookPage() {
           if (parentName?.trim()) body.parentName = parentName.trim();
           if (parentPhone?.trim()) body.parentPhone = parentPhone.trim();
           if (parentEmail?.trim()) body.parentEmail = parentEmail.trim();
+          if (phoneOnly && email.trim()) body.studentEmail = email.trim();
           const res = await fetch("/api/book/submit", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -516,7 +525,7 @@ export default function BookPage() {
             }
           } catch (_) {}
 
-          const body: { teacherId: string; date: string; startTime: string; endTime: string; availabilityId?: string; selectedTopic?: string; studentName?: string; phone?: string; parentName?: string; parentPhone?: string; parentEmail?: string; notes?: string } = {
+          const body: { teacherId: string; date: string; startTime: string; endTime: string; availabilityId?: string; selectedTopic?: string; studentName?: string; phone?: string; parentName?: string; parentPhone?: string; parentEmail?: string; notes?: string; studentEmail?: string } = {
             teacherId: bookableTeacher.id,
             date: selectedDate,
             startTime: selectedSlot.startTime,
@@ -531,6 +540,7 @@ export default function BookPage() {
           if (parentName?.trim()) body.parentName = parentName.trim();
           if (parentPhone?.trim()) body.parentPhone = parentPhone.trim();
           if (parentEmail?.trim()) body.parentEmail = parentEmail.trim();
+          if (phoneOnly && email.trim()) body.studentEmail = email.trim();
           body.notes = notes.trim();
           const res = await fetch("/api/book/submit", {
             method: "POST",
@@ -830,7 +840,21 @@ export default function BookPage() {
                 required
                 error={errors.phone}
               />
-              {email ? (
+              {phoneOnly ? (
+                <FormField
+                  label="אימייל תלמיד"
+                  name="email"
+                  type="email"
+                  value={email}
+                  onChange={(v) => {
+                    setEmail(v);
+                    if (errors.email) setErrors((e) => ({ ...e, email: "" }));
+                  }}
+                  required
+                  error={errors.email}
+                  hint="לכאן יישלחו האישור, התזכורות וסיכום השיעור. המייל יישמר בחשבון, ואפשר להיכנס איתו גם בפעם הבאה."
+                />
+              ) : (
                 <FormField
                   label="אימייל תלמיד"
                   name="email"
@@ -840,10 +864,6 @@ export default function BookPage() {
                   readOnly
                   hint="האישור והסיכום יישלחו לכתובת שאיתה התחברת."
                 />
-              ) : (
-                <p className="text-sm text-[var(--color-text-muted)]">
-                  נכנסתם עם הנייד, אז האישור והסיכום יישלחו למייל של ההורה. אפשר להוסיף מייל משלכם בעמוד הפרטים שלי.
-                </p>
               )}
               <FormField
                 label="שם מלא של אחד ההורים"
@@ -951,7 +971,21 @@ export default function BookPage() {
                 required
                 error={errors.phone}
               />
-              {email ? (
+              {phoneOnly ? (
+                <FormField
+                  label="אימייל תלמיד"
+                  name="email"
+                  type="email"
+                  value={email}
+                  onChange={(v) => {
+                    setEmail(v);
+                    if (errors.email) setErrors((e) => ({ ...e, email: "" }));
+                  }}
+                  required
+                  error={errors.email}
+                  hint="לכאן יישלחו האישור, התזכורות וסיכום השיעור. המייל יישמר בחשבון, ואפשר להיכנס איתו גם בפעם הבאה."
+                />
+              ) : (
                 <FormField
                   label="אימייל תלמיד"
                   name="email"
@@ -961,10 +995,6 @@ export default function BookPage() {
                   readOnly
                   hint="האישור והסיכום יישלחו לכתובת שאיתה התחברת."
                 />
-              ) : (
-                <p className="text-sm text-[var(--color-text-muted)]">
-                  נכנסתם עם הנייד, אז האישור והסיכום יישלחו למייל של ההורה. אפשר להוסיף מייל משלכם בעמוד הפרטים שלי.
-                </p>
               )}
               <FormField
                 label="שם מלא של אחד ההורים"
