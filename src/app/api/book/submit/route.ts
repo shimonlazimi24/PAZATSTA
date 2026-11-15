@@ -98,18 +98,16 @@ export async function POST(req: Request) {
       }
       const taken = await prisma.user.findUnique({ where: { email: newEmail }, select: { id: true } });
       if (taken && taken.id !== user.id) {
+        // Not a slot conflict: the page sends a code to this email to join the accounts.
         return NextResponse.json(
-          {
-            error:
-              "המייל הזה כבר רשום אצלנו בחשבון אחר. כדי לחבר את החשבונות, היכנסו ל'הפרטים שלי' ולחצו 'הוספת מייל': נשלח קוד לאימות והשיעורים יתאחדו.",
-          },
+          { error: "המייל הזה כבר רשום אצלנו בחשבון אחר.", code: "email_taken", email: newEmail },
           { status: 409 }
         );
       }
       try {
         await prisma.user.update({ where: { id: user.id }, data: { email: newEmail } });
       } catch {
-        return NextResponse.json({ error: "המייל הזה כבר רשום אצלנו. נסו מייל אחר" }, { status: 409 });
+        return NextResponse.json({ error: "המייל הזה כבר רשום אצלנו.", code: "email_taken", email: newEmail }, { status: 409 });
       }
     }
     const workshopId = workshopIdRaw?.trim() || "";

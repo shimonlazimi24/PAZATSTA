@@ -190,6 +190,9 @@ export default function BookPage() {
   const [email, setEmail] = useState("");
   // Signed up with a phone only: the email is asked for here, and saved on the account.
   const [phoneOnly, setPhoneOnly] = useState(false);
+  // The email typed by a phone-only student already has an account: a code to that
+  // email joins the two accounts, and the booking is then sent again.
+  const [join, setJoin] = useState<{ email: string; code: string; busy: boolean; error: string } | null>(null);
   const [parentName, setParentName] = useState("");
   const [parentPhone, setParentPhone] = useState("");
   const [parentEmail, setParentEmail] = useState("");
@@ -413,6 +416,75 @@ export default function BookPage() {
     return Object.keys(e).length === 0;
   }
 
+  async function startJoin(joinEmail: string) {
+    setJoin({ email: joinEmail, code: "", busy: true, error: "" });
+    setErrors({});
+    const r = await fetch("/api/student/link-login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ step: "send", email: joinEmail }),
+    }).catch(() => null);
+    const d = r ? await r.json().catch(() => ({})) : {};
+    setJoin({ email: joinEmail, code: "", busy: false, error: r?.ok ? "" : (d as { error?: string }).error || "לא הצלחנו לשלוח קוד. נסו שוב" });
+  }
+
+  async function confirmJoin() {
+    if (!join || join.busy) return;
+    setJoin({ ...join, busy: true, error: "" });
+    const r = await fetch("/api/student/link-login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ step: "verify", email: join.email, code: join.code }),
+    }).catch(() => null);
+    const d = r ? await r.json().catch(() => ({})) : {};
+    if (!r?.ok) {
+      setJoin({ ...join, busy: false, error: (d as { error?: string }).error || "הקוד לא אומת. נסו שוב" });
+      return;
+    }
+    // Now logged in to the joined account, which has this email: book again.
+    setJoin(null);
+    setPhoneOnly(false);
+    setEmail(join.email);
+    await handleNext();
+  }
+
+  const joinBox = join && (
+    <div className="space-y-3 rounded-[var(--radius-card)] border border-amber-200 bg-amber-50 p-4 text-right" role="region" aria-label="חיבור החשבונות">
+      <p className="text-sm text-amber-900">
+        המייל <bdi dir="ltr">{join.email}</bdi> כבר רשום אצלנו. שלחנו אליו קוד: הזינו אותו כדי לחבר את החשבונות, וההזמנה תישלח מיד.
+      </p>
+      <input
+        inputMode="numeric"
+        autoComplete="one-time-code"
+        placeholder="000000"
+        dir="ltr"
+        maxLength={6}
+        value={join.code}
+        onChange={(e) => setJoin({ ...join, code: e.target.value.replace(/\D/g, "").slice(0, 6), error: "" })}
+        className="w-full rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-3 py-2 text-center text-lg tracking-widest"
+      />
+      {join.error && <p className="text-sm text-red-700">{join.error}</p>}
+      <div className="flex flex-wrap gap-2">
+        <Button onClick={confirmJoin} disabled={join.busy || join.code.length !== 6} className="flex-1 justify-center">
+          {join.busy ? "רגע…" : "אישור והזמנה"}
+        </Button>
+        <Button variant="secondary" onClick={() => startJoin(join.email)} disabled={join.busy}>
+          שליחת קוד חדש
+        </Button>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            setJoin(null);
+            setStep(detailsStep);
+          }}
+          disabled={join.busy}
+        >
+          מייל אחר
+        </Button>
+      </div>
+    </div>
+  );
+
   async function handleNext() {
     if (isSubmitting) return;
     if (step === 1 && !canProceedStep1) return;
@@ -475,6 +547,10 @@ export default function BookPage() {
             return;
           }
           setIsSubmitting(false);
+          if ((data as { code?: string }).code === "email_taken") {
+            await startJoin((data as { email?: string }).email || email.trim());
+            return;
+          }
           setErrors({ submit: (data as { error?: string }).error ?? "שגיאה בקביעת השיעור" });
           return;
         } catch (_) {
@@ -553,6 +629,10 @@ export default function BookPage() {
             return;
           }
           setIsSubmitting(false);
+          if ((data as { code?: string }).code === "email_taken") {
+            await startJoin((data as { email?: string }).email || email.trim());
+            return;
+          }
           if (res.status === 409 && teacher && selectedDate) {
             setSelectedSlot(null);
             setStep(3);
@@ -1071,9 +1151,13 @@ export default function BookPage() {
             {errors.submit && (
               <p className="text-sm text-red-600 text-right">{errors.submit}</p>
             )}
-            <Button onClick={handleNext} showArrow disabled={isSubmitting} className="w-full justify-center">
-              {isSubmitting ? "שולח…" : "אישור וקביעת שיעור"}
-            </Button>
+            {join ? (
+              joinBox
+            ) : (
+              <Button onClick={handleNext} showArrow disabled={isSubmitting} className="w-full justify-center">
+                {isSubmitting ? "שולח…" : "אישור וקביעת שיעור"}
+              </Button>
+            )}
           </div>
         )}
 
@@ -1102,9 +1186,13 @@ export default function BookPage() {
             {errors.submit && (
               <p className="text-sm text-red-600 text-right">{errors.submit}</p>
             )}
-            <Button onClick={handleNext} showArrow disabled={isSubmitting} className="w-full justify-center">
-              {isSubmitting ? "שולח…" : "אישור וקביעת שיעור"}
-            </Button>
+            {join ? (
+              joinBox
+            ) : (
+              <Button onClick={handleNext} showArrow disabled={isSubmitting} className="w-full justify-center">
+                {isSubmitting ? "שולח…" : "אישור וקביעת שיעור"}
+              </Button>
+            )}
           </div>
         )}
 
