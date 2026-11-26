@@ -20,6 +20,7 @@ import { isValidEmail, isValidPhone } from "@/lib/validation";
 import { apiJson } from "@/lib/api";
 import type { SlotView } from "@/types/slot";
 import { isPhoneOnlyEmail } from "@/lib/phone-only";
+import type { AddedTopic } from "@/lib/booking-topics";
 
 /** Week dates in Israel (YYYY-MM-DD) so student and teacher see the same calendar days. */
 function getBookPageWeekDates(): string[] {
@@ -190,6 +191,22 @@ export default function BookPage() {
   const [email, setEmail] = useState("");
   // Signed up with a phone only: the email is asked for here, and saved on the account.
   const [phoneOnly, setPhoneOnly] = useState(false);
+  // Topics the admin added, shown under their category after the built-in ones.
+  const [addedTopics, setAddedTopics] = useState<AddedTopic[]>([]);
+  useEffect(() => {
+    fetch("/api/topics")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((list: AddedTopic[]) => setAddedTopics(Array.isArray(list) ? list : []))
+      .catch(() => {});
+  }, []);
+  const categories = useMemo(
+    () =>
+      CATEGORIES.map((c) => ({
+        ...c,
+        subs: [...c.subs, ...addedTopics.filter((t) => t.category === c.id).map((t) => ({ id: `added-${t.id}`, label: t.label }))],
+      })),
+    [addedTopics]
+  );
   // The email typed by a phone-only student already has an account: a code to that
   // email joins the two accounts, and the booking is then sent again.
   const [join, setJoin] = useState<{ email: string; code: string; busy: boolean; error: string } | null>(null);
@@ -672,7 +689,7 @@ export default function BookPage() {
   const subjectTitle =
     subOption?.displayLabel ??
     subOption?.label ??
-    CATEGORIES.find((c) => c.id === categoryId)?.title ??
+    categories.find((c) => c.id === categoryId)?.title ??
     "";
 
   if (!roleChecked) {
@@ -702,7 +719,7 @@ export default function BookPage() {
           <div className="space-y-6">
             <p className="text-[var(--color-text-muted)] text-right">בחרו מסלול</p>
             <div className="grid gap-4 sm:grid-cols-2">
-              {CATEGORIES.map((cat) => {
+              {categories.map((cat) => {
                 const colors = CATEGORY_COLORS[cat.id];
                 const isSelected = categoryId === cat.id;
                 return (
@@ -780,7 +797,7 @@ export default function BookPage() {
                       </>
                     )
                   ) : (
-                    CATEGORIES.find((c) => c.id === categoryId)?.subs.map((s) => {
+                    categories.find((c) => c.id === categoryId)?.subs.map((s) => {
                       const colors = CATEGORY_COLORS[categoryId];
                       const isChipSelected = subOption?.id === s.id;
                       return (

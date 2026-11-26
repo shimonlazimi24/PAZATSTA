@@ -532,3 +532,15 @@ model AppSetting {
   value     Json
   updatedAt DateTime @updatedAt
 }
+
+/// A booking topic the admin added, on top of the built-in ones in the code.
+/// It appears in the booking form under its category and as a teacher specialty.
+model BookingTopic {
+  id        String   @id @default(cuid())
+  /// One of the booking categories: tzav | yom100 | modiin | flight | other.
+  category  String
+  label     String   @unique
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+}

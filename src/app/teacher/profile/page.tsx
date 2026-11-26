@@ -6,7 +6,7 @@ import { Button } from "@/components/design/Button";
 import { FormField } from "@/components/design/FormField";
 import { apiJson } from "@/lib/api";
 import { isValidPhone } from "@/lib/validation";
-import { BOOKING_TOPIC_LABELS } from "@/data/topics";
+import { useSpecialtyLabels } from "@/hooks/useSpecialtyLabels";
 import { TeacherAvatar } from "@/components/TeacherAvatar";
 
 type ProfileResponse = {
@@ -22,6 +22,7 @@ type ProfileResponse = {
 };
 
 export default function TeacherProfilePage() {
+  const specialtyLabels = useSpecialtyLabels();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -167,7 +168,7 @@ export default function TeacherProfilePage() {
                 בחרו את המסלולים שבהם אתם מתמחים. רק מורים שמתאימים למסלול יופיעו לתלמידים.
               </p>
               <div className="flex flex-wrap gap-2 justify-start">
-                {BOOKING_TOPIC_LABELS.map((topic) => {
+                {specialtyLabels.map((topic) => {
                   const isSelected = specialties.has(topic);
                   return (
                     <button

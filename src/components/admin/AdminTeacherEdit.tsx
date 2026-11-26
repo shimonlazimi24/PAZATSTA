@@ -10,7 +10,7 @@ import { TeacherAvailability } from "@/components/TeacherAvailability";
 import { TeacherAvatar } from "@/components/TeacherAvatar";
 import { apiJson } from "@/lib/api";
 import { isValidPhone } from "@/lib/validation";
-import { BOOKING_TOPIC_LABELS } from "@/data/topics";
+import { useSpecialtyLabels } from "@/hooks/useSpecialtyLabels";
 import { formatIsraelYYYYMMDD, addDaysYYYYMMDD } from "@/lib/dates";
 
 type TeacherProfile = {
@@ -46,6 +46,7 @@ function getWeekDatesIsrael(): string[] {
 export function AdminTeacherEdit({ teacherId }: { teacherId: string }) {
   const [profile, setProfile] = useState<TeacherProfile | null>(null);
   const router = useRouter();
+  const specialtyLabels = useSpecialtyLabels();
   const [deleting, setDeleting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -248,7 +249,7 @@ export function AdminTeacherEdit({ teacherId }: { teacherId: string }) {
           <div className="text-right">
             <label className="block text-sm font-medium text-[var(--color-text)] mb-2">התמחויות</label>
             <div className="flex flex-wrap gap-2 justify-start">
-              {BOOKING_TOPIC_LABELS.map((topic) => {
+              {specialtyLabels.map((topic) => {
                 const isSelected = specialties.has(topic);
                 return (
                   <button
