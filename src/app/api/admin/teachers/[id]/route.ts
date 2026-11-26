@@ -57,6 +57,9 @@ export async function GET(
             specialties: true,
             avatarType: true,
             profileImageUrl: true,
+            canPrivate: true,
+            canGroup: true,
+            canFrontal: true,
           },
         },
       },
@@ -76,6 +79,9 @@ export async function GET(
       specialties: p?.specialties ?? [],
       avatarType: p?.avatarType ?? null,
       profileImageUrl: p?.profileImageUrl ?? null,
+      canPrivate: p?.canPrivate ?? true,
+      canGroup: p?.canGroup ?? true,
+      canFrontal: p?.canFrontal ?? true,
     });
   } catch (e) {
     console.error("[admin/teachers] GET error:", e);
@@ -126,7 +132,21 @@ export async function PATCH(
     if (phone !== undefined) userData.phone = phone;
     if (email !== undefined) userData.email = email;
 
-    const profileData: { avatarType?: string | null; profileImageUrl?: string | null; displayName?: string | null; bio?: string | null; specialization?: string | null; specialties?: string[] } = {};
+    const profileData: {
+      avatarType?: string | null;
+      profileImageUrl?: string | null;
+      displayName?: string | null;
+      bio?: string | null;
+      specialization?: string | null;
+      specialties?: string[];
+      canPrivate?: boolean;
+      canGroup?: boolean;
+      canFrontal?: boolean;
+    } = {};
+    // What the teacher takes part in (private lessons, group lessons, frontal days).
+    for (const k of ["canPrivate", "canGroup", "canFrontal"] as const) {
+      if (typeof body[k] === "boolean") profileData[k] = body[k];
+    }
     if (avatarType !== undefined) {
       profileData.avatarType = avatarType;
       if (avatarType) profileData.profileImageUrl = null;

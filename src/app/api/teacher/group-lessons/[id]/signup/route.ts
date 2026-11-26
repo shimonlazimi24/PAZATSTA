@@ -5,12 +5,14 @@ import { nowIsraelHHMM, todayIsraelYYYYMMDD } from "@/lib/dates";
 import { canSignUp, canWithdraw } from "@/lib/group-lessons";
 import { lessonDateStr } from "@/lib/group-lessons-server";
 import { lockGroupLessonForSignup } from "@/lib/group-lesson-signup";
+import { NO_PERMISSION_MESSAGE, getTeacherPermissions } from "@/lib/teacher-permissions";
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireTeacher();
   if ("error" in auth) return auth.error;
   const { id } = await params;
   const me = auth.user.id;
+  if (!(await getTeacherPermissions(me)).group) return NextResponse.json({ error: NO_PERMISSION_MESSAGE.group }, { status: 403 });
   const result = await prisma.$transaction(async (tx) => {
     const lesson = await lockGroupLessonForSignup(tx, id);
     if (!lesson) return { error: "השיעור לא נמצא", status: 404 } as const;

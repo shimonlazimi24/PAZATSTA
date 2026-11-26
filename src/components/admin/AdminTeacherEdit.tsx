@@ -24,7 +24,17 @@ type TeacherProfile = {
   specialties: string[];
   avatarType: string | null;
   profileImageUrl: string | null;
+  canPrivate?: boolean;
+  canGroup?: boolean;
+  canFrontal?: boolean;
 };
+
+const AREAS = [
+  { key: "canPrivate", label: "שיעורים פרטיים", hint: "מופיע לתלמידים בקביעת שיעור, ויש לו עמוד זמינות" },
+  { key: "canGroup", label: "שיעורים קבוצתיים", hint: "רואה את השיעורים ונרשם אליהם, ומקבל תזכורות" },
+  { key: "canFrontal", label: "ימים פרונטליים", hint: "רואה את הימים ונרשם אליהם" },
+] as const;
+type AreaKey = (typeof AREAS)[number]["key"];
 
 function getWeekDatesIsrael(): string[] {
   const startStr = formatIsraelYYYYMMDD(new Date());
@@ -50,6 +60,7 @@ export function AdminTeacherEdit({ teacherId }: { teacherId: string }) {
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [specialties, setSpecialties] = useState<Set<string>>(new Set());
+  const [areas, setAreas] = useState<Record<AreaKey, boolean>>({ canPrivate: true, canGroup: true, canFrontal: true });
 
   const weekDates = useMemo(() => getWeekDatesIsrael(), []);
 
@@ -66,6 +77,7 @@ export function AdminTeacherEdit({ teacherId }: { teacherId: string }) {
         setDisplayName(p.displayName ?? "");
         setBio(p.bio ?? "");
         setSpecialties(new Set(p.specialties ?? []));
+        setAreas({ canPrivate: p.canPrivate !== false, canGroup: p.canGroup !== false, canFrontal: p.canFrontal !== false });
       }
       setLoading(false);
     });
@@ -91,6 +103,7 @@ export function AdminTeacherEdit({ teacherId }: { teacherId: string }) {
         displayName: displayName.trim() || null,
         bio: bio.trim() || null,
         specialties: Array.from(specialties),
+        ...areas,
       }),
     });
     setSaving(false);
@@ -206,6 +219,32 @@ export function AdminTeacherEdit({ teacherId }: { teacherId: string }) {
             onChange={(v) => { setDisplayName(v); setSuccess(false); setError(""); }}
             placeholder="השם שיופיע בכרטיס המורה"
           />
+          <fieldset className="text-right">
+            <legend className="block text-sm font-medium text-[var(--color-text)] mb-2">במה המורה משתתף (הרשאות)</legend>
+            <div className="space-y-2">
+              {AREAS.map((a) => (
+                <label key={a.key} className="flex items-start gap-3 rounded-md border border-[var(--color-border)] px-3 py-2">
+                  <input
+                    type="checkbox"
+                    className="mt-1 h-4 w-4 accent-[var(--color-primary)]"
+                    checked={areas[a.key]}
+                    onChange={(e) => {
+                      setAreas((prev) => ({ ...prev, [a.key]: e.target.checked }));
+                      setSuccess(false);
+                      setError("");
+                    }}
+                  />
+                  <span>
+                    <span className="block text-sm font-medium text-[var(--color-text)]">{a.label}</span>
+                    <span className="block text-xs text-[var(--color-text-muted)]">{a.hint}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+              למשל מורה לסדנאות בלבד: מסמנים רק &quot;ימים פרונטליים&quot;. שיעורים שכבר נקבעו לא מתבטלים.
+            </p>
+          </fieldset>
           <div className="text-right">
             <label className="block text-sm font-medium text-[var(--color-text)] mb-2">התמחויות</label>
             <div className="flex flex-wrap gap-2 justify-start">

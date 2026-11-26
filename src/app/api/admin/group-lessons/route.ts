@@ -4,6 +4,7 @@ import { requireAdmin, missingTableResponse } from "@/lib/admin-api";
 import { isMonthKey, monthKeyOf, monthRange, teachersWithoutSignup, typeLabel } from "@/lib/group-lessons";
 import { GroupLessonInput, firstZodMessage, lessonDateFromStr, lessonDateStr } from "@/lib/group-lessons-server";
 import { todayIsraelYYYYMMDD } from "@/lib/dates";
+import { teachersAllowed } from "@/lib/teacher-permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,8 @@ export async function GET(req: Request) {
           reports: { select: { teacherId: true, typeLabel: true, participants: true, notes: true }, orderBy: { submittedAt: "asc" } },
         },
       }),
-      prisma.user.findMany({ where: { role: "teacher" }, select: { id: true, name: true, email: true }, orderBy: { name: "asc" } }),
+      // Only teachers who take part in group lessons owe one a month.
+      prisma.user.findMany({ where: { role: "teacher", ...teachersAllowed("group") }, select: { id: true, name: true, email: true }, orderBy: { name: "asc" } }),
     ]);
     const nameOf = new Map(teachers.map((t) => [t.id, t.name || t.email]));
     const signedThisMonth = lessons.filter((l) => l.status === "open").flatMap((l) => l.signups.map((s) => s.teacherId));

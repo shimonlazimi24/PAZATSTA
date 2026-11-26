@@ -13,9 +13,17 @@ export function useNavItems(): NavItem[] & { email?: string } {
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (!data) return setState({ items: [] });
-        const { role: r, canAccessAdmin, email } = data;
+        const { role: r, canAccessAdmin, email, teaching } = data;
         const items: NavItem[] = [];
-        if (r === "teacher") items.push(...TEACHER_NAV);
+        if (r === "teacher") {
+          // Areas the admin turned off for this teacher are left out of the menu.
+          const hidden = new Set<string>([
+            ...(teaching?.private === false ? ["/teacher/availability"] : []),
+            ...(teaching?.group === false ? ["/teacher/group-lessons"] : []),
+            ...(teaching?.frontal === false ? ["/teacher/frontal-days"] : []),
+          ]);
+          items.push(...TEACHER_NAV.filter((i) => !hidden.has(i.href)));
+        }
         else if (r === "student") items.push(...STUDENT_NAV);
         if (r === "admin" || canAccessAdmin) items.push(...ADMIN_NAV);
         setState({ items: items.length ? items : [...STUDENT_NAV], email });

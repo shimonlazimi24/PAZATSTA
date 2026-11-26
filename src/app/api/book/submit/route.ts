@@ -15,6 +15,7 @@ import {
 } from "@/lib/dates";
 import { expirePendingForSlotInTx } from "@/lib/expire-pending-lessons";
 import { isPhoneOnlyEmail } from "@/lib/phone-only";
+import { getTeacherPermissions } from "@/lib/teacher-permissions";
 import { normalizeEmailInput } from "@/lib/login-messages";
 
 const APPROVAL_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -111,6 +112,11 @@ export async function POST(req: Request) {
       }
     }
     const workshopId = workshopIdRaw?.trim() || "";
+
+    // A teacher the admin took off private lessons cannot be booked, even directly.
+    if (!workshopId && teacherId && !(await getTeacherPermissions(teacherId)).private) {
+      return NextResponse.json({ error: "המורה הזה לא זמין לשיעורים פרטיים. בחרו מורה אחר." }, { status: 400 });
+    }
 
     if (!workshopId && !notesFromForm?.trim()) {
       return NextResponse.json(

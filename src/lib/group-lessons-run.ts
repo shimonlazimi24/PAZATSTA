@@ -5,6 +5,7 @@ import { isValidDeliveryEmail } from "@/lib/validation";
 import { monthLabel, monthRange, noticesDue, teachersWithoutSignup } from "@/lib/group-lessons";
 import { emailInfo, lessonDateFromStr } from "@/lib/group-lessons-server";
 import { sendGroupLessonDayBefore, sendGroupMissingSignup, sendGroupSignupOpen } from "@/lib/email";
+import { teachersAllowed } from "@/lib/teacher-permissions";
 
 /** Records a monthly notice; false if it was already sent (the unique key decides). */
 async function claimNotice(prisma: PrismaClient, monthKey: string, kind: string): Promise<boolean> {
@@ -23,7 +24,7 @@ async function claimNotice(prisma: PrismaClient, monthKey: string, kind: string)
  */
 export async function runGroupLessonNotices(prisma: PrismaClient, todayStr = todayIsraelYYYYMMDD()) {
   const result = { signupOpen: 0, missingSignup: 0, dayBefore: 0 };
-  const teachers = (await prisma.user.findMany({ where: { role: "teacher" }, select: { id: true, email: true } })).filter((t) =>
+  const teachers = (await prisma.user.findMany({ where: { role: "teacher", ...teachersAllowed("group") }, select: { id: true, email: true } })).filter((t) =>
     isValidDeliveryEmail(t.email)
   );
 

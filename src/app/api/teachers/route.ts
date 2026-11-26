@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getTopicsToMatch } from "@/lib/topics";
+import { teachersAllowed } from "@/lib/teacher-permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -42,9 +43,9 @@ export async function GET(req: Request) {
         });
       }
     }
-    const where = andConditions.length > 0
-      ? { role: "teacher" as const, AND: andConditions }
-      : { role: "teacher" as const };
+    // Only teachers the admin allows for private lessons are offered to students.
+    andConditions.push(teachersAllowed("private"));
+    const where = { role: "teacher" as const, AND: andConditions };
 
     const teachers = await prisma.user.findMany({
       where,

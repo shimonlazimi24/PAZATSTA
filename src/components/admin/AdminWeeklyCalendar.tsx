@@ -79,9 +79,89 @@ const rowGrid = "grid gap-x-4 gap-y-1 px-4 py-3 sm:grid-cols-[5.5rem_1fr_auto] s
 
 type Act = (lesson: WeeklyLesson, action: "cancel" | "reject" | "not-held") => void;
 
-function PrivateRow({ l, busy, act }: { l: WeeklyLesson; busy: boolean; act: Act }) {
+type Candidate = { id: string; name: string; teachesTopic: boolean; busy: boolean };
+
+/** Pick another teacher for the same date and time, instead of canceling the lesson. */
+function TransferBox({ l, onDone, onClose }: { l: WeeklyLesson; onDone: (text: string) => void; onClose: () => void }) {
+  const [list, setList] = useState<Candidate[] | null>(null);
+  const [choice, setChoice] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetch(`/api/lessons/${l.id}/transfer`, { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { teachers?: Candidate[] } | null) => setList(d?.teachers ?? []))
+      .catch(() => setList([]));
+  }, [l.id]);
+
+  // Teachers who teach the topic and are free first; the rest after, marked.
+  const sorted = (list ?? []).slice().sort((a, b) => Number(b.teachesTopic && !b.busy) - Number(a.teachesTopic && !a.busy));
+
+  async function submit() {
+    if (!choice) return;
+    setBusy(true);
+    setError("");
+    const r = await fetch(`/api/lessons/${l.id}/transfer`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ teacherId: choice }),
+    }).catch(() => null);
+    const d = r ? ((await r.json().catch(() => ({}))) as { error?: string }) : {};
+    setBusy(false);
+    if (!r?.ok) return setError(d.error || "ההעברה נכשלה. נסו שוב.");
+    onDone(`השיעור הועבר ל${list?.find((t) => t.id === choice)?.name ?? "מורה אחר"}. המורים והתלמיד קיבלו מייל.`);
+  }
+
+  return (
+    <div className="col-span-full mt-2 flex flex-wrap items-center gap-2 rounded-md bg-[var(--color-bg-muted)]/60 p-3">
+      <label htmlFor={`tr-${l.id}`} className="text-sm font-medium text-[var(--color-text)]">
+        להעביר למורה:
+      </label>
+      {list === null ? (
+        <span className="text-sm text-[var(--color-text-muted)]">טוען…</span>
+      ) : (
+        <select
+          id={`tr-${l.id}`}
+          value={choice}
+          onChange={(e) => setChoice(e.target.value)}
+          className="min-h-[36px] max-w-full rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-2 text-sm"
+        >
+          <option value="">— בחרו מורה —</option>
+          {sorted.map((t) => (
+            <option key={t.id} value={t.id} disabled={t.busy}>
+              {t.name}
+              {t.busy ? " (תפוס בשעה הזו)" : !t.teachesTopic ? " (לא מלמד את הנושא)" : ""}
+            </option>
+          ))}
+        </select>
+      )}
+      <button
+        type="button"
+        disabled={!choice || busy}
+        onClick={submit}
+        className="min-h-[36px] rounded-[var(--radius-input)] bg-[var(--color-primary)] px-3 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+      >
+        {busy ? "מעביר…" : "העברה"}
+      </button>
+      <button type="button" onClick={onClose} className={actionBtn}>
+        סגירה
+      </button>
+      {error && (
+        <p className="w-full text-sm text-red-700" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function PrivateRow({ l, busy, act, onTransferred }: { l: WeeklyLesson; busy: boolean; act: Act; onTransferred: (text: string) => void }) {
   const status = STATUS[l.status] ?? { label: l.status, cls: "bg-[var(--color-bg-muted)]" };
   const started = isLessonStarted(l.date, l.startTime);
+  const [transferring, setTransferring] = useState(false);
+  const canTransfer = !l.isWorkshop && !started && (l.status === "scheduled" || l.status === "pending_approval");
   return (
     <li className={rowGrid}>
       <span className="text-sm font-medium tabular-nums text-[var(--color-text)]">
@@ -101,6 +181,11 @@ function PrivateRow({ l, busy, act }: { l: WeeklyLesson; busy: boolean; act: Act
             לא לאשר
           </button>
         )}
+        {canTransfer && (
+          <button type="button" disabled={busy} className={actionBtn} onClick={() => setTransferring((v) => !v)}>
+            העברה למורה אחר
+          </button>
+        )}
         {l.status === "scheduled" && !started && (
           <button type="button" disabled={busy} className={actionBtn} onClick={() => act(l, "cancel")}>
             ביטול
@@ -113,6 +198,16 @@ function PrivateRow({ l, busy, act }: { l: WeeklyLesson; busy: boolean; act: Act
           </button>
         )}
       </span>
+      {transferring && (
+        <TransferBox
+          l={l}
+          onClose={() => setTransferring(false)}
+          onDone={(text) => {
+            setTransferring(false);
+            onTransferred(text);
+          }}
+        />
+      )}
     </li>
   );
 }
@@ -313,7 +408,16 @@ export function AdminWeeklyCalendar() {
                   <p className="border-b border-[var(--color-border)] pb-3 text-sm text-[var(--color-text-muted)]">{filtered ? "אין כלום לפי הסינון" : "אין כלום"}</p>
                 ) : (
                   <ul className="divide-y divide-[var(--color-border)] rounded-lg border border-[var(--color-border)] bg-white">
-                    {dayRows.map((r) => (r.kind === "private" ? <PrivateRow key={r.lesson.id} l={r.lesson} busy={busyId === r.lesson.id} act={act} /> : <EventRow key={r.event.id} kind={r.kind} e={r.event} />))}
+                    {dayRows.map((r) => (r.kind === "private" ? <PrivateRow
+                          key={r.lesson.id}
+                          l={r.lesson}
+                          busy={busyId === r.lesson.id}
+                          act={act}
+                          onTransferred={(text) => {
+                            setMessage({ ok: true, text });
+                            load(weekStart);
+                          }}
+                        /> : <EventRow key={r.event.id} kind={r.kind} e={r.event} />))}
                   </ul>
                 )}
               </li>

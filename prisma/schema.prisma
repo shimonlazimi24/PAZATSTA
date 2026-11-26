@@ -50,6 +50,10 @@ model TeacherProfile {
   avatarType      String? // "male" | "female" - generic avatar
   specialization  String? // legacy single string
   specialties     String[] @default([]) // multi-select, must match booking topic labels exactly
+  /// What this teacher takes part in; the admin turns each off per teacher.
+  canPrivate      Boolean  @default(true)
+  canGroup        Boolean  @default(true)
+  canFrontal      Boolean  @default(true)
   createdAt       DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

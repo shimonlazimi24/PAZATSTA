@@ -5,11 +5,13 @@ import { todayIsraelYYYYMMDD } from "@/lib/dates";
 import { canWithdraw } from "@/lib/frontal-days";
 import { lessonDateStr } from "@/lib/group-lessons-server";
 import { registerTeacherForDay, sendRegistrationMessage } from "@/lib/frontal-days-register";
+import { NO_PERMISSION_MESSAGE, getTeacherPermissions } from "@/lib/teacher-permissions";
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireTeacher();
   if ("error" in auth) return auth.error;
   const { id } = await params;
+  if (!(await getTeacherPermissions(auth.user.id)).frontal) return NextResponse.json({ error: NO_PERMISSION_MESSAGE.frontal }, { status: 403 });
   const result = await registerTeacherForDay(prisma, id, auth.user.id);
   if (!result.ok) return NextResponse.json({ error: result.message }, { status: result.status });
   await sendRegistrationMessage(result.day, auth.user).catch((e) => console.error("[frontal register] email failed", e));

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { parseDateParam } from "@/lib/date-utils";
+import { teachersAllowed } from "@/lib/teacher-permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,7 @@ export async function GET(
     const endParam = searchParams.get("end");
 
     const teacher = await prisma.user.findFirst({
-      where: { id: teacherId, role: "teacher" },
+      where: { id: teacherId, role: "teacher", ...teachersAllowed("private") },
     });
     if (!teacher) {
       return NextResponse.json({ error: "Teacher not found" }, { status: 404 });

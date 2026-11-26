@@ -4,6 +4,7 @@ import { requireTeacher } from "@/lib/teacher-api";
 import { missingTableResponse } from "@/lib/admin-api";
 import { todayIsraelYYYYMMDD } from "@/lib/dates";
 import { lessonDateFromStr, lessonDateStr } from "@/lib/group-lessons-server";
+import { NO_PERMISSION_MESSAGE, getTeacherPermissions } from "@/lib/teacher-permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,7 @@ export async function GET() {
   const auth = await requireTeacher();
   if ("error" in auth) return auth.error;
   const me = auth.user.id;
+  if (!(await getTeacherPermissions(me)).frontal) return NextResponse.json({ error: NO_PERMISSION_MESSAGE.frontal }, { status: 403 });
   const today = todayIsraelYYYYMMDD();
   try {
     const days = await prisma.frontalDay.findMany({
