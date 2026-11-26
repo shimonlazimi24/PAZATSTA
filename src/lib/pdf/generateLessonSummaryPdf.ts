@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { createLessonSummaryDocument } from "./LessonSummaryPDF";
 import { resolveTipsText } from "@/lib/report-template";
+import { isPhoneOnlyEmail } from "@/lib/phone-only";
+import { readExtraAnswers } from "@/lib/report-extra";
 
 const STORAGE_DIR = process.env.STORAGE_PATH || path.join(process.cwd(), "storage", "pdfs");
 const SUBDIR = "lesson-summaries";
@@ -83,7 +85,8 @@ export async function generateLessonPdfBuffer(
     const doc = createLessonSummaryDocument({
       studentName: studentName || "",
       teacherName,
-      studentEmail: lesson.student.email || undefined,
+      // A phone-only student has a stand-in address, not a mailbox: leave it out.
+      studentEmail: lesson.student.email && !isPhoneOnlyEmail(lesson.student.email) ? lesson.student.email : undefined,
       teacherEmail: lesson.teacher.email || undefined,
       date: dateStr,
       timeRange,
@@ -93,6 +96,7 @@ export async function generateLessonPdfBuffer(
       pointsToImprove: summary.pointsToImprove || "",
       tips: await resolveTipsText(summary),
       recommendations: summary.recommendations || "",
+      extra: readExtraAnswers(summary.extraAnswers),
     });
     const buffer = await renderToBuffer(doc);
     const buf = Buffer.from(buffer);

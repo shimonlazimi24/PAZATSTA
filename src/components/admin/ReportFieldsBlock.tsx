@@ -15,13 +15,41 @@ export function ReportFieldsBlock() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [newLabel, setNewLabel] = useState("");
+  const [newRequired, setNewRequired] = useState(false);
+  const [adding, setAdding] = useState(false);
 
-  useEffect(() => {
+  function reload() {
     apiJson<ReportField[]>("/api/admin/report-fields").then((r) => {
       if (r.ok) setFields(r.data);
       else setLoadError(r.error);
     });
-  }, []);
+  }
+  useEffect(reload, []);
+
+  async function addQuestion() {
+    if (!newLabel.trim()) return;
+    setAdding(true);
+    const r = await apiJson("/api/admin/report-fields", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label: newLabel.trim(), isRequired: newRequired }),
+    });
+    setAdding(false);
+    if (!r.ok) return setMessage({ type: "err", text: r.error });
+    setNewLabel("");
+    setNewRequired(false);
+    setMessage({ type: "ok", text: "השאלה נוספה לטופס" });
+    reload();
+  }
+
+  async function removeQuestion(key: string, label: string) {
+    if (!confirm(`למחוק את השאלה "${label}"? דוחות שכבר נשלחו ישמרו את התשובה.`)) return;
+    const r = await apiJson(`/api/admin/report-fields?key=${encodeURIComponent(key)}`, { method: "DELETE" });
+    if (!r.ok) return setMessage({ type: "err", text: r.error });
+    setMessage({ type: "ok", text: "השאלה נמחקה" });
+    reload();
+  }
 
   function update(key: string, patch: Partial<ReportField>) {
     setMessage(null);
@@ -61,16 +89,36 @@ export function ReportFieldsBlock() {
   return (
     <div className="space-y-6" dir="rtl">
       <p className="text-sm text-[var(--color-text-muted)]">
-        הניסוח של שדות דוח הסיכום, כפי שהמורה רואה אותם בטופס. הכותרות בקובץ ה-PDF
-        נשארות קבועות, כדי שדוח שכבר נשלח להורה לא ישתנה למפרע.
+        השאלות בטופס הסיכום שהמורה ממלא אחרי שיעור פרטי. אפשר לשנות ניסוח, להסתיר שדה קבוע, ולהוסיף שאלות משלכם
+        (בסוף הדף). התשובות לשאלות שהוספתם מופיעות גם ב-PDF שנשלח להורה.
       </p>
 
       <form onSubmit={save} className="space-y-4">
         {fields.map((field) => (
           <Card key={field.key}>
             <div className="space-y-4">
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="font-bold text-[var(--color-text)]">{field.label || field.key}</h3>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h3 className={`font-bold ${field.active ? "text-[var(--color-text)]" : "text-[var(--color-text-muted)] line-through"}`}>
+                  {field.label || field.key}
+                  {field.custom && <span className="ms-2 rounded bg-[var(--color-bg-muted)] px-2 py-0.5 text-xs font-normal no-underline">שאלה שהוספתם</span>}
+                </h3>
+                <div className="flex flex-wrap items-center gap-4">
+                {field.key !== "summaryText" && !field.custom && (
+                  <label className="flex items-center gap-2 text-sm text-[var(--color-text)] shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={field.active}
+                      onChange={(e) => update(field.key, { active: e.target.checked })}
+                      className="rounded border-[var(--color-border)]"
+                    />
+                    מוצג בטופס
+                  </label>
+                )}
+                {field.custom && (
+                  <button type="button" onClick={() => removeQuestion(field.key, field.label)} className="text-sm text-red-700 underline-offset-2 hover:underline">
+                    מחיקת השאלה
+                  </button>
+                )}
                 <label className="flex items-center gap-2 text-sm text-[var(--color-text)] shrink-0">
                   <input
                     type="checkbox"
@@ -81,6 +129,7 @@ export function ReportFieldsBlock() {
                   />
                   שדה חובה
                 </label>
+                </div>
               </div>
               {field.key === "tips" && (
                 <p className="text-sm text-[var(--color-text-muted)]">
@@ -136,6 +185,26 @@ export function ReportFieldsBlock() {
           {saving ? "שומר…" : "שמירת השדות"}
         </Button>
       </form>
+
+      <Card>
+        <div className="space-y-3">
+          <h3 className="font-bold text-[var(--color-text)]">הוספת שאלה לטופס</h3>
+          <FormField
+            label="השאלה"
+            name="new-question"
+            value={newLabel}
+            onChange={setNewLabel}
+            hint="למשל: איך התלמיד הגיע מוכן לשיעור? המורה עונה במלל חופשי."
+          />
+          <label className="flex items-center gap-2 text-sm text-[var(--color-text)]">
+            <input type="checkbox" checked={newRequired} onChange={(e) => setNewRequired(e.target.checked)} className="rounded border-[var(--color-border)]" />
+            שדה חובה
+          </label>
+          <Button type="button" onClick={addQuestion} disabled={adding || !newLabel.trim()}>
+            {adding ? "מוסיף…" : "הוספת השאלה"}
+          </Button>
+        </div>
+      </Card>
     </div>
   );
 }

@@ -173,6 +173,9 @@ model LessonSummary {
   /// re-resolving `tips`. Empty on rows written before this column existed.
   tipsSnapshot    String   @default("")
   recommendations String   @default("") // המלצות להמשך (nextRecommendations)
+  /// Answers to questions the admin added: [{ key, label, value }]. The label is
+  /// stored with the answer, so renaming or removing a question later keeps old reports.
+  extraAnswers    Json?
   pdfUrl          String?
   createdAt       DateTime @default(now())
 
@@ -212,6 +215,11 @@ model ReportFieldConfig {
   helpText    String   @default("")
   placeholder String   @default("")
   isRequired  Boolean  @default(false)
+  /// Hidden from the form when false (a built-in field the admin removed).
+  active      Boolean  @default(true)
+  /// A question the admin added; its answers live in LessonSummary.extraAnswers.
+  custom      Boolean  @default(false)
+  sortOrder   Int      @default(0)
   updatedAt   DateTime @updatedAt
 }
 

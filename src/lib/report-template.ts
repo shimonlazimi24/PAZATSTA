@@ -28,12 +28,35 @@ export type ReportFieldKey =
   | "homeworkText";
 
 export type ReportField = {
-  key: ReportFieldKey;
+  /** One of ReportFieldKey for a built-in field, or "custom_…" for one the admin added. */
+  key: string;
   label: string;
   helpText: string;
   placeholder: string;
   isRequired: boolean;
+  /** False when the admin removed a built-in field from the form. */
+  active: boolean;
+  /** A question the admin added; answered as free text into LessonSummary.extraAnswers. */
+  custom: boolean;
 };
+
+type ConfigRow = {
+  key: string;
+  label: string;
+  helpText: string;
+  placeholder: string;
+  isRequired: boolean;
+  active?: boolean;
+  custom?: boolean;
+  sortOrder?: number;
+};
+
+/** Built-in fields the form cannot do without. */
+export const ALWAYS_SHOWN: readonly string[] = ["summaryText"];
+
+export function isCustomFieldKey(key: string): boolean {
+  return /^custom_[a-z0-9]{6,40}$/.test(key);
+}
 
 /**
  * The fields, in the order the form renders them, with the wording that shipped
@@ -45,44 +68,48 @@ export type ReportField = {
  * report page down.
  */
 const FIELD_DEFAULTS: readonly ReportField[] = [
-  { key: "summaryText", label: "סיכום כללי", helpText: "", placeholder: "סיכום כללי של השיעור", isRequired: true },
-  { key: "pointsToKeep", label: "נקודות לשימור", helpText: "", placeholder: "מה עבד טוב, לשמור עליו", isRequired: true },
-  { key: "pointsToImprove", label: "נקודות לשיפור", helpText: "", placeholder: "מה לשפר", isRequired: true },
-  { key: "tips", label: "טיפים", helpText: "", placeholder: "", isRequired: false },
-  { key: "recommendations", label: "המלצות להמשך", helpText: "", placeholder: "המלצות לשיעורים הבאים", isRequired: true },
-  { key: "homeworkText", label: "משימות לתרגול", helpText: "", placeholder: "תרגול והכנה לשיעור הבא", isRequired: false },
+  { key: "summaryText", label: "סיכום כללי", helpText: "", placeholder: "סיכום כללי של השיעור", isRequired: true, active: true, custom: false },
+  { key: "pointsToKeep", label: "נקודות לשימור", helpText: "", placeholder: "מה עבד טוב, לשמור עליו", isRequired: true, active: true, custom: false },
+  { key: "pointsToImprove", label: "נקודות לשיפור", helpText: "", placeholder: "מה לשפר", isRequired: true, active: true, custom: false },
+  { key: "tips", label: "טיפים", helpText: "", placeholder: "", isRequired: false, active: true, custom: false },
+  { key: "recommendations", label: "המלצות להמשך", helpText: "", placeholder: "המלצות לשיעורים הבאים", isRequired: true, active: true, custom: false },
+  { key: "homeworkText", label: "משימות לתרגול", helpText: "", placeholder: "תרגול והכנה לשיעור הבא", isRequired: false, active: true, custom: false },
 ];
 
-export const REPORT_FIELD_KEYS: readonly ReportFieldKey[] = FIELD_DEFAULTS.map((f) => f.key);
+export const REPORT_FIELD_KEYS: readonly ReportFieldKey[] = FIELD_DEFAULTS.map((f) => f.key as ReportFieldKey);
 
 export function isReportFieldKey(value: string): value is ReportFieldKey {
   return (REPORT_FIELD_KEYS as readonly string[]).includes(value);
 }
 
-/** The six fields with any admin wording overlaid on the defaults. */
-export async function getReportFields(): Promise<ReportField[]> {
-  let rows: { key: string; label: string; helpText: string; placeholder: string; isRequired: boolean }[] = [];
+/** Every field, shown or hidden, built-in and added: what the admin screen edits. */
+export async function getAllReportFields(): Promise<ReportField[]> {
+  let rows: ConfigRow[] = [];
   try {
-    rows = await prisma.reportFieldConfig.findMany();
+    rows = await prisma.reportFieldConfig.findMany({ orderBy: { sortOrder: "asc" } });
   } catch (e) {
     // A missing table (deploy ahead of migration) must not break the form.
     console.error("[report-template] Could not read field config, using defaults:", e);
   }
-
   return mergeFieldConfig(rows);
 }
 
+/** The fields the teacher's form shows, in order. */
+export async function getReportFields(): Promise<ReportField[]> {
+  return (await getAllReportFields()).filter((f) => f.active);
+}
+
 /**
- * Overlay stored wording onto the defaults.
+ * Overlay stored wording onto the built-in fields, then add the admin's own
+ * questions after them.
  *
- * Exported for its own sake: this is the rule that keeps a partial or
- * hand-edited config table from changing which fields exist.
+ * Exported for its own sake: a partial or hand-edited config table can change
+ * wording and hide built-in fields, but never invent a built-in field, and
+ * "summary" always stays.
  */
-export function mergeFieldConfig(
-  rows: { key: string; label: string; helpText: string; placeholder: string; isRequired: boolean }[]
-): ReportField[] {
+export function mergeFieldConfig(rows: ConfigRow[]): ReportField[] {
   const byKey = new Map(rows.map((r) => [r.key, r]));
-  return FIELD_DEFAULTS.map((def) => {
+  const builtIn = FIELD_DEFAULTS.map((def) => {
     const row = byKey.get(def.key);
     if (!row) return { ...def };
     return {
@@ -92,9 +119,26 @@ export function mergeFieldConfig(
       helpText: row.helpText ?? "",
       placeholder: row.placeholder ?? "",
       isRequired: row.isRequired,
+      active: ALWAYS_SHOWN.includes(def.key) ? true : row.active !== false,
+      custom: false,
     };
   });
+  const added = rows
+    .filter((r) => r.custom && isCustomFieldKey(r.key) && r.label.trim())
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+    .map((r) => ({
+      key: r.key,
+      label: r.label.trim(),
+      helpText: r.helpText ?? "",
+      placeholder: r.placeholder ?? "",
+      isRequired: r.isRequired,
+      active: r.active !== false,
+      custom: true,
+    }));
+  return [...builtIn, ...added];
 }
+
+export { readExtraAnswers, type ExtraAnswer } from "@/lib/report-extra";
 
 export type OfferedTip = {
   slug: string;

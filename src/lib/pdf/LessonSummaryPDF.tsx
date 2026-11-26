@@ -171,6 +171,8 @@ export type LessonSummaryPDFProps = {
   pointsToImprove?: string;
   tips?: string;
   recommendations?: string;
+  /** Answers to questions the admin added, printed after the fixed sections. */
+  extra?: { label: string; value: string }[];
 };
 
 /**
@@ -192,6 +194,7 @@ export function createLessonSummaryDocument(props: LessonSummaryPDFProps) {
     pointsToImprove = "",
     tips = "",
     recommendations = "",
+    extra = [],
   } = props;
 
   const sn = normalize(studentName);
@@ -252,6 +255,9 @@ export function createLessonSummaryDocument(props: LessonSummaryPDFProps) {
         <Section title="טיפים" text={tips} />
         <Section title="המלצות להמשך" text={recommendations} />
         <Section title="משימות לתרגול" text={homeworkText || "—"} />
+        {extra.map((a, i) => (
+          <Section key={i} title={a.label} text={a.value} />
+        ))}
         <View style={styles.footer} fixed>
           <Text>כל הזכויות שמורות © פזצט״א</Text>
         </View>

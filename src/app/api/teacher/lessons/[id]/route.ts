@@ -58,6 +58,7 @@ export async function GET(
           // report would fall back to resolving slugs and lose the freeze.
           tipsSnapshot: lesson.summary.tipsSnapshot,
           recommendations: lesson.summary.recommendations,
+          extraAnswers: lesson.summary.extraAnswers,
           pdfUrl: lesson.summary.pdfUrl,
         }
       : null,

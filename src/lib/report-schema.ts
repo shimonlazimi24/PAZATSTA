@@ -33,6 +33,18 @@ export const ReportSchema = z.object({
   /** Free text the teacher added alongside the selection. */
   tipsCustom: text(),
   recommendations: text(),
+  /** Answers to the questions the admin added, by field key. */
+  extra: z
+    .unknown()
+    .optional()
+    .transform((v) => {
+      if (!v || typeof v !== "object" || Array.isArray(v)) return {} as Record<string, string>;
+      const out: Record<string, string> = {};
+      for (const [k, val] of Object.entries(v as Record<string, unknown>).slice(0, 50)) {
+        if (typeof val === "string") out[k.slice(0, 60)] = val.trim().slice(0, MAX_FIELD_LENGTH);
+      }
+      return out;
+    }),
   screeningType: text().transform((v) => v || null),
   parentEmail: text().transform((v) => v || null),
   screeningDate: text().transform((v) => (/^\d{4}-\d{2}-\d{2}$/.test(v) ? v : "")),

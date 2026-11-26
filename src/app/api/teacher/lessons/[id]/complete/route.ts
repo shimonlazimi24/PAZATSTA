@@ -59,6 +59,7 @@ export async function POST(
       tipIds,
       tipsCustom,
       recommendations,
+      extra,
       screeningType,
       parentEmail: parentEmailFromBody,
       screeningDate: screeningDateStr,
@@ -69,6 +70,7 @@ export async function POST(
     // Which fields are required, and what they are called, is admin-configurable.
     // The server stays the authority; the form's asterisks are only a hint.
     const values: Record<string, string> = {
+      ...extra,
       summaryText,
       pointsToKeep,
       pointsToImprove,
@@ -78,7 +80,7 @@ export async function POST(
     };
     const fields = await getReportFields();
     const missing = fields
-      .filter((f) => f.isRequired && !values[f.key]?.trim())
+      .filter((f) => f.isRequired && f.key !== "tips" && !values[f.key]?.trim())
       .map((f) => f.label);
     if (missing.length > 0) {
       return NextResponse.json(
@@ -134,6 +136,11 @@ export async function POST(
           tipsCustom: tipsCustom || "",
           tipsSnapshot,
           recommendations: recommendations || "",
+          // The admin's own questions, with the wording at the time of the report.
+          extraAnswers: fields
+            .filter((f) => f.custom)
+            .map((f) => ({ key: f.key, label: f.label, value: extra[f.key] ?? "" }))
+            .filter((a) => a.value),
           pdfUrl: null,
         },
       }),

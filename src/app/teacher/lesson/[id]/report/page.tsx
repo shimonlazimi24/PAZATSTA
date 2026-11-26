@@ -8,6 +8,7 @@ import { apiJson } from "@/lib/api";
 import { formatHebrewShortDate } from "@/lib/dates";
 import { SCREENING_TOPICS } from "@/data/topics";
 import type { ReportField, OfferedTip } from "@/lib/report-template";
+import { readExtraAnswers } from "@/lib/report-extra";
 import { isLessonStarted } from "@/lib/dates";
 
 /** Mirrors the cap enforced by /api/teacher/lessons/[id]/complete. */
@@ -39,6 +40,7 @@ type Lesson = {
     tipsCustom?: string;
     tipsSnapshot?: string;
     recommendations?: string;
+    extraAnswers?: unknown;
     pdfUrl?: string | null;
   } | null;
 };
@@ -57,6 +59,7 @@ export default function TeacherLessonReportPage() {
   const [tipsCustom, setTipsCustom] = useState("");
   const [template, setTemplate] = useState<{ fields: ReportField[]; tips: OfferedTip[] } | null>(null);
   const [recommendations, setRecommendations] = useState("");
+  const [extra, setExtra] = useState<Record<string, string>>({});
   const [screeningType, setScreeningType] = useState("");
   const [screeningDate, setScreeningDate] = useState("");
   const [parentEmail, setParentEmail] = useState("");
@@ -116,6 +119,11 @@ export default function TeacherLessonReportPage() {
     for (const f of template?.fields ?? []) map.set(f.key, f);
     return map;
   }, [template]);
+  // The admin can hide built-in fields and add questions; until the template
+  // loads, the form shows the classic six.
+  const shown = (key: string) => !template || fieldByKey.has(key);
+  const isReq = (key: string) => (template ? !!fieldByKey.get(key)?.isRequired : key !== "homeworkText" && key !== "tips");
+  const customFields = useMemo(() => (template?.fields ?? []).filter((f) => f.custom), [template]);
 
   /** Tips grouped for display, preserving the order the server returned. */
   const tipGroups = useMemo(() => {
@@ -205,11 +213,10 @@ export default function TeacherLessonReportPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const missing: string[] = [];
-    if (!summaryText.trim()) missing.push("סיכום כללי");
-    if (!pointsToKeep.trim()) missing.push("נקודות לשימור");
-    if (!pointsToImprove.trim()) missing.push("נקודות לשיפור");
-    if (!recommendations.trim()) missing.push("המלצות להמשך");
+    const values: Record<string, string> = { summaryText, pointsToKeep, pointsToImprove, recommendations, homeworkText, ...extra };
+    const missing = (template?.fields ?? [])
+      .filter((f) => f.isRequired && f.key !== "tips" && !(values[f.key] ?? "").trim())
+      .map((f) => f.label);
     if (missing.length > 0) {
       setError(`נא למלא את השדות החובה: ${missing.join(", ")}`);
       return;
@@ -227,6 +234,7 @@ export default function TeacherLessonReportPage() {
         tipIds: Array.from(tipSlugs),
         tipsCustom: tipsCustom.trim(),
         recommendations: recommendations.trim(),
+        extra: Object.fromEntries(customFields.map((f) => [f.key, (extra[f.key] ?? "").trim()])),
         screeningType: screeningType.trim() || undefined,
         screeningDate: screeningDate.trim() || undefined,
         parentEmail: parentEmail.trim() || undefined,
@@ -396,6 +404,14 @@ export default function TeacherLessonReportPage() {
                 </p>
               </>
             )}
+            {readExtraAnswers(lesson.summary?.extraAnswers).map((a) =>
+              a.value.trim() ? (
+                <div key={a.key || a.label}>
+                  <h3 className="font-semibold text-[var(--color-text)]">{a.label}</h3>
+                  <p className="text-sm text-[var(--color-text)] whitespace-pre-wrap">{a.value}</p>
+                </div>
+              ) : null
+            )}
             <p className="text-xs text-[var(--color-text-muted)] pt-2">
               הדוח הושלם ואין אפשרות לעריכה.
             </p>
@@ -416,6 +432,7 @@ export default function TeacherLessonReportPage() {
                 />
               </div>
             )}
+            {shown("summaryText") && (
             <div>
               <label className={labelClass}>
                 {fieldByKey.get("summaryText")?.label ?? "סיכום כללי"}
@@ -431,9 +448,11 @@ export default function TeacherLessonReportPage() {
                 className={fieldClass}
                 placeholder={fieldByKey.get("summaryText")?.placeholder || "סיכום כללי של השיעור"}
                 disabled={status === "loading"}
-                required
+                required={isReq("summaryText")}
               />
             </div>
+            )}
+            {shown("pointsToKeep") && (
             <div>
               <label className={labelClass}>
                 {fieldByKey.get("pointsToKeep")?.label ?? "נקודות לשימור"}
@@ -449,9 +468,11 @@ export default function TeacherLessonReportPage() {
                 className={fieldClass}
                 placeholder={fieldByKey.get("pointsToKeep")?.placeholder || "מה עבד טוב, לשמור עליו"}
                 disabled={status === "loading"}
-                required
+                required={isReq("pointsToKeep")}
               />
             </div>
+            )}
+            {shown("pointsToImprove") && (
             <div>
               <label className={labelClass}>
                 {fieldByKey.get("pointsToImprove")?.label ?? "נקודות לשיפור"}
@@ -467,9 +488,11 @@ export default function TeacherLessonReportPage() {
                 className={fieldClass}
                 placeholder={fieldByKey.get("pointsToImprove")?.placeholder || "מה לשפר"}
                 disabled={status === "loading"}
-                required
+                required={isReq("pointsToImprove")}
               />
             </div>
+            )}
+            {shown("tips") && (
             <div>
               <label className={labelClass}>{fieldByKey.get("tips")?.label ?? "טיפים"}</label>
               {fieldByKey.get("tips")?.helpText ? (
@@ -521,6 +544,8 @@ export default function TeacherLessonReportPage() {
                 />
               </div>
             </div>
+            )}
+            {shown("recommendations") && (
             <div>
               <label className={labelClass}>
                 {fieldByKey.get("recommendations")?.label ?? "המלצות להמשך"}
@@ -536,9 +561,11 @@ export default function TeacherLessonReportPage() {
                 className={fieldClass}
                 placeholder={fieldByKey.get("recommendations")?.placeholder || "המלצות לשיעורים הבאים"}
                 disabled={status === "loading"}
-                required
+                required={isReq("recommendations")}
               />
             </div>
+            )}
+            {shown("homeworkText") && (
             <div>
               <label className={labelClass}>
                 {fieldByKey.get("homeworkText")?.label ?? "משימות לתרגול"}
@@ -556,6 +583,26 @@ export default function TeacherLessonReportPage() {
                 disabled={status === "loading"}
               />
             </div>
+            )}
+            {customFields.map((f) => (
+              <div key={f.key}>
+                <label className={labelClass}>
+                  {f.label}
+                  {f.isRequired && <span className="text-red-600" aria-hidden> *</span>}
+                </label>
+                {f.helpText && <p className="text-sm text-[var(--color-text-muted)] mt-1">{f.helpText}</p>}
+                <textarea
+                  maxLength={MAX_FIELD_LENGTH}
+                  value={extra[f.key] ?? ""}
+                  onChange={(e) => setExtra((x) => ({ ...x, [f.key]: e.target.value }))}
+                  rows={2}
+                  className={fieldClass}
+                  placeholder={f.placeholder}
+                  disabled={status === "loading"}
+                  required={f.isRequired}
+                />
+              </div>
+            ))}
             {error && <p className="text-sm text-red-600">{error}</p>}
             <button
               type="submit"
