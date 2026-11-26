@@ -6,9 +6,9 @@ import { apiJson } from "@/lib/api";
 import type { RatingItem, RatingMode } from "@/lib/ratings";
 import { RatingTile } from "./RatingTile";
 
-type TeacherRow = { id: string; name: string; images: number; videos: number; lessonsDone: number; items: RatingItem[] };
+type TeacherRow = { id: string; name: string; images: number; videos: number; items: RatingItem[] };
 
-/** Every teacher with how many ratings they uploaded next to how many lessons they completed; a row opens the files. */
+/** Every teacher with how many videos and photos they uploaded; a row opens the files. */
 export function AdminRatings() {
   const [data, setData] = useState<{ mode: RatingMode; teachers: TeacherRow[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -51,12 +51,8 @@ export function AdminRatings() {
                 <ChevronLeft className="h-4 w-4 shrink-0 text-[var(--color-text-muted)] transition-transform group-open:-rotate-90" aria-hidden />
                 <span className="min-w-0 flex-1 font-medium text-[var(--color-text)]">{t.name}</span>
                 <span className={`text-sm tabular-nums ${t.items.length ? "font-semibold text-[var(--color-text)]" : "text-[var(--color-text-muted)]"}`}>
-                  העלה {t.items.length}
+                  {t.videos} סרטונים · {t.images} תמונות
                 </span>
-                <span className="text-sm tabular-nums text-[var(--color-text-muted)]">
-                  {t.images} תמונות · {t.videos} סרטונים
-                </span>
-                <span className="text-sm tabular-nums text-[var(--color-text-muted)]">עשה {t.lessonsDone} שיעורים</span>
               </summary>
               <div className="border-t border-dashed border-[var(--color-border)] p-4">
                 {t.items.length === 0 ? (

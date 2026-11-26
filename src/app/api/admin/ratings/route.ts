@@ -6,20 +6,18 @@ import { toItem } from "@/lib/ratings-server";
 
 export const dynamic = "force-dynamic";
 
-/** Every teacher with their uploads and counts: photos, videos, and lessons they completed. */
+/** Every teacher with their uploads and counts of photos and videos. */
 export async function GET() {
   const auth = await requireAdmin();
   if ("error" in auth) return auth.error;
   try {
-    const [teachers, uploads, done] = await Promise.all([
+    const [teachers, uploads] = await Promise.all([
       prisma.user.findMany({
         where: { role: "teacher" },
         select: { id: true, name: true, email: true, teacherProfile: { select: { displayName: true } } },
       }),
       prisma.ratingUpload.findMany({ orderBy: { createdAt: "desc" } }),
-      prisma.lesson.groupBy({ by: ["teacherId"], where: { status: "completed" }, _count: { _all: true } }),
     ]);
-    const doneBy = new Map(done.map((d) => [d.teacherId, d._count._all]));
     const rows = teachers
       .map((t) => {
         const items = uploads.filter((u) => u.teacherId === t.id);
@@ -28,7 +26,6 @@ export async function GET() {
           name: t.teacherProfile?.displayName || t.name || t.email,
           images: items.filter((i) => i.kind === "image").length,
           videos: items.filter((i) => i.kind === "video").length,
-          lessonsDone: doneBy.get(t.id) ?? 0,
           items: items.map(toItem),
         };
       })

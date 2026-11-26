@@ -6,7 +6,7 @@ export default function AdminRatingsPage() {
     <div className="max-w-4xl">
       <AdminPageHeader
         title="דירוגים"
-        description="התמונות והסרטונים שהמורים העלו, לכל מורה: כמה העלה וכמה שיעורים עשה."
+        description="התמונות והסרטונים שהמורים העלו, וכמה כל מורה העלה."
       />
       <AdminRatings />
     </div>
