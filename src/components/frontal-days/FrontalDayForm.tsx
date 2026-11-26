@@ -168,13 +168,13 @@ export function FrontalDayForm({
           <span>
             <span className="block text-sm font-medium text-[var(--color-text)]">היום כולל גישה לקורס מתנה לתלמידים</span>
             <span className="block text-xs text-[var(--color-text-muted)]">
-              בסוף היום המורה יציג לתלמידים QR לקורס ואת קוד הגישה. בלי הסימון, לא יופיע קורס.
+              תלמיד שממלא את סקר המשוב יקבל בסופו את הקישור לקורס ואת קוד הגישה. בלי הסימון, לא יופיע קורס.
             </span>
           </span>
         </label>
         {withCourse && (
           <div className="grid gap-4 border-r-2 border-[var(--color-border)] pr-4 sm:grid-cols-2">
-            <Field id="fd-course-url" label="קישור לקורס בחינם" hint="מדביקים כאן את הקישור לקורס, וממנו נוצר קוד ה-QR שהתלמידים סורקים.">
+            <Field id="fd-course-url" label="קישור לקורס בחינם" hint="מדביקים כאן את הקישור לקורס. הוא מופיע לתלמידים בסוף סקר המשוב.">
               <input id="fd-course-url" dir="ltr" className={input} value={v.courseUrl} onChange={set("courseUrl")} placeholder="https://pazatsta.co.il/share-cart/…" />
             </Field>
             <Field id="fd-course-code" label="קוד גישה לקורס (רשות)" hint="רק אם הקישור לבד לא מספיק. אותו קוד לכל התלמידים ביום הזה.">

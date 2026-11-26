@@ -173,6 +173,7 @@ export default function TeacherLessonReportPage() {
       if (raw) {
         const d = JSON.parse(raw) as Record<string, unknown>;
         if (typeof d.summaryText === "string") setSummaryText(d.summaryText);
+        if (d.extra && typeof d.extra === "object") setExtra(d.extra as Record<string, string>);
         if (typeof d.homeworkText === "string") setHomeworkText(d.homeworkText);
         if (typeof d.pointsToKeep === "string") setPointsToKeep(d.pointsToKeep);
         if (typeof d.pointsToImprove === "string") setPointsToImprove(d.pointsToImprove);
@@ -188,6 +189,7 @@ export default function TeacherLessonReportPage() {
   useEffect(() => {
     if (!DRAFT_KEY || lesson?.summary) return;
     const payload = {
+      extra,
       summaryText,
       homeworkText,
       pointsToKeep,
@@ -204,7 +206,7 @@ export default function TeacherLessonReportPage() {
       }
     }, 500);
     return () => clearTimeout(t);
-  }, [DRAFT_KEY, lesson?.summary, summaryText, homeworkText, pointsToKeep, pointsToImprove, tipSlugs, tipsCustom, recommendations]);
+  }, [DRAFT_KEY, lesson?.summary, summaryText, homeworkText, pointsToKeep, pointsToImprove, tipSlugs, tipsCustom, recommendations, extra]);
 
   const alreadyCompleted = !!lesson?.reportCompleted || !!lesson?.summary;
   const lessonDateDisplay = lesson?.date ? formatHebrewShortDate(lesson.date) : lesson?.date ?? "—";

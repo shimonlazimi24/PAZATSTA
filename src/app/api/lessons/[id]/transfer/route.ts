@@ -5,7 +5,7 @@ import { canAccessAdmin } from "@/lib/admin";
 import { sendNotice } from "@/lib/email";
 import { formatDateInIsrael } from "@/lib/date-utils";
 import { expirePendingForSlotInTx, restoreAvailabilityForLesson } from "@/lib/expire-pending-lessons";
-import { formatIsraelYYYYMMDD } from "@/lib/dates";
+import { formatIsraelYYYYMMDD, utcDayBounds } from "@/lib/dates";
 import { teacherMatchesTopic } from "@/lib/topics";
 import { teachersAllowed } from "@/lib/teacher-permissions";
 import { isPhoneOnlyEmail } from "@/lib/phone-only";
@@ -50,7 +50,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       orderBy: { name: "asc" },
     }),
     prisma.lesson.findMany({
-      where: { date: lesson.date, startTime: lesson.startTime, workshopId: null, status: { not: "canceled" }, id: { not: id } },
+      // The whole calendar day, as booking and rescheduling match it: stored times of day can differ.
+      where: { date: utcDayBounds(formatIsraelYYYYMMDD(lesson.date)), startTime: lesson.startTime, workshopId: null, status: { not: "canceled" }, id: { not: id } },
       select: { teacherId: true },
     }),
   ]);
@@ -83,18 +84,26 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!newTeacher) return NextResponse.json({ error: "המורה לא נמצא או שאינו מלמד שיעורים פרטיים" }, { status: 400 });
 
   const dateStr = formatIsraelYYYYMMDD(lesson.date);
+  const day = utcDayBounds(dateStr);
   try {
     await prisma.$transaction(async (tx) => {
       // A lapsed pending request of the new teacher at that time does not block the move.
       await expirePendingForSlotInTx(tx, newTeacher.id, dateStr, lesson.startTime);
       const clash = await tx.lesson.findFirst({
-        where: { teacherId: newTeacher.id, date: lesson.date, startTime: lesson.startTime, workshopId: null, status: { not: "canceled" } },
+        where: { teacherId: newTeacher.id, date: day, startTime: lesson.startTime, workshopId: null, status: { not: "canceled" } },
         select: { id: true },
       });
       if (clash) throw Object.assign(new Error("BUSY"), { code: "BUSY" });
       await restoreAvailabilityForLesson(tx, lesson);
-      await tx.availability.deleteMany({ where: { teacherId: newTeacher.id, date: lesson.date, startTime: lesson.startTime } });
-      await tx.lesson.update({ where: { id }, data: { teacherId: newTeacher.id } });
+      await tx.availability.deleteMany({ where: { teacherId: newTeacher.id, date: day, startTime: lesson.startTime } });
+      await tx.lesson.update({
+        where: { id },
+        data: {
+          teacherId: newTeacher.id,
+          // A request still waiting for approval gets a full window with the new teacher.
+          ...(lesson.status === "pending_approval" ? { approvalExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) } : {}),
+        },
+      });
     });
   } catch (e) {
     const code = (e as { code?: string })?.code;
