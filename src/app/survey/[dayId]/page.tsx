@@ -16,7 +16,38 @@ type Question = {
   showIfFieldId: string | null;
   showIfValues: string[];
 };
-type Survey = { title: string; dateLabel: string; open: boolean; answered: boolean; questions: Question[] };
+type Survey = {
+  title: string;
+  dateLabel: string;
+  open: boolean;
+  answered: boolean;
+  gift: { url: string; code: string } | null;
+  questions: Question[];
+};
+
+/** The free course, revealed once the survey is sent. */
+function Gift({ gift }: { gift: { url: string; code: string } }) {
+  return (
+    <div className="space-y-3 rounded-[var(--radius-card)] border border-[var(--color-primary)]/30 bg-[var(--color-bg-muted)] p-4 text-center">
+      <p className="text-lg font-semibold text-[var(--color-text)]">🎁 מתנה: קורס הכנה בחינם</p>
+      {gift.code && (
+        <p className="text-sm text-[var(--color-text)]">
+          קוד גישה: <span className="select-all font-mono text-lg font-bold tracking-wider" dir="ltr">{gift.code}</span>
+        </p>
+      )}
+      {gift.url && (
+        <a
+          href={gift.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex min-h-[48px] w-full items-center justify-center rounded-[var(--radius-input)] bg-[var(--color-primary)] px-4 font-medium text-white hover:opacity-90"
+        >
+          כניסה לקורס
+        </a>
+      )}
+    </div>
+  );
+}
 
 /** The students' feedback survey, opened from the QR code at the end of a frontal day. No login. */
 export default function SurveyPage({ params }: { params: Promise<{ dayId: string }> }) {
@@ -61,7 +92,13 @@ export default function SurveyPage({ params }: { params: Promise<{ dayId: string
   let body: React.ReactNode;
   if (loadError) body = <p className="text-center text-[var(--color-text)]">{loadError}</p>;
   else if (!survey) body = <p className="text-center text-sm text-[var(--color-text-muted)]">טוען…</p>;
-  else if (done || survey.answered) body = <p className="text-center text-lg font-medium text-[var(--color-text)]">תודה רבה על המשוב!</p>;
+  else if (done || survey.answered)
+    body = (
+      <div className="space-y-4">
+        <p className="text-center text-lg font-medium text-[var(--color-text)]">תודה רבה על המשוב!</p>
+        {survey.gift && <Gift gift={survey.gift} />}
+      </div>
+    );
   else if (!survey.open) body = <p className="text-center text-[var(--color-text)]">הסקר של היום הזה כבר סגור. תודה!</p>;
   else
     body = (
@@ -81,7 +118,10 @@ export default function SurveyPage({ params }: { params: Promise<{ dayId: string
         >
           {busy ? "שולח…" : "שליחה"}
         </button>
-        <p className="text-center text-xs text-[var(--color-text-muted)]">הסקר אנונימי. לא צריך להירשם או להתחבר.</p>
+        <p className="text-center text-xs text-[var(--color-text-muted)]">
+          הסקר אנונימי. לא צריך להירשם או להתחבר.
+          {survey.gift && " בסוף מחכה לכם קישור לקורס הכנה בחינם."}
+        </p>
       </form>
     );
 

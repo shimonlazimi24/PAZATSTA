@@ -23,7 +23,7 @@ function readKey(req: Request): string | null {
 }
 
 async function loadDay(dayId: string) {
-  return prisma.frontalDay.findUnique({ where: { id: dayId }, select: { id: true, title: true, date: true, status: true, classSize: true } });
+  return prisma.frontalDay.findUnique({ where: { id: dayId }, select: { id: true, title: true, date: true, status: true, classSize: true, courseUrl: true, courseCode: true } });
 }
 
 /** Public: the questions of one day's survey. No login. */
@@ -42,6 +42,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ dayId: s
       dateLabel: hebrewDateLabel(day.date),
       open,
       answered,
+      // The free course, shown after the survey is sent: one QR code for both.
+      gift: day.courseUrl || day.courseCode ? { url: day.courseUrl, code: day.courseCode } : null,
       questions: questions.map((q) => ({
         id: q.id,
         label: q.label,

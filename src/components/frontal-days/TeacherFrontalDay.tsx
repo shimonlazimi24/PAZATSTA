@@ -72,7 +72,7 @@ export function TeacherFrontalDay({ id }: { id: string }) {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string[]>([]);
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
-  const [qr, setQr] = useState<"feedback" | "course" | null>(null);
+  const [qr, setQr] = useState<"feedback" | null>(null);
 
   const load = useCallback(async () => {
     const r = await apiJson<Day>(`/api/teacher/frontal-days/${id}`);
@@ -274,13 +274,8 @@ export function TeacherFrontalDay({ id }: { id: string }) {
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">הציגו לתלמידים על המסך המלא, כדי שיסרקו.</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button type="button" onClick={() => setQr("feedback")} className={`${bigLink} border border-[var(--color-border)] bg-white hover:bg-[var(--color-bg-muted)]`}>
-              QR לסקר המשוב של התלמידים
+              {day.courseUrl || day.courseCode ? "QR לסקר המשוב ולקורס המתנה" : "QR לסקר המשוב של התלמידים"}
             </button>
-            {(day.courseUrl || day.courseCode) && (
-              <button type="button" onClick={() => setQr("course")} className={`${bigLink} border border-[var(--color-border)] bg-white hover:bg-[var(--color-bg-muted)]`}>
-                QR וקוד לקורס המתנה
-              </button>
-            )}
           </div>
           {typeof day.surveyCount === "number" && (
             <p className="mt-3 text-sm text-[var(--color-text-muted)]">{surveyRatio(day.surveyCount, day.classSize)}</p>
@@ -320,7 +315,6 @@ export function TeacherFrontalDay({ id }: { id: string }) {
       )}
 
       {qr === "feedback" && <FullscreenQr title="משוב על היום" value={`${window.location.origin}${surveyPath(day.id)}`} onClose={() => setQr(null)} />}
-      {qr === "course" && <FullscreenQr title="קורס מתנה" value={day.courseUrl ?? ""} code={day.courseCode} onClose={() => setQr(null)} />}
     </div>
   );
 }

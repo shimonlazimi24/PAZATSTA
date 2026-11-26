@@ -505,26 +505,22 @@ export function AdminFrontalDayDetail({ id }: { id: string }) {
 
       {day.status !== "canceled" && (
         <section className={card} aria-labelledby="qr-h">
-          <h3 id="qr-h" className="text-lg font-semibold">קודי QR לסוף היום</h3>
-          <p className="mt-1 text-sm text-[var(--color-text-muted)]">המורים רואים אותם באזור האישי ביום עצמו. אפשר גם להדפיס מכאן.</p>
+          <h3 id="qr-h" className="text-lg font-semibold">קוד QR לסוף היום</h3>
+          <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+            קוד אחד לסקר המשוב.
+            {day.courseUrl || day.courseCode ? " מי ששולח את הסקר מקבל בסופו את הקישור והקוד לקורס המתנה." : ""} המורים רואים אותו באזור
+            האישי ביום עצמו, ואפשר גם להדפיס מכאן.
+          </p>
           <div className="mt-4 flex flex-wrap gap-8">
             <figure className="space-y-2 text-center">
               <QrCode value={typeof window === "undefined" ? "" : `${window.location.origin}${surveyPath(id)}`} size={180} label="QR לסקר המשוב" />
               <figcaption className="text-sm">
-                סקר משוב לתלמידים
+                סקר משוב{day.courseUrl || day.courseCode ? " וקורס מתנה" : " לתלמידים"}
                 <a href={surveyPath(id)} target="_blank" rel="noreferrer" className="block text-xs text-[var(--color-primary)] underline">
                   פתיחת הסקר
                 </a>
               </figcaption>
             </figure>
-            {(day.courseUrl || day.courseCode) && (
-              <figure className="space-y-2 text-center">
-                {day.courseUrl && <QrCode value={day.courseUrl} size={180} label="QR לקורס המתנה" />}
-                <figcaption className="text-sm">
-                  קורס מתנה{day.courseCode && <span className="block font-mono text-lg font-semibold" dir="ltr">{day.courseCode}</span>}
-                </figcaption>
-              </figure>
-            )}
           </div>
         </section>
       )}
