@@ -537,9 +537,18 @@ model AppSetting {
 /// It appears in the booking form under its category and as a teacher specialty.
 model BookingTopic {
   id        String   @id @default(cuid())
-  /// One of the booking categories: tzav | yom100 | modiin | flight | other.
+  /// A built-in category (tzav | yom100 | modiin | flight | other) or a BookingCategory id.
   category  String
   label     String   @unique
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+/// A booking card the admin added (a new track), holding its own BookingTopic rows.
+model BookingCategory {
+  id        String   @id @default(cuid())
+  title     String   @unique
   active    Boolean  @default(true)
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())

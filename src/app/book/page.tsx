@@ -20,7 +20,7 @@ import { isValidEmail, isValidPhone } from "@/lib/validation";
 import { apiJson } from "@/lib/api";
 import type { SlotView } from "@/types/slot";
 import { isPhoneOnlyEmail } from "@/lib/phone-only";
-import type { AddedTopic } from "@/lib/booking-topics";
+import type { AddedCategory, AddedTopic } from "@/lib/booking-topics";
 
 /** Week dates in Israel (YYYY-MM-DD) so student and teacher see the same calendar days. */
 function getBookPageWeekDates(): string[] {
@@ -193,20 +193,25 @@ export default function BookPage() {
   const [phoneOnly, setPhoneOnly] = useState(false);
   // Topics the admin added, shown under their category after the built-in ones.
   const [addedTopics, setAddedTopics] = useState<AddedTopic[]>([]);
+  // Cards the admin added (new tracks), shown before "סדנאות".
+  const [addedCategories, setAddedCategories] = useState<AddedCategory[]>([]);
   useEffect(() => {
-    fetch("/api/topics")
-      .then((r) => (r.ok ? r.json() : []))
-      .then((list: AddedTopic[]) => setAddedTopics(Array.isArray(list) ? list : []))
+    fetch("/api/topics?categories=1")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { topics?: AddedTopic[]; categories?: AddedCategory[] } | null) => {
+        setAddedTopics(Array.isArray(d?.topics) ? d!.topics! : []);
+        setAddedCategories(Array.isArray(d?.categories) ? d!.categories! : []);
+      })
       .catch(() => {});
   }, []);
-  const categories = useMemo(
-    () =>
-      CATEGORIES.map((c) => ({
-        ...c,
-        subs: [...c.subs, ...addedTopics.filter((t) => t.category === c.id).map((t) => ({ id: `added-${t.id}`, label: t.label }))],
-      })),
-    [addedTopics]
-  );
+  const categories = useMemo(() => {
+    const subsOf = (id: string) => addedTopics.filter((t) => t.category === id).map((t) => ({ id: `added-${t.id}`, label: t.label }));
+    const builtIn = CATEGORIES.map((c) => ({ ...c, subs: [...c.subs, ...subsOf(c.id)] }));
+    // A card with no topics yet has nothing to choose, so it is not shown.
+    const added = addedCategories.map((c) => ({ id: c.id, title: c.title, subs: subsOf(c.id) })).filter((c) => c.subs.length > 0);
+    const at = builtIn.findIndex((c) => c.id === "workshop");
+    return [...builtIn.slice(0, at), ...added, ...builtIn.slice(at)];
+  }, [addedTopics, addedCategories]);
   // The email typed by a phone-only student already has an account: a code to that
   // email joins the two accounts, and the booking is then sent again.
   const [join, setJoin] = useState<{ email: string; code: string; busy: boolean; error: string } | null>(null);
@@ -720,7 +725,7 @@ export default function BookPage() {
             <p className="text-[var(--color-text-muted)] text-right">בחרו מסלול</p>
             <div className="grid gap-4 sm:grid-cols-2">
               {categories.map((cat) => {
-                const colors = CATEGORY_COLORS[cat.id];
+                const colors = CATEGORY_COLORS[cat.id] ?? CATEGORY_COLORS.other;
                 const isSelected = categoryId === cat.id;
                 return (
                   <div
@@ -798,7 +803,7 @@ export default function BookPage() {
                     )
                   ) : (
                     categories.find((c) => c.id === categoryId)?.subs.map((s) => {
-                      const colors = CATEGORY_COLORS[categoryId];
+                      const colors = CATEGORY_COLORS[categoryId] ?? CATEGORY_COLORS.other;
                       const isChipSelected = subOption?.id === s.id;
                       return (
                         <button

@@ -14,4 +14,6 @@ export function isTopicCategory(v: unknown): v is TopicCategoryId {
 }
 
 /** A topic the admin added, as the booking form and the specialty pickers get it. */
-export type AddedTopic = { id: string; category: TopicCategoryId; label: string };
+export type AddedTopic = { id: string; category: string; label: string };
+/** A booking card the admin added; its topics carry its id as their category. */
+export type AddedCategory = { id: string; title: string };
