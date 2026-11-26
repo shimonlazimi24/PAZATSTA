@@ -553,3 +553,17 @@ model BookingCategory {
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
 }
+
+/// A photo or video of a rating a teacher uploaded from their dashboard.
+/// The file itself lives in file storage; this row points at it.
+model RatingUpload {
+  id        String   @id @default(cuid())
+  teacherId String
+  /// "image" | "video"
+  kind      String
+  url       String   @unique
+  size      Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([teacherId, createdAt])
+}

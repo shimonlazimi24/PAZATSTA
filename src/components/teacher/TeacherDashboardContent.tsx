@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { TeacherHomeLessons } from "@/components/teacher/TeacherHomeLessons";
 import { PendingApprovalsBlock } from "@/components/teacher/PendingApprovalsBlock";
 import { TeacherAssignmentsBlock } from "@/components/teacher/TeacherAssignmentsBlock";
+import { RatingsBlock } from "@/components/ratings/RatingsBlock";
 
 export function TeacherDashboardContent() {
   const searchParams = useSearchParams();
@@ -30,6 +31,8 @@ export function TeacherDashboardContent() {
       <section id="teacher-lessons">
         <TeacherHomeLessons />
       </section>
+
+      <RatingsBlock />
     </div>
   );
 }

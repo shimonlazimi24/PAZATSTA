@@ -30,6 +30,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     items: [
       { href: "/admin/teachers", label: "מורים" },
       { href: "/admin/settings/topics", label: "נושאי הכנה" },
+      { href: "/admin/ratings", label: "דירוגים" },
       { href: "/admin/reminders", label: "תזכורות אישור" },
     ],
   },
