@@ -153,10 +153,13 @@ export function dayStatus(p: {
   signedCount: number;
   report: ReportState;
   sentToRecipient: boolean;
+  /** The admin closed the day: nothing more is expected. */
+  closed?: boolean;
 }): { label: string; tone: DayTone } {
   if (p.status === "canceled") return { label: "בוטל", tone: "muted" };
   const d = daysUntil(p.dateStr, p.todayStr);
   if (d < 0) {
+    if (p.closed) return { label: p.report === "approved" && p.sentToRecipient ? "נסגר, הדוח נשלח" : "נסגר", tone: "ok" };
     if (p.report === "approved") return p.sentToRecipient ? { label: "הדוח נשלח", tone: "ok" } : { label: "הדוח אושר, לא נשלח", tone: "warning" };
     if (p.report === "submitted") return { label: "דוח ממתין לאישור", tone: "warning" };
     if (p.report === "returned") return { label: "הדוח הוחזר למורה", tone: "warning" };

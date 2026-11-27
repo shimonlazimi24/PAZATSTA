@@ -36,6 +36,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     placesLeft: Math.max(0, day.teachersNeeded - day.signups.length),
     mine: !!mine,
     past: date < today,
+    closed: !!day.closedAt,
   };
   if (!mine) return NextResponse.json(base, { headers: { "Cache-Control": "no-store" } });
 

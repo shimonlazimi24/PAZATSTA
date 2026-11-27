@@ -44,7 +44,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 }
 
 /**
- * Three kinds of change: day details, the message/reminder/checklist
+ * Four kinds of change: closing or reopening a past day ({ closed }), day details, the message/reminder/checklist
  * ({ templates: … }), or canceling ({ status: "canceled" }), which emails the
  * registered teachers.
  */
@@ -68,6 +68,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         [`היום הפרונטלי ב${day.title}, ${hebrewDateLabel(day.date)}, בוטל.`, "לשאלות פנו לשחר."]
       ).catch((e) => console.error("[frontal cancel] email failed", e));
     }
+    return NextResponse.json({ ok: true });
+  }
+
+  // Closing a past day: nothing more is expected from it, and it moves to the archive. It can be reopened.
+  if (typeof body?.closed === "boolean") {
+    if (day.status !== "open") return NextResponse.json({ error: "היום בוטל" }, { status: 409 });
+    if (lessonDateStr(day.date) >= todayIsraelYYYYMMDD()) return NextResponse.json({ error: "אפשר לסגור יום רק אחרי שעבר" }, { status: 409 });
+    await prisma.frontalDay.update({ where: { id }, data: { closedAt: body.closed ? (day.closedAt ?? new Date()) : null } });
     return NextResponse.json({ ok: true });
   }
 

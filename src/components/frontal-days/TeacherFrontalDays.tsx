@@ -29,6 +29,7 @@ function nextStep(r: Row): { text: string; urgent: boolean } {
     if (r.reportStatus === "none") return { text: "צריך למלא דוח סיום", urgent: true };
     if (r.reportStatus === "returned") return { text: "הדוח הוחזר לתיקון", urgent: true };
     if (r.reportStatus === "submitted") return { text: "הדוח ממתין לאישור", urgent: false };
+    if (r.reportStatus === "closed") return { text: "היום נסגר", urgent: false };
     return { text: "הדוח אושר", urgent: false };
   }
   if (r.checklistTotal > 0 && r.checklistDone < r.checklistTotal) return { text: `הכנות: ${r.checklistDone} מתוך ${r.checklistTotal}`, urgent: true };

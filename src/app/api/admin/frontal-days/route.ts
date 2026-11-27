@@ -44,7 +44,9 @@ export async function GET() {
             signedCount: d.signups.length,
             report: (d.report?.status ?? "none") as ReportState,
             sentToRecipient: !!d.report?.sentToRecipientAt,
+            closed: !!d.closedAt,
           }),
+          closed: !!d.closedAt,
           past: date < today,
           survey: { count: d._count.surveyResponses, classSize: d.classSize },
           report: d.report

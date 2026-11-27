@@ -21,6 +21,7 @@ type Day = {
   placesLeft: number;
   mine: boolean;
   past: boolean;
+  closed?: boolean;
   wazeUrl?: string;
   presentationUrl?: string;
   contactName?: string;
@@ -194,7 +195,8 @@ export function TeacherFrontalDay({ id }: { id: string }) {
 
   const checklist = day.checklist ?? [];
   const report = day.report;
-  const canFillReport = dayOfOrAfter && !canceled && !day.otherTeacherReported && (!report || report.status === "returned");
+  const closedNoReport = !!day.closed && !report;
+  const canFillReport = dayOfOrAfter && !canceled && !closedNoReport && !day.otherTeacherReported && (!report || report.status === "returned");
 
   return (
     <div className="max-w-2xl space-y-6" dir="rtl">
@@ -286,7 +288,9 @@ export function TeacherFrontalDay({ id }: { id: string }) {
       {!canceled && dayOfOrAfter && (
         <section className={card} aria-labelledby="rep-h">
           <h3 id="rep-h" className="text-base font-semibold">דוח סיום</h3>
-          {day.otherTeacherReported && !report?.byMe ? (
+          {closedNoReport ? (
+            <p className="mt-2 text-[var(--color-text-muted)]">שחר סגר את היום. אין צורך בדוח סיום.</p>
+          ) : day.otherTeacherReported && !report?.byMe ? (
             <p className="mt-2 text-[var(--color-text-muted)]">מורה אחר כבר הגיש את דוח הסיום של היום.</p>
           ) : report && report.status !== "returned" ? (
             <p className="mt-2">{report.status === "approved" ? "הדוח אושר ונשלח אל המקום. תודה." : "הדוח הוגש וממתין לאישור של שחר."}</p>

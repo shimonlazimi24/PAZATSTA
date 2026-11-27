@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { apiJson } from "@/lib/api";
@@ -19,6 +19,7 @@ type Row = {
   teachers: string[];
   status: { label: string; tone: DayTone };
   past: boolean;
+  closed: boolean;
   survey: { count: number; classSize: number | null };
   report: { status: string; teacherName: string; answers: { label: string; value: string; internal?: boolean }[] } | null;
 };
@@ -30,15 +31,15 @@ const REPORT_STATE: Record<string, string> = {
 };
 
 /** The closing report of a day that took place, readable right in the list. */
-function DaySummary({ row }: { row: Row }) {
+function DaySummary({ row, onClose }: { row: Row; onClose: (id: string) => void }) {
   const answers = row.report?.answers.filter((a) => a.value?.trim()) ?? [];
   return (
     <details className="group border-t border-dashed border-[var(--color-border)] px-4 py-2 sm:ps-24">
       <summary className="cursor-pointer list-none text-sm font-medium text-[var(--color-text)] [&::-webkit-details-marker]:hidden">
         <ChevronLeft className="me-1 inline h-4 w-4 align-[-3px] transition-transform group-open:-rotate-90" aria-hidden />
         סיכום היום
-        <span className={`ms-2 font-normal ${row.report ? "text-[var(--color-text-muted)]" : "text-amber-800"}`}>
-          {row.report ? `${row.report.teacherName} · ${REPORT_STATE[row.report.status] ?? ""}` : "עוד לא הוגש דוח סיום"}
+        <span className={`ms-2 font-normal ${row.report || row.closed ? "text-[var(--color-text-muted)]" : "text-amber-800"}`}>
+          {row.report ? `${row.report.teacherName} · ${REPORT_STATE[row.report.status] ?? ""}` : row.closed ? "נסגר בלי דוח סיום" : "עוד לא הוגש דוח סיום"}
         </span>
       </summary>
       <p className="mt-2 text-sm text-[var(--color-text)]">
@@ -57,6 +58,17 @@ function DaySummary({ row }: { row: Row }) {
             </div>
           ))}
         </dl>
+      )}
+      {!row.closed && row.status.tone === "warning" && (
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={() => onClose(row.id)}
+            className="inline-flex min-h-[44px] items-center rounded-[var(--radius-input)] border border-[var(--color-border)] bg-white px-4 text-sm font-medium text-[var(--color-text)] hover:bg-[var(--color-bg-muted)]"
+          >
+            סגירת היום והעברה לארכיון
+          </button>
+        </div>
       )}
       {row.report && (
         <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -94,7 +106,7 @@ function DateBlock({ date }: { date: string }) {
   );
 }
 
-function DayList({ rows }: { rows: Row[] }) {
+function DayList({ rows, onClose }: { rows: Row[]; onClose: (id: string) => void }) {
   return (
     <ul className="divide-y divide-[var(--color-border)] rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white">
       {rows.map((r) => (
@@ -115,7 +127,7 @@ function DayList({ rows }: { rows: Row[] }) {
               </p>
             </div>
           </Link>
-          {r.past && r.status.tone !== "muted" && (r.report || r.teachers.length > 0) && <DaySummary row={r} />}
+          {r.past && r.status.tone !== "muted" && (r.report || r.teachers.length > 0) && <DaySummary row={r} onClose={onClose} />}
         </li>
       ))}
     </ul>
@@ -127,16 +139,25 @@ export function AdminFrontalDaysList() {
   const [error, setError] = useState<string | null>(null);
   const [showPast, setShowPast] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     apiJson<Row[]>("/api/admin/frontal-days").then((r) => (r.ok ? setRows(r.data) : setError("לא הצלחנו לטעון את הימים.")));
   }, []);
+  useEffect(load, [load]);
+
+  async function closeDay(id: string) {
+    const r = await apiJson(`/api/admin/frontal-days/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ closed: true }) });
+    if (!r.ok) return setError(r.error || "הסגירה נכשלה");
+    load();
+  }
 
   if (error) return <p className="text-sm text-red-700" role="alert">{error}</p>;
   if (!rows) return <p className="text-sm text-[var(--color-text-muted)]">טוען…</p>;
 
   const upcoming = rows.filter((r) => !r.past);
   const past = rows.filter((r) => r.past).reverse();
-  const needAttention = past.filter((r) => r.status.tone === "warning").length;
+  // Past days that still need something stay in view; the rest (sent, closed, canceled) are the archive.
+  const waiting = past.filter((r) => r.status.tone === "warning");
+  const archive = past.filter((r) => r.status.tone !== "warning");
 
   return (
     <div className="space-y-8">
@@ -150,20 +171,32 @@ export function AdminFrontalDaysList() {
             </Link>
           </div>
         ) : (
-          <DayList rows={upcoming} />
+          <DayList rows={upcoming} onClose={closeDay} />
         )}
       </section>
 
-      {past.length > 0 && (
+      {waiting.length > 0 && (
+        <section aria-labelledby="wait-h" className="space-y-3">
+          <div className="flex flex-wrap items-baseline gap-3">
+            <h3 id="wait-h" className="text-sm font-semibold text-[var(--color-text)]">ימים שעברו ומחכים לטיפול</h3>
+            <p className="text-sm text-amber-800">{waiting.length}</p>
+          </div>
+          <p className="text-sm text-[var(--color-text-muted)]">
+            יום יוצא מכאן כשהדוח שלו מאושר ונשלח, או כשסוגרים אותו. פתחו את סיכום היום כדי לסגור.
+          </p>
+          <DayList rows={waiting} onClose={closeDay} />
+        </section>
+      )}
+
+      {archive.length > 0 && (
         <section aria-labelledby="past-h" className="space-y-3">
           <div className="flex flex-wrap items-baseline gap-3">
-            <h3 id="past-h" className="text-sm font-semibold text-[var(--color-text)]">ימים שעברו</h3>
-            {needAttention > 0 && <p className="text-sm text-amber-800">{needAttention} מחכים לטיפול בדוח</p>}
+            <h3 id="past-h" className="text-sm font-semibold text-[var(--color-text)]">ארכיון</h3>
             <button type="button" onClick={() => setShowPast((s) => !s)} className="text-sm text-[var(--color-primary)] underline">
-              {showPast ? "הסתרה" : `הצגת ${past.length} ימים`}
+              {showPast ? "הסתרה" : `הצגת ${archive.length} ימים`}
             </button>
           </div>
-          {showPast && <DayList rows={past} />}
+          {showPast && <DayList rows={archive} onClose={closeDay} />}
         </section>
       )}
     </div>

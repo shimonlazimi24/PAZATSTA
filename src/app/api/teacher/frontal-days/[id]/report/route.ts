@@ -23,6 +23,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   });
   if (!day || day.signups.length === 0) return NextResponse.json({ error: "רק מורה שרשום ליום יכול להגיש דוח" }, { status: 403 });
   if (day.status !== "open") return NextResponse.json({ error: "היום בוטל" }, { status: 409 });
+  if (day.closedAt && !day.report) return NextResponse.json({ error: "היום נסגר, ואין צורך בדוח" }, { status: 409 });
   if (lessonDateStr(day.date) > todayIsraelYYYYMMDD()) return NextResponse.json({ error: "אפשר להגיש את הדוח מיום הפעילות" }, { status: 409 });
   if (day.report && day.report.teacherId !== me.id) return NextResponse.json({ error: "מורה אחר כבר הגיש את הדוח של היום" }, { status: 409 });
   if (day.report && day.report.status !== "returned") return NextResponse.json({ error: "הדוח כבר הוגש" }, { status: 409 });

@@ -75,6 +75,9 @@ test("day status tells the admin what is needed", () => {
   assert.equal(dayStatus({ ...s, todayStr: "2026-12-11", report: "submitted" }).label, "דוח ממתין לאישור");
   assert.equal(dayStatus({ ...s, todayStr: "2026-12-11", report: "approved", sentToRecipient: true }).label, "הדוח נשלח");
   assert.equal(dayStatus({ ...s, todayStr: "2026-12-11", status: "canceled" }).label, "בוטל");
+  // A closed day asks for nothing, with or without a report.
+  assert.deepEqual(dayStatus({ ...s, todayStr: "2026-12-11", closed: true }), { label: "נסגר", tone: "ok" });
+  assert.equal(dayStatus({ ...s, todayStr: "2026-12-11", report: "submitted", closed: true }).tone, "ok");
 });
 
 test("report answers follow the admin's fields", () => {

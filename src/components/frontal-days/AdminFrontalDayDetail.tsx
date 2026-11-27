@@ -13,6 +13,7 @@ import { surveyPath, surveyRatio, type QuestionSummary } from "@/lib/frontal-sur
 type Detail = FrontalDayValues & {
   id: string;
   status: string;
+  closedAt: string | null;
   messageTemplate: string;
   reminderTemplate: string;
   checklist: string[];
@@ -169,8 +170,24 @@ export function AdminFrontalDayDetail({ id }: { id: string }) {
           </p>
           {day.topic && <p className="text-[var(--color-text-muted)]">נושא: {day.topic}</p>}
           {canceled && <p className="font-medium text-red-700">היום בוטל.</p>}
+          {day.closedAt && !canceled && <p className="font-medium text-[var(--color-primary)]">היום נסגר ונמצא בארכיון.</p>}
         </div>
-        {!canceled && !editing && (
+        {!canceled && !editing && past && (
+          <button
+            type="button"
+            disabled={busy}
+            className={day.closedAt ? secondary : primary}
+            onClick={() =>
+              act(
+                () => apiJson(`/api/admin/frontal-days/${id}`, json("PATCH", { closed: !day.closedAt })),
+                day.closedAt ? "היום נפתח מחדש." : "היום נסגר ועבר לארכיון."
+              )
+            }
+          >
+            {day.closedAt ? "פתיחה מחדש" : "סגירת היום והעברה לארכיון"}
+          </button>
+        )}
+        {!canceled && !editing && !past && (
           <div className="flex gap-2">
             <button type="button" className={secondary} onClick={() => setEditing(true)}>
               עריכת פרטים
@@ -346,8 +363,10 @@ export function AdminFrontalDayDetail({ id }: { id: string }) {
           )}
         </section>
       )}
-      {past && !day.report && !canceled && (
-        <p className={`${card} text-amber-800`}>היום עבר ועוד לא הוגש דוח סיום. אחד המורים הרשומים ממלא אותו מהאזור האישי.</p>
+      {past && !day.report && !canceled && !day.closedAt && (
+        <p className={`${card} text-amber-800`}>
+          היום עבר ועוד לא הוגש דוח סיום. אחד המורים הרשומים ממלא אותו מהאזור האישי. אם לא צריך דוח, סגרו את היום בכפתור למעלה.
+        </p>
       )}
 
       <section className={card} aria-labelledby="teachers-h">

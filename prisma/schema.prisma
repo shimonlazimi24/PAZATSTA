@@ -443,6 +443,8 @@ model FrontalDay {
   status           String    @default("open")
   /// Set when the admin was warned the day has no teachers two weeks ahead.
   noTeacherAlertAt DateTime?
+  /// Set when the admin closed a past day: nothing more is expected, it sits in the archive.
+  closedAt         DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 

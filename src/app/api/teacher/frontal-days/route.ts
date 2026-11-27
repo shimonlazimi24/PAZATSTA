@@ -47,7 +47,8 @@ export async function GET() {
           past: date < today,
           checklistTotal: d.checklist.length,
           checklistDone: mine ? mine.checklistDone.filter((x) => d.checklist.includes(x)).length : 0,
-          reportStatus: d.report?.status ?? "none",
+          // A day the admin closed without a report no longer asks the teacher for one.
+          reportStatus: d.report?.status ?? (d.closedAt ? "closed" : "none"),
         };
       }),
       { headers: { "Cache-Control": "no-store" } }
